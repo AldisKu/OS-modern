@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+   <head>
+    <title>Zeit-Synchronisierung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css">
+ 
+	<link rel="stylesheet" href="php/3rdparty/orderstyle/orderstyle.min.css" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js"></script>
+</head>
+
+<body>
+<script>
+
+var T_SET_TIME = ["Client-Zeit auf den Server übertragen?","Set client time at server?", "Transfer hora de cliento al servidor?"];
+var T_SET_BTN = ["Setze Client-Zeit","Set Client Time","Poner hora del cliente"];
+
+var lang;
+
+function setLanguage(language) {
+	lang = language;
+	$("#settimetxt").html("<b>" + T_SET_TIME[lang] + "</b>");
+	$("#settimebtntxt").html(T_SET_BTN[lang]);
+}
+
+function doLogout() {
+	doAjax("POST", "php/contenthandler.php?module=admin&command=logout", null, showLoginMask, "Logoutproblem");
+}
+
+function showLoginMask(jsonContent) {
+	setTimeout(function(){document.location.href = "index.html"},250);
+}
+
+function binding() {
+	$("#transfertimebtn").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		
+		var data = osGetDate();
+		doAjax("POST", "php/contenthandler.php?module=admin&command=setTime", data, getGeneralConfigItems, "Fehler Serverzeit setzen");
+	});
+	
+	$("#logoutbutton").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		doLogout();
+	});
+}
+
+function getGeneralConfigItems() {
+	doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertGenConfigStartRest, "Fehler Konfigurationsdaten");
+}
+	
+function insertGenConfigStartRest(configResult) {
+	if (configResult.status == "OK") {
+		var values = configResult.msg;
+		
+		var txt = tdigits(values.sday) + "." + tdigits(values.smonth) + "." + values.syear + " - " + tdigits(values.shour) + ":" + tdigits(values.smin);
+		$("#servertime").html(txt);
+		
+		setLanguage(values.userlanguage);
+	
+		binding();
+	} else {
+		setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+	}
+}
+
+function osGetDate() {
+	var date = new Date();
+	
+	var data = {
+		day: date.getDate(),
+		month: date.getMonth() + 1,
+		year: date.getFullYear(),
+		minute: date.getMinutes(),
+		hour: date.getHours()
+	};
+	
+	return data;
+}
+
+function tdigits(no) {
+	return ("0" + no).slice(-2);
+}
+
+$(document).on("pageinit", "#index-page", function () {
+	
+	initializeMainMenu("#modulemenu");
+	hideMenu();
+	$.ajaxSetup({ cache: false });
+
+	var data = osGetDate();
+
+ 	var clienttime = tdigits(data.day) + "." + tdigits(data.month) + "." + data.year + " - " + tdigits(data.hour) + ":" + tdigits(data.minute);
+ 	$("#clienttime").html(clienttime);
+ 	
+ 	getGeneralConfigItems();
+});
+
+</script>
+
+<div data-role="page" id="index-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1>Zeitabgleich</h1>
+		 <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    
+    <div data-role="content">    
+
+
+	<div data-role="collapsible" data-content-theme="c" data-collapsed="false" data-theme="e" id="loginmask">
+		<H2>Zeiten/Times/Horas (Format: DD.MM.YYYY hh:mm)</H2>
+
+		<span id=servertimetxt>Server-Zeit: </span><i><span id=servertime></span></i><br><br>
+		<span id=clienttimetxt>Client-Zeit: </span><i><span id=clienttime></span></i><br><br>
+
+		<span id=settimetxt>Setze Client Zeit am Server?</span><br><br>
+		<form>
+			<a href="#" data-theme="f" data-role="button" data-icon="check" data-ajax="false" id="transfertimebtn"><span id=settimebtntxt>Setze Client-Time</span></a> 
+			<input type="submit" value="Abmelden" id="logoutbutton" data-theme="d"/>
+		</form>
+	</div>  <!--  Login-Maske -->  
+
+   </div>   
+    
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+	
+</div>
+
+	
+</div>
+</body>
+
+</html>
+

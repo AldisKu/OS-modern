@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>OrderSprinter Modern</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">OS</div>
+          <div class="brand-title">
+            <div class="title">OrderSprinter</div>
+            <div class="subtitle">Modern Client</div>
+          </div>
+        </div>
+        <div class="status" id="status-badges">
+          <span class="badge" id="badge-connection">Offline</span>
+          <span class="badge" id="badge-broker">Broker?</span>
+          <span class="badge" id="badge-sync">Sync?</span>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="panel panel-login" id="login-panel">
+          <h1>Anmeldung</h1>
+          <div class="login-grid">
+            <label>
+              <span>Benutzer-ID</span>
+              <input type="number" inputmode="numeric" id="login-user" placeholder="z. B. 1" />
+            </label>
+            <label>
+              <span>Passwort</span>
+              <input type="password" id="login-pass" placeholder="****" />
+            </label>
+            <button id="login-btn" class="primary">Login</button>
+          </div>
+          <div class="login-hint" id="login-hint"></div>
+        </section>
+
+        <section class="panel panel-app hidden" id="app-panel">
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <button id="refresh-all" class="ghost">Jetzt syncen</button>
+              <button id="logout-btn" class="ghost">Logout</button>
+            </div>
+            <div class="toolbar-right" id="user-info"></div>
+          </div>
+
+          <div class="layout">
+            <aside class="sidebar">
+              <div class="section-title">Tische</div>
+              <div class="table-filters">
+                <button id="refresh-tables" class="ghost">Tische aktualisieren</button>
+              </div>
+              <div id="rooms-container" class="rooms"></div>
+              <div class="section-title">To-Go</div>
+              <div id="togo-container" class="togo"></div>
+            </aside>
+
+            <section class="main">
+              <div class="main-top">
+                <div class="section-title">Bestellung</div>
+                <div class="table-selected" id="table-selected">Kein Tisch gewählt</div>
+              </div>
+
+              <div class="order-grid">
+                <div class="menu-panel">
+                  <div class="menu-toolbar">
+                    <input id="menu-search" placeholder="Suche" />
+                    <button id="refresh-menu" class="ghost">Menu aktualisieren</button>
+                  </div>
+                  <div id="menu-types" class="menu-types"></div>
+                  <div id="menu-items" class="menu-items"></div>
+                </div>
+
+                <div class="cart-panel">
+                  <div class="cart-header">
+                    <h2>Warenkorb</h2>
+                    <div class="cart-meta" id="cart-meta">0 Artikel</div>
+                  </div>
+                  <div id="cart-items" class="cart-items"></div>
+                  <div class="cart-footer">
+                    <div class="cart-total" id="cart-total">0.00</div>
+                    <button id="send-order" class="primary">Senden</button>
+                  </div>
+                  <div class="cart-actions">
+                    <button id="clear-cart" class="ghost">Warenkorb leeren</button>
+                    <label class="toggle">
+                      <input type="checkbox" id="print-order" />
+                      <span>Mit Druck</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="detail-panel">
+                <div class="detail-header">
+                  <h2>Aktuelle Positionen</h2>
+                  <button id="refresh-open-items" class="ghost">Aktualisieren</button>
+                </div>
+                <div id="open-items" class="open-items"></div>
+
+                <div class="detail-header">
+                  <h2>Records</h2>
+                  <button id="refresh-records" class="ghost">Aktualisieren</button>
+                </div>
+                <div id="records" class="records"></div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <div id="product-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-title">Produkt</h2>
+        <button id="modal-close" class="ghost">Schließen</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-row">
+          <label>Menge</label>
+          <input type="number" id="modal-qty" value="1" min="1" step="1" />
+        </div>
+        <div class="modal-row">
+          <label>Bemerkung</label>
+          <input type="text" id="modal-note" placeholder="z. B. ohne Zwiebeln" />
+        </div>
+        <div class="modal-row">
+          <label class="toggle">
+            <input type="checkbox" id="modal-togo" />
+            <span>To-Go</span>
+          </label>
+        </div>
+        <div class="modal-extras">
+          <div class="section-title">Extras</div>
+          <div id="modal-extras"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-add" class="primary">Zum Warenkorb</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

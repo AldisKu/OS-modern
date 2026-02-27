@@ -1,0 +1,16 @@
+<h2>Kasse</h2>
+
+<p>In der Kassenansicht kann der Benutzer folgende Aktionen durchführen:
+
+<ul>
+	<li><i>Tische abrechnen</i>: Nach Auswahl eines Tisches kann er die Produkte entweder einzeln oder mit einem Klick auf den Kassenbon übertragen. Anschließend kann er entscheiden, ob ein Bon gedruckt werden soll. Je nach globaler Konfiguration stehen verschiedene Zahlungswege zur Auswahl.
+	<li><i>Einlagen</i>: Er kann festlegen, wieviel Geld er in seine <i>persönliches</i> Portemonnaie einlegen möchte, z.B. Wechselgeld vor Betriebsbeginn
+	<li><i>Auslagen</i>: Ebenso kann er auch angeben, wieviel Geld er wieder aus seinem Portemonnaie entnommen hat.
+	<li><i>Einnahmen</i>: Er kann jederzeit überprüfen, wieviel Geld er entsprechend der Ein-/Auslagen und der Abrechnungsvorgänge in seinem Portemonnaie haben sollte. 
+</ul>
+
+<p>Wird ein Tisch abgerechnet, so kann der eingeblendete Kassenbon in der Mobilansicht durch Anklicken vergrößert dargestellt werden. Das kann sinnvoll sein, wenn der Gast vor der Abrechnung den Gesamtbetrag sehen möchte. Ein Klick auf den vergrößerten Kassenbon verkleinert diesen wieder.
+
+<p>Das Format des eingeblendeten Kassenbon kann sich vom Druck auf dem Bondrucker unterscheiden.
+
+<p><i>Gäste</i>: Es können Rechnungen auch auf in OrderSprinter erfasste Gäste gebucht werden, wenn diese sich entsprechend des gewählten Aufenthaltszeitraums gerade im Restaurant aufhalten könnten. Bei der Auswahl des Zahlungsweg ist 'Gäste' anzuklicken und die ersten Buchstaben des Gastes einzugeben. Anschließend erscheint eine Drop-Down-Auswahlliste der Gäste, die auf die Eingabe passen.

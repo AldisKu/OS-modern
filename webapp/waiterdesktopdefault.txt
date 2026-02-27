@@ -1,0 +1,98 @@
+<div id="allwithoutheaderfooter">
+	<div id="tablepanel" class="tableaside1">
+		<div id="location" class="tablepanelheader">Raum: Raum xyz</div>
+		<div id="roompanel" class="roompanel"></div>
+		<div id="tablepanelcontent" class="tablepanelcontent"></div>
+		<div id=tablemapcontent style="position: relative;width:100%;display:none;">
+		      <img id="mapimgpart" class="notzoomed" style="position: relative;left: 0;top: 0;" src=img/empty-room.png />
+		      <div id=tableoverlay></div>
+		</div>
+		<div class="daycodeareamobile" style="display:none;"><span class="daycodetxt">Tageslosung</span>: <span class="daycodefield"></span></div>
+		<div id="receiptpanel" style="display:none;"></div>
+		</div>
+ 
+	<div id="main">
+		<div id="groupchain" class="grouppanel"></div>
+
+		<div id="groupchoice" class="grouppanel"></div>
+
+		<div id="paybuttonpanel" style="display:none;">
+		<input id="payall" class="input50 inputwhite" type="submit" value="Alles" />
+		<div class="infoarea"><span id="priceinreceipt"></span></div>
+		</div>
+		<div id="billprintjobspanel" style="display:none;"></div>
+		<div id="oben" class="paypanel" style="display:none;"></div>
+		<hr>
+		<div id="unten" class="paypanel" style="display:none;"></div>
+
+		<!-- a hack: info-page is for compatibility to mobile view at which data is stored -->
+		<div id="info-page" style='display:none;'></div>
+
+		<div id="searchpanel" tabindex="-1" style="display:none;">
+			<input id="search" class="input100 inputwhite" type="text" placeholder="Suchen..." />
+			<input id="barcode" tabindex="-1" class="input100 inputwhite" type="text" placeholder="Barcode..." style="display:none;" />
+		</div>
+
+		<div id="productspanel" class="productspanel" style="display:none;"></div>
+
+		<div id="remarkpanel" style="display:none;">
+			<input id="remark" class="input100 inputwhite" type="text" placeholder="Produktbemerkung" />
+                        <br><input id="orderoption" class="input100 inputwhite" type="text" placeholder="Gesamtbestellbemerkung" />
+		</div>
+                
+                <div id="deliverydetails" style="display:none;">
+                    <input id="deliverydetailsbtn" type="submit" class="inputgrey input100" value="Lieferauftrag" />
+                    <div id="deliveryfields" style="display:none;">
+                        <input id="ordername" class="input100 inputwhite" type="text" placeholder="Name"/><br />
+                        <input id="orderstreet" class="input50 inputwhite" type="text" placeholder="Straße" />
+                        <input id="orderhousenumber" class="input50 inputwhite" type="text" placeholder="Hausnummer"/><br />
+                        <input id="orderpostalcode" class="input50 inputwhite" type="text" placeholder="PLZ"/>
+                        <input id="ordercity" class="input50 inputwhite" type="text" placeholder="Stadt"/><br />
+                        <input id="orderphone" class="input50 inputwhite" type="text" placeholder="Telefonnummer" /><br />
+                        <input id="orderremark" class="input100 inputwhite" type="text" placeholder="Kommentar"/>
+                    </div>
+                <div id="ordersendemaildiv" style="display:none;">
+                        <img id="ordersendemailyes" src="img/ok.png"/><img id="ordersendemailno" src="img/notavailable.png" style="display:none;">&nbsp;E-Mail bei Fertigstellung
+                </div>
+                </div>
+                
+                
+	</div>
+ 
+	<div id="rightsidearea">
+
+		<div class="buttonarea">
+		<input id="mainmenubtn" class="input100 inputwhite"type="submit" value="Hauptmenü" />
+
+                <div id="phasesarea" style="display:none;">
+                        <input id="phasebtn_pre" class="input100 phasebtns phaseunselected" type="submit" value="Vorspeise" />
+                        <input id="phasebtn_main" class="input100 phasebtns phaseunselected" type="submit" value="Hauptgang" />
+                        <input id="phasebtn_post" class="input100 phasebtns phaseunselected" type="submit" value="Nachspeise" />
+		</div><!-- phasesarea -->    
+
+		<input id="paydeskbtn" class="input100 inputwhite" type="submit" value="Kasse" style="display:none;"/><br>
+		<input id="goorderbtn" class="input100 inputwhite" type="submit" value="Bestellung" style="display:none;"/>
+		<input id="cashbutton" class="input100 inputwhite" type="submit" value="Ein-/Auslage" />
+                <input id="zeroreceiptbutton" class="input100 inputwhite" type="submit" value="Nullbeleg (RKSV)" />
+		<input id="hostbutton" class="input100 inputwhite btnswitchoff" type="submit" style="display:none;" value="Bewirtungsbeleg" />
+                <input id="minuscheapest" class="input100 inputwhite btnswitchoff" type="submit" style="display:none;" value="Minus billigster Artikel" />
+		<input id="paydeskcash" class="input100 inputwhite" type="submit"  style="display:none;" value="Zahlung" />
+		<input id="paydeskprint" class="input100 inputwhite" type="submit" style="display:none;" value="Bondruck" />
+		<input id="workbtn" class="input100 inputwhite" type="submit" value="Arbeitsbon" style="display:none;" />
+		<input id="sendNewOrders" class="input100 inputwhite" type="submit" value="Bestellung abschließen" style="display:none;" />
+		<input id="changetablebtn" class="input100 inputwhite" type="submit" value="Tischwechsel" style="display:none;" />
+		<input id="tablerecordsbtn" class="input100 inputwhite" type="submit" value="Tischprotokoll" style="display:none;" />
+		</div>
+
+		<div id='neworderinfo'>Preis: <span id='neworderinfofield'>0,00</span></div>
+
+		<div id="neworders" class="ordereditem-container"></div>
+
+	 </div>
+
+</div>
+
+<div id="osbottom">
+			<div id="ordered" class="ordereditem-sentcontainer">ORDERED</div>
+			<div id="waitermessagearea" class="waitermsg waitermessageareadesktop" style="display:none;">Waiter Message</div>
+</div>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="de">
+     <head>
+    <title>Ansicht Bereitstellung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+ 
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+<style>
+
+#tableWithPreparedProds,#tableWithDeliveredEntries,#headertableToCook
+{
+	width:100%;
+}
+
+#tableWithPreparedProds tr:hover td {
+	background-color: #ffaaff;
+}
+
+#declareready,#declarenotcooked {
+	text-align:center;
+	vertical-align:middle;
+}
+
+#readybutton,#notreadybutton,#alldeliverbutton {
+	width:90%;
+}
+
+#optiontext
+{
+	font-family:sans-serif;
+	font-size:10pt;
+	color:black;
+}
+
+#tableWithDeliveredEntries td {
+	background:#b4b4ec
+}
+
+.dividerline {
+	height: 10px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+var S_PROVIDED = ["Serviert (die letzten 10 Produkte)","Served (last 10 products)","Servido (últimos 10 productos)"];
+var S_TABLE = ["Tisch: ","Table: ","Mesa: "];
+var S_INCOMPLETE = ["unvollständig","incomplete","incompleto"];
+var S_COMPLETE = ["komplett","complete","completo"];
+var S_ALL = ["Alles","All","Todo"];
+var S_PROVISION = ["Bereitstellung","Prepared Products","Productos preparados"];
+var S_SHOW_POS = ["Zeige Positionen an/aus","Show position on/off","Mostrar posición si/no"];
+
+var lang = 0;
+var beepCooked = 0;
+
+function setLanguage(language) {
+	lang = language;
+	$("#supplyheadline").html(S_PROVISION[lang]);
+}
+
+function getGeneralConfigItems() {
+	doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertGeneralConfigItems, "Fehler Konfigurationsdaten");
+}
+
+function insertGeneralConfigItems(configResult) {
+	if (configResult.status == "OK") {
+		var values = configResult.msg;
+		setLanguage(values.userlanguage);
+		beepCooked = values.beepcooked;
+		initializeEverything();
+	} else {
+		setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+		//alert("Fehler beim Abruf der Konfigurationsdaten!");
+	}
+}
+
+// refreshing the content
+$(document).ready(function() {
+var refreshId = setInterval(function() {
+	getAndDisplayAllEntries();
+}, 10000);
+ $.ajaxSetup({ cache: false });
+});
+
+function getPreparedProds() {
+	doAjax("GET","php/contenthandler.php?module=queue&command=getJsonAllPreparedProducts",null,fillTableWithPreparedProds,"Vorbereitete Produkte");
+}
+
+function getDeliveredEntries() {
+	doAjax("GET","php/contenthandler.php?module=queue&command=getJsonLastDeliveredProducts",null,filltableWithDeliveredEntries,"Bereitgestellte Produkte");
+}
+
+function declareProductBeDelivered(queueid) {
+	doAjaxNonJsonNonCall("POST","php/contenthandler.php?module=queue&command=declareProductBeDelivered",{ queueid: queueid});
+}
+
+function declareMultipleProductsDelivered(queueids) {
+	doAjax("POST","php/contenthandler.php?module=queue&command=declareMultipleProductsDelivered", { queueids: queueids }, null, "Fehler");
+}
+
+function declareProductNOTBeDelivered(queueid) {
+	doAjaxNonJsonNonCall("POST","php/contenthandler.php?module=queue&command=declareProductNotBeDelivered",{ queueid: queueid});
+}
+
+function getTableMapPreferences() {
+	doAjax("GET","php/tablemap.php?command=getTableMapPreferences",null,insertTMInfo,"Keine TM-Information");
+}
+function insertTMInfo(jsonTminfo) {
+	tminfo = jsonTminfo;
+}
+
+function shallDisplayMapForTable(tableid) {
+	
+	for (var i=0;i<tminfo.length;i++) {
+		var aRoom = tminfo[i];
+		if (aRoom.displaymap == 1) {
+			var tablePos = aRoom.tablepositions;
+			for (j=0;j<tablePos.length;j++) {
+				var aTablePos = tablePos[j];
+				if (aTablePos.haspos == 1) {
+					if (aTablePos.id == tableid) {
+						return shallDisplayRoom(aRoom.roomid);
+					}
+				}
+			}
+		}
+	}
+	return {show:false};
+}
+
+function shallDisplayRoom(roomid) {
+	for (var i=0;i<tminfo.length;i++) {
+		if (tminfo[i].roomid == roomid) {
+			return {show:tminfo[i].displaymap == 1 ? true : false,pos:tminfo[i].tablepositions};
+		}
+	}
+	return {show:false};
+}
+
+function listOfTable(table) {
+	var tableid = table.tableid;
+	var tablename = S_TABLE[lang] + table.tableheadline;
+	var theme = 'd';
+	var tablestatus = S_INCOMPLETE[lang];
+	if (table.tablestatus == 'complete') {
+		tablestatus = S_COMPLETE[lang];
+		theme = "e";
+	}
+	var aList = '<ul data-role="listview" id="' + tableid + '" data-divider-theme="a" data-inset="true">';
+	aList += '<li data-role="list-divider" data-theme="' + theme + '" data-role="heading" data-icon="check">' + tablename + ' (' + tablestatus + ')</li>';
+	aList += '<li data-theme="f" data-icon="check" id="table-' + tableid + '" class="preparedtable"><a href="#" ><h2>' + S_ALL[lang] + '</h2></A></LI>';
+	
+	if (shallDisplayMapForTable(tableid).show) {
+		aList += '<li data-theme="d" data-icon="check" id="tableshowpos_' + tableid + '" class="showpos"><a href="#" ><h2>' + S_SHOW_POS[lang] + '</h2></A></LI>';
+	}
+	
+	var itemsForTable = table.prodsOfTable;
+
+	$.each(itemsForTable, function (i, entry) {
+		var option = '';
+		
+		var extratxt = createExtraParagraph(entry.extras,0);
+		
+		if (entry.option != '') {
+			option = '<p>' + toHtml(entry.option) + '</p>';
+		}
+		aList += '<li data-theme="c" data-icon="check" class="preparedlistitem" + id="' + entry.id + '"><a href="#">' + toHtml(entry.longname) + extratxt + option + '</a></li>';
+	});
+	
+	aList += '</ul>';
+	aList += '<p><div><img id="mapimgpart_' + tableid + '" style="width:100%;display:none;" src=img/empty-room.png /></div></p>';
+	return aList;
+}
+
+function beep() {
+    var snd = new Audio("data:audio/wav;base64,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qJrx4KOQjahZxWbcZgztj2c49nKmkId44S71j0c8eV9yDK6uPRzx5X18eDvjvQ6yKo9ZSS6l//8elePK/Lf//IInrOF/FvDoADYAGBMGb7FtErm5MXMlmPAJQVgWta7Zx2go+8xJ0UiCb8LHHdftWyLJE0QIAIsI+UbXu67dZMjmgDGCGl1H+vpF4NSDckSIkk7Vd+sxEhBQMRU8j/12UIRhzSaUdQ+rQU5kGeFxm+hb1oh6pWWmv3uvmReDl0UnvtapVaIzo1jZbf/pD6ElLqSX+rUmOQNpJFa/r+sa4e/pBlAABoAAAAA3CUgShLdGIxsY7AUABPRrgCABdDuQ5GC7DqPQCgbbJUAoRSUj+NIEig0YfyWUho1VBBBA//uQZB4ABZx5zfMakeAAAAmwAAAAF5F3P0w9GtAAACfAAAAAwLhMDmAYWMgVEG1U0FIGCBgXBXAtfMH10000EEEEEECUBYln03TTTdNBDZopopYvrTTdNa325mImNg3TTPV9q3pmY0xoO6bv3r00y+IDGid/9aaaZTGMuj9mpu9Mpio1dXrr5HERTZSmqU36A3CumzN/9Robv/Xx4v9ijkSRSNLQhAWumap82WRSBUqXStV/YcS+XVLnSS+WLDroqArFkMEsAS+eWmrUzrO0oEmE40RlMZ5+ODIkAyKAGUwZ3mVKmcamcJnMW26MRPgUw6j+LkhyHGVGYjSUUKNpuJUQoOIAyDvEyG8S5yfK6dhZc0Tx1KI/gviKL6qvvFs1+bWtaz58uUNnryq6kt5RzOCkPWlVqVX2a/EEBUdU1KrXLf40GoiiFXK///qpoiDXrOgqDR38JB0bw7SoL+ZB9o1RCkQjQ2CBYZKd/+VJxZRRZlqSkKiws0WFxUyCwsKiMy7hUVFhIaCrNQsKkTIsLivwKKigsj8XYlwt/WKi2N4d//uQRCSAAjURNIHpMZBGYiaQPSYyAAABLAAAAAAAACWAAAAApUF/Mg+0aohSIRobBAsMlO//Kk4soosy1JSFRYWaLC4qZBYWFRGZdwqKiwkNBVmoWFSJkWFxX4FFRQWR+LsS4W/rFRb/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////VEFHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAU291bmRib3kuZGUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjAwNGh0dHA6Ly93d3cuc291bmRib3kuZGUAAAAAAAAAACU=");  
+    snd.play();
+}
+
+function fillTableWithPreparedProds(answer) {
+	if (!answer.hasOwnProperty('newproductstoserve')) {
+		setTimeout(function(){document.location.href = "index.html"},250);
+		return;
+	}
+	var aList = '';
+	
+	var newproductstoserve = answer.newproductstoserve;
+	if ((newproductstoserve == 1) && (beepCooked == 1)) {
+		beep();
+	}
+	var entriesToCook = answer.items;
+	$.each(entriesToCook, function (i, table) {   
+		aList += listOfTable(table);
+	});
+
+	$("#prodstodeliver").html(aList);
+	$("#prodstodeliver").trigger("create");
+	
+	$(".showpos").off("click").on("click", function (e) {
+		var tableid = this.id.split("_")[1];
+		var tables = [ {id:tableid} ];
+
+		d = new Date();
+		$("#mapimgpart_" + tableid).attr("src", "php/tablemap.php?command=getTableMapImgAsPng&tableid=" + tableid + "&"+d.getTime());
+		$("#mapimgpart_" + tableid).toggle();
+	});
+	
+	$.each(entriesToCook, function (i, table) {   
+		$("#table-" + table.tableid).data("queueids", table.ids);
+	});
+	
+	$(".preparedlistitem").off("click").on("click", function (e) {
+		declareProductBeDelivered($(this).attr("id"));
+		getAndDisplayAllEntries();
+	});
+	
+	$(".preparedtable").off("click").on("click", function (e) {
+		var test = $(this).data("queueids");
+		declareMultipleProductsDelivered($(this).data("queueids"));
+		getAndDisplayAllEntries();
+	});
+}
+
+function filltableWithDeliveredEntries(answer) {
+	if (answer.status != "OK") {
+		setTimeout(function(){document.location.href = "index.html"},250);
+		return;
+	}
+	
+	var cookedEntries = answer.msg;
+	
+	var theList = '<ul data-role="listview" id="deliveredProdsList" data-divider-theme="a" data-inset="true">';
+	theList += '<li data-role="list-divider" data-theme="b" data-role="heading" data-icon="check">' + S_PROVIDED[lang] + '</li>';
+	$.each(cookedEntries, function (i, queueentry) {
+		var prodname = toHtml(queueentry.longname);
+		var queue_entry_id = queueentry.id;
+		var tablename = queueentry.tablename;
+		
+		var extratxt = createExtraParagraph(queueentry.extras,0);
+		
+		theList += '<li data-theme="e" data-icon="arrow-u" id="' + queue_entry_id + '" class="deliveredlistitem"><a href="#">' + prodname + extratxt;
+		theList += '<p>' + tablename + ' - ' + queueentry.delivertime + '</p>';
+		theList += '</A></LI>';
+	});
+	theList += '</ul>';
+	
+	$("#prodsalreadydelivered").html(theList);
+	$("#prodsalreadydelivered").trigger("create");
+	
+	$(".deliveredlistitem").off("click").on("click", function (e) {
+		declareProductNOTBeDelivered($(this).attr("id"));
+		getAndDisplayAllEntries();
+	});
+}
+
+function getAndDisplayAllEntries ()
+{
+	getPreparedProds();	
+	getDeliveredEntries();
+}
+
+
+$(document).on("pageinit", "#supplydesk-page", function () {
+	getTableMapPreferences();
+	getGeneralConfigItems();
+});
+
+function initializeEverything() {
+	initializeMainMenu("#modulemenu");
+	hideMenu();
+	getAndDisplayAllEntries();
+}
+
+
+</script>
+
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext"></div>
+</div>
+
+<!--first page -->
+<div data-role="page" id="supplydesk-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" style="background-color:black;">
+         <h1><span id="supplyheadline">Bereitstellung</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" />  <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    
+    <div data-role="content">
+    	<div id="prodstodeliver"></div>
+    	<hr>
+    	<div id="prodsalreadydelivered"></div>
+    </div>    
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+</div>
+
+</body>
+</html>

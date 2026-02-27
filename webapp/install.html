@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="author" content="Stefan Pichel">
+<title>Setup</title>
+<link rel="stylesheet" type="text/css" href="css/installstyle.css?v=2.9.12">
+<script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+<script src="utilities.js?v=2.9.12"></script>
+
+<script>
+
+var CURRENCY = ["Währung","Currency","Moneda"];
+var CATEGORY = ["Kategorie","Category","Categoría"];
+var SETTING = ["Einstellung","Setting","Configuración"];
+var VALUE = ["Wert","Value","Dato"];
+var DB = ["Datenbank","Data base","Base de datos"];
+var DBSERVER = ["Datenbank-Server:","Data base server:", "Servidor:"];
+var DBNAME = ["Datenbank-Name:","Data base name:", "Nombre:"];
+var DBUSER = ["Datenbank-Benutzer:","Data base user:", "Usario:"];
+var DBPASSWORD = ["Datenbank-Passwort:","Data base password:", "Contraseña:"];
+var PREFIX = ["Präfix für die Tabellen:","Table prefix:", "Prefijo de la tablas:"];
+var TESTDB = ["Teste DB-Zugriff", "Test db access", "Probar acceso al base de datos"];
+var REPLIDB = ["Replikation (nur für Fortgeschrittene!)","Replication (for advanced users)","Replicación"];
+
+var TESTWRITEACCESS = ["Teste Schreibberechtigung", "Test write access", "Probar derecho de sobrescribir"];
+var WRITEACCESS = ["Schreibberechtigung","Write access","Permiso de sobrescribir"];
+var PHPDIR = ["php-Verzeichnis","php directory","fichero php"];
+
+var APPLICATION = ["Applikation","Application", "Aplicación"];
+var LANGUAGE = ["Applikationssprache:","Application language:", "Idioma de la aplicación:"];
+var DECIMALPOINT = ["Dezimaltrennzeichen:","Decimal point:", "Punto decimal:"];
+var ADMINPASS = ["Administrator-Passwort:","Administrator password:", "Contraseña del administrador:"];
+var ADMINPASSREPEAT = ["Administrator-Passwort (Wdh.):","Administrator password (repetition):", "Contraseña del administrador (repitición):"];
+
+var POINTCHAR = ["Punkt","Point","Punto"];
+var COMMACHAR = ["Komma","Comma","Coma"];
+
+var STARTINSTALL = ["Starte Installation","Start installation", "Initiar instalación"];
+
+var GERMANLANG = ["Deutsch","German","Alemán"];
+var ENGLISHLANG = ["Englisch","English","Inglés"];
+var SPAINLANG = ["Spanisch","Spanish","Español"];
+
+var WRONG = ["Fehlerhaft","False","Falso"];
+var NOTWRITEABLE = ["Nicht beschreibbar","No write access","Imposible sobrescribir"];
+
+var WORKING = ["Arbeitet...","Working...","Trabajando..."];
+var DB_SETTING_WRONG = ["Datenbank-Angaben falsch","Data base values wrong","Datos de la base de datos falsos"];
+var ERROR = ["Installation/Update nicht erfolgreich: ", "Install/Update not performed: ", "Problema con el update/instal: "];
+var UPDATE_OK = ["Update erfolgreich! Bitte install-Verzeichnis löschen. Bitte beachten Sie, dass die Software im Fehlerfall Debug-Daten an den Anbieter sendet. Mehr Infos dazu auf der Homepage.","Update successful! Please remove install directory. Please be aware that debug data will be sent to the provider in case of malfunctions.","Update completo. Esta recomendado removar el fichero 'install'. Por favor dar cuenta que debug data esta enviado fuera en caso de malfunctions."];
+var AUTO_UPDATE_OK = ["Update erfolgreich! Bitte vergessen Sie nicht, auch den TSEConnector zu updaten, und ebenso den Printserver, wenn Sie von einer Version 1.x auf 2.x aktualisiert haben. Bitte beachten Sie, dass die Software im Fehlerfall Debug-Daten an den Anbieter sendet. Mehr Infos dazu auf der Homepage.","Update successful! Please do not forget to update the printservers if you have updated from version 1.x to 2.x. Please be aware that debug data will be sent to the provider in case of malfunctions.","Update completo. No olvide el printserver si quiere usa sus funciones nuevas. Por favor dar cuenta que debug data esta enviado fuera en caso de malfunctions."];
+
+var SAMPLE_HEADLINE = ["Sie können die Datenbank mit Beispieldaten füllen. Diese können später beliebig wieder in der Administrations- und Artikelansicht verändert werden.",
+                       "You can fill the data base with sample data. The content can later be changed in the manager and product view.",
+                       "Puede insertar data de ejemplo, que por supuesto puede cambiar despues en la vista de administración y productos."];
+
+var SAMPLE_TITLE = ["Leere Installation oder mit Musterinhalt füllen?","Empty data base or fill with sample content","Base de datos vacia o con contento de ejemplo?"];
+var SAMPLE_WAITER_USER = ["Wenn Sie die 2. oder 3. Option auswählen, besitzen alle Benutzer das gleiche Passwort wie das des Admins, welches im Installationsschritt festgelegt wurde!", 
+                          "If you select the second or third option all users will have the same password as the admin user whose password you specified during the installation step.",
+                          "Si ha decidido opción 2 o 3 cada usario tiene el mismo contraseña que el admin que ha specificado durante el paso de la instalación."];
+var SAMPLE_EMPTY = ["leer<br>nur Admin-Benutzer","empty<br>only admin user","vacia<br>solo usuario <i>admin</i>"];
+var SAMPLE_TABLE_USER = ["6 Tische<br>Beispielspeisekarte<br>Admin- und Kellner-Benutzer<br>Kassenbonlogo",
+                         "6 tables<br>Sample menu<br>Admin and Waiter user<br>Sample receipt logo image",
+                         "6 mesas<br>Menú de ejemplo<br>usuarios admin y camarero<br>Imagén para tiques"];
+var SAMPLE_TABLE_USER_NOT_GASTRO = ["Beispielangebot<br>Admin- und normaler Benutzer<br>Kassenbonlogo",
+                         "Sample menu<br>Admin and normal user<br>Sample receipt logo image",
+                         "Menú de ejemplo<br>usuarios admin y normal<br>Imagén para tiques"];
+                 
+var SAMPLE_ROOM_TABLE_USER_ONLY_DIGI = ["2 Räume<br>je 6 Tische<br>grafische Tischauswahl<br>Beispielspeisekarte<br>Benutzer: Admin, Kellner, Chef<br>Kassenbonlogo<br>3 Gäste",
+                         "2 rooms<br>each with 6 tables<br>tablemap<br>Sample menu<br>Users: admin, waiter, manager<br>Sample receipt logo image<br>3 guests",
+                         "2 espacios<br>cada con 6 mesas<br>mapa de mesas<br>Menú de ejemplo<br>usuarios admin, camarero y jefe<br>Imagén para tiques<br>3 clientes"];
+var SAMPLE_ROOM_TABLE_USER_ONLY_DIGI_NOT_GASTRO = ["Beispielangebot<br>Benutzer: Admin, Normalbenutzer, Chef<br>Kassenbonlogo<br>3 Gäste",
+                         "Sample menu<br>Users: admin, noral user, manager<br>Sample receipt logo image<br>3 guests",
+                         "Menú de ejemplo<br>usuarios admin, usuario normal y jefe<br>Imagén para tiques<br>3 clientes"];
+var SAMPLE_ROOM_TABLE_USER = ["2 Räume<br>je 6 Tische<br>grafische Tischauswahl<br>Beispielspeisekarte<br>Benutzer: Admin, Kellner,Koch,Chef<br>Kassenbonlogo<br>3 Gäste",
+                              "2 rooms<br>each with 6 tables<br>tablemap<br>Sample menu<br>Users: admin, waiter, cook, manager<br>Sample receipt logo image<br>3 guests",
+                              "2 espacios<br>cada con 6 mesas<br>mapa de mesas<br>Menú de ejemplo<br>usuarios admin, camarero, cocinero y jefe<br>Imagén para tiques<br>3 clientes"];
+var SAMPLE_ROOM_TABLE_USER_NOT_GASTRO= ["Beispielangebot<br>Benutzer: Admin, 2 normale Benutzer,hef<br>Kassenbonlogo<br>3 Gäste",
+                              "Sample menu<br>Users: admin, 2 normal users, manager<br>Sample receipt logo image<br>3 guests",
+                              "Menú de ejemplo<br>usuarios admin, 2 usuarios normales, cocinero y jefe<br>Imagén para tiques<br>3 clientes"];
+
+var WORKFLOW_HEADLINE = ["Traditioneller Arbeitsablauf über den Druck von Arbeitsbons oder digitaler Ablauf?" ,
+		"Traditional workflow with work receipts or digital workflow?",
+				"Modo de trabajar por tiques de trabajar o del modo digital?"];
+var WORKFLOW_TABLE_TITLE = ["Auswahl Arbeitsablauf","Select work flow","Qué modo de trabajar?"];
+var WORKFLOW_DIGITAL = ["<b>Digital:</b> Bestellungen durchlaufen die digitalen Ansichten (z.B. in der Gastro: Küche, Bar, Bereitstellung), wenn nicht produktspezifisch anders eingestellt.",
+                        "<b>Digital:</b> Orders pass the digital (e.g. in gastronomy: views kitchen, bar, and supplydesk), if not configured differently for some products.",
+                        "<b>Digital:</b> Ordenes pasan las vistas digitales (por ejemplo in gastronomia: cocina, bar y productos preparados) para todos los productos que no estan configurados diferentes."];
+var WORKFLOW_WORKTICKETS = ["<b>Arbeitsbons:</b> Die Bestellung wird über Arbeitsbons abgewickelt.",
+                            "<b>Work receipts:</b> Orders are handled by printing work receipts.",
+                            "<b>Tiques de trabajar:</b> Ordenes va a ser imprimidos."];
+var WORKFLOW_BOTH = ["<b>Arbeitsbons <u>und</u> Digital:</b> Der Besteller (Gastro: Kellner) entscheidet selbst - von dieser Konfiguration wird abgeraten!",
+					"<b>Work receipts <u>and</u> digital workflow:</b> The ordener (gastronomy: waiter) decides the workflow - this configuration is not recommended!",
+					"<b>Tiques de trabajar <u>y</u> modo digital:</b> El camarero decide que modo - esta configuración no esta recomendada!"];
+var SEL_TIMEZONE = ["Zeitzone auswählen","Select time zone","Qué tiempo?"];
+var IGNORE_TIMEZONE = ["Soll nur ein Versionsupdate vorgenommen werden, so ist diese Angabe irrelevant.",
+                       "If you only intend to update the version this setting is of no interest.",
+                       "Si sólo quiere update la versión la zone de tiempo no esta importante."];
+var MISSING_PHP_EXTENSIONS = ["Diese PHP-Extensions sind nicht installiert und das kann zu Fehlfunktionen führen: ",
+                              "These PHP extensions are not installed and this may result in malfunctions of the software: ",
+                              "Estas extensiones no son instaladas y puede resultar en errores: "];
+var EXECUTION_TOO_SHORT = ["Der Php-Wert <i>max_execution_time</i> sollte mindestens 300 (Sekunden) betragen, damit zeitintensive Backup/Restore-Funktionen möglich sind. Er beträgt im Moment: ",
+                           "The PHP value <i>max_execution_time</i> should be 300 (seconds) at minimum to allow time-consuming backup/restore tasks. Currently the value is: ",
+                           "Al valor <i>max_execution_time</i> debe ser 300 (secondos) al minimum para permitir backup/restore funcionality que necesity mucho tiempo. De momento ekl valor es: "];
+var EXECUTION_TOO_SHORT_ADD = ["Auf schnellen Servern und bei guter Datenverbindung ist das jedoch kein Problem.",
+                               "If the server has a good performance and the data uplink is good this value is ok.",
+                               "Si el servidor trabaja rapidamente y si la velocidad del uplink es bueno, este valor es bueno."];
+var SESSION_LIFETIME_TOO_SHORT = ["Die maximale Sessionlebenszeit <i>session.gc_maxlifetime</i> bestimmt die Dauer, die ein Benutzer eingeloggt sein darf. Ratsam sind 36000 Sekunden = 10 Stunden. Aktuell ist eingestellt: ",
+                                  "The maximal session lifetime <i>session.gc_maxlifetime</i> is the maximal duration that a user is allowed to log in. A value of 36000 seconds = 10 hours is recommended. Currently the value is: ",
+                                  "El session lifetime <i>session.gc_maxlifetime</i> es la duracion pata un usario de estar logged-in. Recommendado 36000 secondos = 10 horas. De momento el valor es: "];
+var NOT_ALL_PHP_OK = ["Die Installation kann trotzdem fortgesetzt werden. Bitte beachten Sie die jedoch die obigen Hinweise!",
+                      "You can continue the installation but please consider the notes!",
+                      "Se puede continuar la instalación pero leer las recomendaciones!"];
+var NEXT_NXT = ["Weiter","Continue","Continuar"];
+var RESTMODE_TXT = ["Einsatzort","Place of use","Lugar de uso"];
+
+var DSF_NAME = ["Name","Name","Nombre"];
+var DSF_STREET = ["Strasse","Street","Calle"];
+var DSF_PLZ = ["PLZ","Postal Code","Código Postal"];
+var DSF_CITY = ["Stadt","City","Ciudad"];
+var DSF_COUNTRY = ["Land","Country","País"];
+var DSF_STNR = ["Steuernummer","Tax Number","Número de impuestos"];
+var DSF_USTID = ["Umsatzsteuer-Identifikationsnummer","Sales tax identification number", "Número de identificación del impuesto sobre las ventas"];
+var PAYDESKID = ["Kassen-ID","Paydesk ID","ID de sistema"];
+
+var DEFAULT_VIEW = ["Standard-Kellneransicht","Defaut waiter's view","Vista estandardo"];
+var CANCEL_CODE_TXT = ["Bon-Stornocode","Receipt cancel code","Codigo de revocar"];
+var PRINT_CODE = ["Printcode","Printcode","Printcode"];
+var GEN_SETTINGS_TXT = ["Allgemeine Einstellungen","General settings","Parametrizaciones generales"];
+var GEN_SETTINGS_CHANGEABLE_TXT = ["Alle Einstellungen können jederzeit später wieder in der Administrationsansicht geändert werden.<br><br>Soll nur ein Versionsupdate vorgenommen werden, so sind diese Angaben irrelevant.","All these settings can be changed at any time later in the administration view.<br><br>If you only intend to update the version these settings are of no interest.","Todos los ajustes se pueden cambiar en cualquier momento en la vista de administración.<br><br>Si sólo quiere update la versión estas parameters no estan importantes."];
+var CAT1NAME = ["Kategorie 1","Category 1","Categoría 1"];
+var CAT2NAME = ["Kategorie 2","Category 2","Categoría 2"];
+var PRODLISTNAME = ["Name der Artikelliste","Name of list of articles","Nombre de la lista de articulos"];
+var CAT1VIEWNAME = ["Ansichtsname der Kategorie 1","Name of the view of category 1","Nombre de la vista de categoría 1"];
+var CAT2VIEWNAME = ["Ansichtsname der Kategorie 2","Name of the view of category 2","Nombre de la vista de categoría 2"];
+var DESKVIEWNAME = ["Name der Desktopbestell-/kassenansicht","Name of the desktop order and paydesk view","Nombre de la vista de desktop para ordernar"];
+var CATS_NEED_BE_FILLED = ["Alle Einsastzort-spezifischen Felder müssen ausgefüllt werden.","All fields that are specific for the place of use need to be filled.","Deben rellenarse todos los campos específicos del lugar de uso."];
+
+var lang = 0;
+var workflow = 1;
+var timezone = "Europe/Berlin";
+var doOnlyUpdate = false;
+
+// generalsettings
+var gen_restaurantmode = 1;
+
+var dsfinvk_name = "";
+var dsfinvk_street = "";
+var dsfinvk_postalcode = "";
+var dsfinvk_city = "";
+var dsfinvk_country = "";
+var dsfinvk_stnr = "";
+var dsfinvk_ustid = "";
+var paydeskid = 1;
+
+var cat1name = "";
+var cat2name = "";
+var prodlistname = "";
+var cat1viewname = "";
+var cat2viewname = "";
+var deskviewname = "";
+
+var gen_defaultview = 0;
+var gen_stornocode = 123;
+var gen_printpass = 123;
+var allowInstallOrUpdate = true;
+
+function setLanguage(langIndex) {
+	lang = langIndex;
+	
+	$("#formid").data("lang",lang);
+	
+	$("#currencytxt").html(CURRENCY[lang] + ": ");
+	$("#category").html(SETTING[lang]);
+	$("#setting").html(VALUE[lang]);
+	$("#value").html(VALUE[lang]);
+	$("#db").html(DB[lang]);
+	$("#dbserver").html(DBSERVER[lang]);
+	$("#dbname").html(DBNAME[lang]);
+	$("#dbusertxt").html(DBUSER[lang]);
+	$("#dbpassword").html(DBPASSWORD[lang]);
+	$("#prefix").html(PREFIX[lang]);
+	$("#testdb").html(TESTDB[lang]);
+        $("#dbrepli").html(REPLIDB[lang]);
+	
+	$("#writeaccess").html(WRITEACCESS[lang]);
+	$("#testwriteaccess").html(TESTWRITEACCESS[lang]);
+	$("#phpdir").html(PHPDIR[lang]);
+	
+	$("#application").html(APPLICATION[lang]);
+	$("#language").html(LANGUAGE[lang]);
+	$("#decimalpoint").html(DECIMALPOINT[lang]);
+	
+	$("#adminpassword").html(ADMINPASS[lang]);
+	$("#adminpasswordrepeat").html(ADMINPASSREPEAT[lang]);
+	$("#startinstall").html(STARTINSTALL[lang]);
+	
+	$("#pointchar").html(POINTCHAR[lang]);
+	$("#commachar").html(COMMACHAR[lang]);
+	
+	$("#germanlang").html(GERMANLANG[lang]);
+	$("#englishlang").html(ENGLISHLANG[lang]);
+	$("#spainlang").html(SPAINLANG[lang]);
+	
+	$("#sampleheadline").html(SAMPLE_HEADLINE[lang]);
+	$("#samplesettingstitel").html(SAMPLE_TITLE[lang]);
+	$("#samplewaiterinfo").html(SAMPLE_WAITER_USER[lang]);
+	$("#sampleempty").html(SAMPLE_EMPTY[lang]);
+	$("#sampletableuser").html(SAMPLE_TABLE_USER[lang]);
+	$("#sampleroomtableuser").html(SAMPLE_ROOM_TABLE_USER[lang]);
+	
+	$("#workflowheadline").html(WORKFLOW_HEADLINE[lang]);
+	$("#workflowtabletitle").html(WORKFLOW_TABLE_TITLE[lang]);
+	$("#workflowdigital").html(WORKFLOW_DIGITAL[lang]);
+	$("#workflowworkreceipts").html(WORKFLOW_WORKTICKETS[lang]);
+	$("#workflowworkboth").html(WORKFLOW_BOTH[lang]);
+	
+	$("#timezoneheader").html(SEL_TIMEZONE[lang]);
+	$("#ignoretimezonehint").html(IGNORE_TIMEZONE[lang]);
+	
+	$("#setgeneralsettingsbtntxt").html(NEXT_NXT[lang]);
+	$("#restmodetxt").html(RESTMODE_TXT[lang]);
+	
+	$("#dsfinvk_name_txt").html(DSF_NAME[lang]);
+	$("#dsfinvk_street_txt").html(DSF_STREET[lang]);
+	$("#dsfinvk_postalcode_txt").html(DSF_PLZ[lang]);
+	$("#dsfinvk_city_txt").html(DSF_CITY[lang]);
+	$("#dsfinvk_country_txt").html(DSF_COUNTRY[lang]);
+	$("#dsfinvk_stnr_txt").html(DSF_STNR[lang]);
+	$("#dsfinvk_ustid_txt").html(DSF_USTID[lang]);
+	$("#paydeskid_txt").html(PAYDESKID[lang]);
+	
+	$("#defaultviewtxt").html(DEFAULT_VIEW[lang]);
+	$("#cancelcodetxt").html(CANCEL_CODE_TXT[lang]);
+	$("#printcodetxt").html(PRINT_CODE[lang]);
+	$("#gensettingstxt").html(GEN_SETTINGS_TXT[lang]);
+	$("#gensettingschangeabletxt").html(GEN_SETTINGS_CHANGEABLE_TXT[lang]);
+        
+        $("#cat1name_txt").html(CAT1NAME[lang]);
+        $("#cat2name_txt").html(CAT2NAME[lang]);
+        $("#prodlistname_txt").html(PRODLISTNAME[lang]);
+        $("#cat1viewname_txt").html(CAT1VIEWNAME[lang]);
+        $("#cat2viewname_txt").html(CAT2VIEWNAME[lang]);
+        $("#deskviewname_txt").html(DESKVIEWNAME[lang]);
+	
+	checkWriteAccess();
+	testdb();
+	checkPhpStatus();
+}
+
+function testdb() {
+	var dbhost = $("#db_host").val();
+        var dbport = $("#db_port").val();
+	var dbname = $("#db_name").val();
+	var dbuser = $("#dbuser").val();
+	var dbpass = $("#dbpass").val();
+
+	var data = {
+			host:dbhost,
+                        port:dbport,
+			dbname:dbname,
+			user:dbuser,
+			pass:dbpass
+	};
+
+	doAjaxSuppressError("POST","install/installer.php?command=testDbConnection",data,answerOfTestDb,"Kommunikation zum Server fehlerhaft");
+	
+}	
+
+function getDbVals() {
+	doAjax("GET",
+			"install/installer.php?command=getConfig",
+			null,fillDbVals,
+			"Kommunikation zum Server fehlerhaft", false);
+}
+
+function fillDbVals(dbVals) {
+	if (dbVals.status === "OK") {
+		var db = dbVals.result;
+		$("#db_host").val(db.host);
+                $("#db_port").val(db.port);
+		$("#db_name").val(db.db);
+		$("#dbuser").val(db.user);
+                $("#replidbs").val(db.replidbs);
+		$("#dbpass").val(db.password);
+		$("#table_prefix").val(db.tabprefix);
+		testdb();
+	}
+}
+
+function answerOfTestDb(answer) {
+	if ((answer.status === "OK") && (answer.ok == 1)) {
+		$("#testdbstatus").html("<b style='color:green;'>OK</b>");
+		$("#testdbstatus").data("status",true);
+	} else {
+		$("#testdbstatus").html("<b style='color:red;'>" + answer.msg + "</b>");
+		$("#testdbstatus").data("status",false);
+	}
+}
+
+function checkWriteAccess() {
+	doAjax("GET",
+			"install/installer.php?command=checkWriteAccess",
+			null,
+			insertWriteAccessVals,
+			"Kommunikation mit Webserver fehlerhaft",true);
+}
+
+function checkPhpStatus() {
+	doAjax("GET",
+			"install/installer.php?command=checkPhpStatus",
+			null,
+			insertPhpStatus,
+			"Kommunikation mit Webserver fehlerhaft",true);
+}
+
+function insertBoolVal(id,boolval) {
+	var notwriteable = NOTWRITEABLE[lang];
+	if (boolval == 1)  {
+		$(id).html("<b style='color:green;'>OK</b>");
+		$(id).data("status",true);
+	} else {
+		$(id).html("<b style='color:red;'>" + notwriteable + "</b>");
+		$(id).data("status",false);
+	}
+}
+
+function insertWriteAccessVals(writestatus) {
+	var wrongtxt = WRONG[lang];
+
+	insertBoolVal("#writeaccessconfigfolder",writestatus.configfolder);
+	insertBoolVal("#writeaccessconfigfile",writestatus.configfile);
+	
+	if (
+			$("#writeaccessconfigfolder").data("status") && 
+			$("#writeaccessconfigfile").data("status")) {
+		
+		$("#writestatus").html("<b style='color:green;'>OK</b>");
+		$("#writestatus").data("status",true);
+	} else {
+		$("#writestatus").html("<b style='color:red;'>" + wrongtxt + "</b>");
+		$("#writestatus").data("status",false);
+	}
+}
+
+function insertPhpStatus(phpStatus) {
+	var allOk = true;
+	var txt = "";
+	if (phpStatus.extensions_status == 0) {
+		txt += "<p>" + MISSING_PHP_EXTENSIONS[lang] + phpStatus.missing_extensions + "</p>";
+		allOk = false;
+	}
+	
+	if (phpStatus.max_execution_status == 0) {
+		txt += "<p>" + EXECUTION_TOO_SHORT[lang] + phpStatus.max_execution_time + "<br>" + EXECUTION_TOO_SHORT_ADD[lang] + "</p>";
+		allOk = false;
+	}
+	
+	if (phpStatus.session_lifetime_status == 0) {
+		txt += "<p>" + SESSION_LIFETIME_TOO_SHORT[lang] + phpStatus.session_gc_maxlifetime + "</p>";
+		allOk = false;
+	}
+	
+	if (allOk) {
+		txt = "<span style='color:green;font-weight:bold;'>OK!</span>";
+	} else {
+		txt = "<span style='color:red;font-weight:bold;'>" + txt + "<p><i>" + NOT_ALL_PHP_OK[lang] + "</i></p></span>";
+	}
+	$("#phpstatusfield").html(txt);
+}
+
+function startupdateajax(cmd) {
+	if ( $("#testdbstatus").data("status")) {
+		var data = {
+				host: $("#db_host").val(),
+                                port: $("#db_port").val(),
+				db: $("#db_name").val(),
+                                dbreplis: $("#replidbs").val(),
+				user: $("#dbuser").val(),
+				password: $("#dbpass").val(),
+				prefix: $("#table_prefix").val(),
+				autoupdate: (doOnlyUpdate ? 1 : 0)
+		}
+                
+                if (cmd === "update") {
+                        allowInstallOrUpdate = false;
+                        doAjaxWithProgress("POST", "install/installer.php?command=update", data, resultOfUpdate, showUpdateProgress, "Fehler beim Versionsupdate", true,"text");
+                } else {
+                        doAjax("POST",
+                                "install/installer.php?command=" + cmd,
+                                data,
+                                resultOfUpdate,
+                                "Fehler beim Versionsupdate");
+                }
+		
+	} else {
+		alert(DB_SETTING_WRONG[lang]);
+	}
+}
+
+
+function startinstall() {
+	
+	if ($("#adminpass").val().length == 0) {
+		alert("Administratorpasswort ist nicht gesetzt");
+		return;
+	}
+	
+	if ($("#adminpass").val() != $("#adminpass2").val()) {
+		alert("Administratorpasswort uneinheitlich eingegeben");
+		return;
+	}
+	
+	var currencytxt = (($("#currency")).val()).trim();
+	if (currencytxt.length === 0) {
+		alert("Währungstext ist nicht ausgefüllt.");
+		return;
+	}	
+	
+	if ( $("#testdbstatus").data("status") && 
+			$("#writestatus").data("status")
+	) {
+		// 0: German, 1: Englisch
+		var langid = $("#formid").data("lang");
+		
+		// 0: Comma, 1: Point
+		var point = $("#point")[0].selectedIndex;
+		if (point == 0) {
+			point = ",";
+		} else {
+			point = ".";
+		}
+		var data = {
+				host: $("#db_host").val(),
+                                port: $("#db_port").val(),
+				db: $("#db_name").val(),
+				user: $("#dbuser").val(),
+				password: $("#dbpass").val(),
+				prefix: $("#table_prefix").val(),
+                                dbreplis: $("#replidbs").val(),
+				adminpass: $("#adminpass").val(),
+				currency: currencytxt,
+				lang: langid,
+				point: point,
+				timezone:timezone,
+				dsfinvk_name: dsfinvk_name,
+				dsfinvk_street: dsfinvk_street,
+				dsfinvk_postalcode: dsfinvk_postalcode,
+				dsfinvk_city: dsfinvk_city,
+				dsfinvk_country: dsfinvk_country,
+				dsfinvk_stnr: dsfinvk_stnr,
+				dsfinvk_ustid: dsfinvk_ustid,
+                                cat1name: cat1name,
+                                cat2name: cat2name,
+                                prodlistname: prodlistname,
+                                cat1viewname: cat1viewname,
+                                cat2viewname: cat2viewname,
+                                deskviewname: deskviewname,
+				paydeskid: paydeskid,
+				restaurantmode: gen_restaurantmode,
+				cancelcode: gen_stornocode,
+				printpass: gen_printpass,
+				defaultview: gen_defaultview
+		}
+		
+		$("#freshinstallprogressindicator").show();
+                $("#installprogressmsg").show();
+		setTimeout(function(){
+                        allowInstallOrUpdate = false;
+                        doAjaxWithProgress("POST", "install/installer.php?command=install", data, resultOfInstall, showInstallProgress, "Fehler bei der Installation", true,"text");
+		},500);
+		
+	} else {
+		alert("Installation nicht möglich");
+	}
+}
+
+function resultOfUpdate(jsonAnswer) {
+        $("#updateinprogresstxt").hide();
+        allowInstallOrUpdate = true;
+        var response = jsonAnswer.split("#");
+        var lastPartOfMsg = JSON.parse(response[response.length - 1]);
+	if (lastPartOfMsg.status == "OK") {
+		if (!doOnlyUpdate) {
+			alert(UPDATE_OK[lang]);
+		} else {
+			alert(AUTO_UPDATE_OK[lang]);
+		}
+		var d = new Date();
+		var n = d.getTime();
+		setTimeout(function(){document.location.href = "logout.php?nocache=" + n;},500);
+	} else {
+		if (typeof lastPartOfMsg === 'string' || lastPartOfMsg instanceof String) {
+			alert(ERROR[lang] + ": " + lastPartOfMsg);
+		} else {
+			alert(ERROR[lang] + lastPartOfMsg.msg);
+		}
+		setTimeout(function(){$("#installprogressindicator").hide();},500);
+	}
+}
+
+function resultOfSampleData(jsonAnswer) {
+	setTimeout(function(){
+		$("#sampleinprogressindicator").hide();
+	},500);
+        var d = new Date();
+	var n = d.getTime();
+	if (jsonAnswer == "OK") {
+		var langid = $("#formid").data("lang");
+		
+		if (langid == 0) {
+			$("#progress").html("<b style='color:green;'>Abgeschlossen</b>");
+			alert("Die Installation ist nun abgeschlossen. Sie werden nun zur Einstiegsseite "
+					 + "umgeleitet. Wenn Sie sich mit dem soeben vergebenen Passwort einloggen "
+					 + "können, war die Installation erfolgreich. Löschen Sie in diesem Fall "
+					 + "das Verzeichnis 'install', damit die Installation nicht zu einem späteren "
+					 + "Zeitpunkt versehentlich überschrieben wird! Bitte beachten Sie, dass in Fehlerfällen "
+					 + "Debug-Daten zum Anbieter geschickt werden. Genaueres dazu ist auf der Homepage beschrieben.");
+			setTimeout(function(){document.location.href = "logout.php?nocache=" + n;},500);
+		} else if (langid == 1) {
+			$("#progress").html("<b style='color:green;'>Finished</b>");
+			alert("The installation is finished. You will be directed to the main page. If you can log " 
+					+ "in with the admin password the installation was successful. Remove the install "
+					+ "directory to avoid a later change of the installation by accident. Please be aware that "
+					+ " in case of malfunctions debug data will be sent to the provider of the software.");
+			setTimeout(function(){document.location.href = "logout.php?nocache=" + n;},500);
+		} else if (langid == 2) {
+			$("#progress").html("<b style='color:green;'>Acabado</b>");
+			alert("La instalación esta completada. Vas a ser dirijido a la página principal. Si puedes"
+					+ " log in con la contraseña que has ponido en la página de instalación, la"
+					+ " instalación esta completada con éxito. Esta recomendado removar el fichero "
+					+ " 'install'. Por favor, dar cuenta de que en problemas debug data esta enviado fuera.");
+			wsetTimeout(function(){document.location.href = "logout.php?nocache=" + n;},500);
+		}
+	} else {
+		alert(ERROR[lang] + jsonAnswer);
+	}
+}
+
+function resultOfInstall(jsonAnswer) {
+        allowInstallOrUpdate = true;
+        var response = jsonAnswer.split("#");
+        var lastPartOfMsg = JSON.parse(response[response.length - 1]);
+	if (lastPartOfMsg.status == "OK") {
+		$("#languagesettings").hide();
+		$("#timezones").hide();
+		$("#generalsettings").hide();
+		$("#installsettings").hide();
+		$("#samplesettings").hide();
+		$("#workflowsettings").show();
+	} else {
+		alert(ERROR[lang] + lastPartOfMsg.msg);
+	}
+}
+
+function showInstallProgress(e) {
+        var response = e.target.responseText.split("#");
+        if ((response.length > 0) && (response[response.length - 1] !== "")) {
+                var lastPartOfMsg = JSON.parse(response[response.length - 1]);
+                if (lastPartOfMsg.status === "inprogress") {
+                        $("#installprogressmsg").html(lastPartOfMsg.msg);
+                }
+        }
+}
+
+function showUpdateProgress(e) {
+        var response = e.target.responseText.split("#");
+        if ((response.length > 0) && (response[response.length - 1] !== "")) {
+                var lastPartOfMsg = JSON.parse(response[response.length - 1]);
+                if (lastPartOfMsg.status === "inprogress") {
+                        $("#updateprogressmsg").html(lastPartOfMsg.msg);
+                }
+        }
+}
+
+function binding() {
+	$("#testdb").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		testdb();
+	});
+	
+	checkWriteAccess();
+	
+	$("#testwriteaccess").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		checkWriteAccess();
+	});
+	
+	$("#startinstall").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+                if (!allowInstallOrUpdate) {
+                        alert("Ein Installations-Vorgang ist bereits aktiv!");
+                        return;
+                }
+		startinstall();
+	});
+	
+	$(".germanflag").off("click").on("click", function (e) {
+		setSelectedLanguage(e,0);
+	});
+	
+	$(".ukflag").off("click").on("click", function (e) {
+		setSelectedLanguage(e,1);
+	});
+	
+	$(".spainflag").off("click").on("click", function (e) {
+		setSelectedLanguage(e,2);
+	});
+	
+	$("#updatebtn").off("click").on("click", function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+                if (!allowInstallOrUpdate) {
+                        alert("Ein Update-Vorgang ist bereits aktiv!");
+                        return;
+                }
+		setTimeout(function(){
+			startupdateajax("update");
+		},250);	
+	});
+	
+	$(".flags").hover(
+	        function() { $(this).addClass("Hover"); },
+	        function() { $(this).removeClass("Hover"); }
+	    );
+	
+	$("#sample_empty").off("click").on("click", function(e) {
+		insertSampleContent(e,1);
+	});
+	
+	$("#sample_tables_user_menu").off("click").on("click", function(e) {
+		insertSampleContent(e,2);
+	});
+	
+	$("#sample_rooms_tables_user_menu").off("click").on("click", function(e) {
+		insertSampleContent(e,3);
+	});
+	
+	$("#workflow_digi_btn").off("click").on("click", function(e) {
+		setWorkflowMode(e,1);
+	});
+	$("#workflow_receipts_btn").off("click").on("click", function(e) {
+                if (gen_restaurantmode == 1) {
+                        $("#sampleroomtableuser").html(SAMPLE_ROOM_TABLE_USER_ONLY_DIGI[lang]);
+                } else {
+                        $("#sampleroomtableuser").html(SAMPLE_ROOM_TABLE_USER_ONLY_DIGI_NOT_GASTRO[lang]);
+                }
+		setWorkflowMode(e,2);
+	});
+	$("#workflow_both_btn").off("click").on("click", function(e) {
+		setWorkflowMode(e,0);
+	});
+	
+	$("#timezonebtn").off("click").on("click", function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		timezone = $("#zoneselection").find(":selected").text();
+		$("#timezones").hide();
+		$("#generalsettings").show();
+	});
+	
+	$("#setgeneralsettingsbtn").off("click").on("click", function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();             
+		
+		
+		// save the general settings that the user wants to have
+		gen_restaurantmode = $("#restmodeselection").val();
+		gen_defaultview = $("#defaultmodeselection").val();
+		gen_stornocode = $("#cancelcode").val();
+		gen_printpass = $("#printcode").val();
+
+		dsfinvk_name = $("#dsfinvk_name").val();
+		dsfinvk_street = $("#dsfinvk_street").val();
+		dsfinvk_postalcode = $("#dsfinvk_postalcode").val();
+		dsfinvk_city = $("#dsfinvk_city").val();
+		dsfinvk_country = $("#dsfinvk_country").val();
+		dsfinvk_stnr = $("#dsfinvk_stnr").val();
+		dsfinvk_ustid = $("#dsfinvk_ustid").val();
+		paydeskid = $("#paydeskid").val();
+                
+                cat1name = $("#cat1name").val().trim();
+                cat2name = $("#cat2name").val().trim();
+                prodlistname = $("#prodlistname").val().trim();
+                cat1viewname = $("#cat1viewname").val().trim();
+                cat2viewname = $("#cat2viewname").val().trim();
+                deskviewname = $("#deskviewname").val().trim();
+                
+                if ((cat1name === "") || (cat2name === "") || (prodlistname === "") || (cat1viewname === "") || (cat2viewname === "") || (deskviewname === "")) {
+                        alert(CATS_NEED_BE_FILLED[lang]);
+                        return;
+                }
+		
+                $("#generalsettings").hide();
+		$("#installsettings").show();
+	});
+        
+        $("#restmodeselection").off("change").on("change", function(e) {
+                var val = $("#restmodeselection").val();
+                insertCatSettings(val);
+        });
+}
+
+function insertCatSettings(useindex) {
+        var l = $("#formid").data("lang");
+        
+        if (useindex == 1) {
+                $("#cat1name").val(["Speisen","Food","Alimentos"][l]);
+                $("#cat2name").val(["Getränke","Drinks","Bebidas"][l]);
+                $("#prodlistname").val(["Speisekarte","Menu","Menú"][l]);
+                $("#cat1viewname").val(["Küche","Kitchen","Cocina"][l]);
+                $("#cat2viewname").val(["Bar","Bar","Bar"][l]);
+                $("#deskviewname").val(["Kellneransicht","Waiter's View","Vista de camareros"][l]);
+        } else if (useindex == 2) {
+                $("#cat1name").val(["Herren","Gentlemen","Hombres"][l]);
+                $("#cat2name").val(["Damen","Ladies","Señoras"][l]);
+                $("#prodlistname").val(["Angebot","Articles","Articulos"][l]);
+                $("#cat1viewname").val(["Herrenbereich","Men's area","Zona de hombres"][l]);
+                $("#cat2viewname").val(["Damenbereich","Ladies areas","Zona de señoras"][l]);
+                $("#deskviewname").val(["Artikelkauf","Buy articles","Pagar articulos"][l]);
+        } else if (useindex == 3) {
+                $("#cat1name").val(["Tageskarten","Day tickets","Entradas de un día"][l]);
+                $("#cat2name").val(["Einzelkarten","One-way tickets","Billetes sencillos"][l]);
+                $("#prodlistname").val(["Eintrittskarten","Tickets","Entradas"][l]);
+                $("#cat1viewname").val(["Tageskarten","Day tickets","Entradas de un día"][l]);
+                $("#cat2viewname").val(["Einzelkarten","One-way tickets","Billetes sencillos"][l]);
+                $("#deskviewname").val(["Artikelkauf","Buy articles","Pagar articulos"][l]);
+        } else if (useindex == 4) {
+                $("#cat1name").val(["Lebensmittel","Food","Alimentos"][l]);
+                $("#cat2name").val(["Sachartikel","Non-food","Articulos"][l]);
+                $("#prodlistname").val(["Angebot","Products","Productos"][l]);
+                $("#cat1viewname").val(["Lebensmittelabteilung","Food area","Alimentos"][l]);
+                $("#cat2viewname").val(["Sachabteilung","Non-food area","Articulos"][l]);
+                $("#deskviewname").val(["Artikelkauf","Buy articles","Pagar articulos"][l]);
+        }
+}
+
+function setWorkflowMode(e,mode) {
+	e.stopImmediatePropagation();
+	e.preventDefault();
+	workflow = mode;
+	$("#languagesettings").hide();
+	$("#timezones").hide();
+	$("#generalsettings").hide();
+	$("#installsettings").hide();
+	$("#samplesettings").show();
+	$("#workflowsettings").hide();
+        setSampleOptionTexts();
+}
+
+
+function insertSampleContent(e,level) {
+	e.stopImmediatePropagation();
+	e.preventDefault();
+	var langid = $("#formid").data("lang");
+	$("#samplesettings").html("<b style='color:red;'><center><br><img id='sampleinprogressindicator' src='php/3rdparty/images/ajax-loader.gif' alt='Progress indication' /><br>" + WORKING[langid] + "</b></center>");
+	var data = {
+			host: $("#db_host").val(),
+                        port: $("#db_port").val(),
+			db: $("#db_name").val(),
+			user: $("#dbuser").val(),
+			password: $("#dbpass").val(),
+			prefix: $("#table_prefix").val(),
+			adminpass: $("#adminpass").val(),
+			lang: langid,
+			level:level,
+			workflow:workflow,
+			timezone:timezone,
+                        restmode:gen_restaurantmode
+	}
+	doAjax("POST",
+			"install/installer.php?command=insertsamplecontent",
+			data,
+			resultOfSampleData,
+			"Fehler bei der Installation");
+}
+
+function setSelectedLanguage(e,l) {
+	e.stopImmediatePropagation();
+	e.preventDefault();
+	setLanguage(l);
+	
+	$("#dsfinvk_name").val("Musterrestaurant");
+	$("#dsfinvk_street").val("ABC-Straße 123");
+	$("#dsfinvk_postalcode").val("12345");
+	$("#dsfinvk_city").val("Beispielstadt");
+	$("#dsfinvk_country").val("Deutschland");
+	$("#dsfinvk_stnr").val("123");
+	$("#dsfinvk_ustid").val("456");
+	$("#paydeskid").val(1);
+	
+	$("#languagesettings").hide();
+	$("#timezones").hide();
+        
+        insertCatSettings(1);
+	displayTimezones();
+}
+
+function displayTimezones() {
+	$("#languagesettings").hide();
+	$("#timezones").show();
+	if (lang == 0) {
+		$("#datasec_de").show();
+	} else if (lang == 1) {
+		$("#datasec_en").show();
+	} else if (lang == 2) {
+		$("#datasec_es").show();
+	}
+}
+
+function getTimeZones() {
+	doAjax("POST","install/installer.php?command=gettimezones",null,insertTimeZones,null);
+}
+
+function insertTimeZones(zones) {
+	var options = "";
+	for (var i=0;i<zones.length;i++) {
+		var aZone = zones[i];
+		if (aZone == "Europe/Berlin") {
+			options += "<option selected>" + aZone + "<option>";
+		} else {
+			options += "<option>" + aZone + "<option>";
+		}
+	}
+	$("#zoneselection").html(options);
+}
+
+function checkDoOnlyUpdate() {
+	var urlsuffix = location.search;
+	var suffices = urlsuffix.split('&');
+	for(var i=0;i<suffices.length;i++) {
+		if ((suffices[i] == 'mode=onlyupdate') || (suffices[i] == '?mode=onlyupdate')) {
+			return true;
+		}
+	}
+	return false;
+}
+
+$(document).ready(function() {
+	$("#printcode").val("123");
+	$("#cancelcode").val("123");
+	$("#restmodeselection").val(1);
+	$("#defaultmodeselection").val(0);
+	
+	doOnlyUpdate = checkDoOnlyUpdate();
+	
+	setLanguage(0);
+	binding();
+	getDbVals();
+	$("#startinstall").css({ width: '300px', 'padding-top': '10px', 'padding-bottom': '10px' });
+	
+	getTimeZones();
+
+	if (doOnlyUpdate) {
+		$("#languagesettings").hide();
+		$("#timezones").hide();
+		$("#generalsettings").hide();
+		$("#installsettings").show();
+		$("#samplesettings").hide();
+		$("#workflowsettings").hide();
+		$("#startinstall").hide();
+		$(".applarea").hide();
+		
+		$("#db_host").prop('disabled', true);
+                $("#db_port").prop('disabled', true);
+		$("#db_name").prop('disabled', true);
+		$("#dbuser").prop('disabled', true);
+		$("#dbpass").prop('disabled', true);
+		$("#table_prefix").prop('disabled', true);
+		
+		$("#updatebtn").hide();
+		$("#updateinprogresstxt").show();
+		setTimeout(function(){
+			startupdateajax("update");
+		},250);	
+		
+	} else {
+		$("#languagesettings").show();
+		$("#timezones").hide();
+		$("#generalsettings").hide();
+		$("#installsettings").hide();
+		$("#samplesettings").hide();
+		$("#workflowsettings").hide();
+	}
+});
+	
+        function setSampleOptionTexts() {
+                if (gen_restaurantmode == 1) {
+                        $("#sampletableuser").html(SAMPLE_TABLE_USER[lang]);
+                        $("#sampleroomtableuser").html(SAMPLE_ROOM_TABLE_USER[lang]);
+                } else {
+                        $("#sampletableuser").html(SAMPLE_TABLE_USER_NOT_GASTRO[lang]);
+                        $("#sampleroomtableuser").html(SAMPLE_ROOM_TABLE_USER_NOT_GASTRO[lang]);
+                }
+        }
+</script>
+  	
+<style>
+
+	
+</style>
+
+</head>
+<body style="background-color:#3c5265 ;">
+
+	<div style="background-color: #2a3947;text-align:center;margin: -10px;">
+		<img src=img/installbanner.png style="height:300px;" alt="Banner" />
+	</div>
+
+<div id="languagesettings" class="installcenterdiv">
+	<br>
+	<br>
+	
+		<table class="installtable" id="langTable" >
+			<tr><th>Sprache auswählen und Installation starten - Select language - Qué idioma?</tr>
+			<tr><td class="germanflag"><img class="flags" src=img/germanflag.png style="width:35px;height:23px;" />&nbsp;&nbsp;&nbsp;<span style="font-size:20px;">Deutsch</span></tr>
+			<tr><td class="ukflag"><img class="flags" src=img/ukflag.png style="width:35px;height:23px;" />&nbsp;&nbsp;&nbsp;<span style="font-size:20px;">English</span></tr>
+			<tr><td class="spainflag"><img class="flags" src=img/spainflag.png style="width:35px;height:23px;" />&nbsp;&nbsp;&nbsp;<span style="font-size:20px;">Español</span></tr>
+		</table>
+        
+        
+        <p /><br /><br />Oder bestehende Installation updaten
+        
+        <p />
+        <table class="installtable">
+                <tr id=updateline>
+                <td>&nbsp;</td>
+                <td align="center">
+                <button id="updatebtn" class="updatebtn">Update -> 2.9.12</button>
+                <span id="updateinprogresstxt" style="display:none;"><img id="installprogressindicator" src="php/3rdparty/images/ajax-loader.gif" alt="Progress indication" /> Update... bitte warten.</span>
+                </td>
+                <td id="updateprogressmsg">&nbsp;</td>
+                </tr>
+        </table>
+</div>
+
+
+<div id="timezones" class="installcenterdiv">
+	<br><br>
+	<form>
+		<table class="installtable" id="timezoneTable">
+			<tr><th colspan=2><span id=timezoneheader>Zeitzone</span></tr>
+			<tr><td><select id=zoneselection style="height:50px;font-family : monospace;font-size : 17pt;" class="installselect">
+			</select>
+			<td><input id="timezonebtn" type="submit" value="&gt;&gt;" />
+			</tr>
+		</table>
+	</form>
+	<br>
+	<div style="font-size:20px;color:white;">
+	(<span id=ignoretimezonehint>Uninteressant bei reinem Versionsupdate</span>)
+	</div>
+	<br>
+	<div id="datasec_de" style="text-align:left;border: 1px solid #666666;border-radius: 25px;padding: 10px;background-color: #cccccc;color:black;display:none;">
+		<br><b><u>Hinweise zum Datenschutz:</u></b><br>
+		Der OrderSprinter-Webservice benötigt keine Verbindung zum Internet. Kann der OrderSprinter-Webserver jedoch eine Verbindung zum Internet aufbauen, stehen folgende 
+		Funktionen zur Verfügung:
+		<ul>
+			<li>Semi-Automatische Softwareupdates: Während der Arbeit in der Administrationsansicht prüft OrderSprinter durch verschiedene Auslöser getriggert (z.B. Seitenaufruf, 
+				Tageserfassungserstellung, Konfigurationsänderung), ob es eine neuere als die installierte Version der Software gibt. Ist dies der Fall, so kann ein 
+				Benutzer mit Administrationsrechten innerhalb der Administrationsansicht durch einen einfachen Buttonklick das Versionsupdate auf dem Server vornehmen. Im Rahmen
+				der Versionsüberprüfung übermittelt der Server die eigene Version und das Installationsdatum an die OrderSprinter-Seite www.ordersprinter.de. Der Webserver 
+				protokolliert überdies die Uhrzeit, die IP-Nummer und den Browsertyp (User Agent) des anfragenden Rechners.
+			<li>Email-Benachrichtigungen: Tageserfassungen können an festgelegte und frei eingebbare E-Mail-Adressen verschickt werden. Im Gastmodul können Reservierungsbestätigungen an Gäste gemailt werden. Über das Feedbackformular können Anwender Nachrichten an den Anbieter verschicken und dabei den Umfang der Datenübermittlung festlegen. Der E-Mail-Dienst funktioniert nur, wenn die E-Mail-Konfiguration in der Administrationsansicht eingegeben wurde (Ausnahme: das Feedbackformular übermittelt die Nachrichten über http).
+			<li>Automatische Erstellung einer Kundenwebseite, die sich aus der konfigurierten Speisekarte ergibt.
+			<li>Verwaltung aus der Ferne über die Komponente "OrderSprinter Spider"
+			<li>Falls ein Fehler auf der Serverseite passiert, wird ein Debugreport an www.ordersprinter.de übermittelt. Dieses dient nur der Verbesserung der Software. Folgende Informationen werden übermittelt:
+				<ul>			
+					<li>Die IP-Adresse der Instanz: Nur so kann ich auseinanderhalten, ob gesendete Fehler unabhängig voneinander aufgetreten sind, oder in Verbindung zueinander stehen.
+					<li>Das ausgeführte Kommando auf der Serverseite und das Kommando auf der Client-Seite, welches anschließend nicht mehr zur Ausführung kommen konnte.
+					<li>Version: Natürlich muss ich auch wissen, in welcher Version der Fehler auftrat.
+					<li>xhr-responseText: Das ist die http-Antwort des Servers auf Anfragen
+					<li>Status: Der Status des Webservers
+					<li>PHP-Version: PHP ist nicht komplett abwärtskompatibel, diese Information hilft bei der Fehlersuche. 
+				</ul>
+		</ul>
+	</div>
+	<div id="datasec_en" style="text-align:left;border: 1px solid #666666;border-radius: 25px;padding: 10px;background-color: #fef79b;display:none;">
+		<br><b><u>Information on data protection:</u></b><br>
+		The OrderSprinter web service does not require an Internet connection. However, if the OrderSprinter web server can connect to the Internet, the following functions are available:
+		<ul>
+			<li>Semi-automatic software updates: While working in the administration view, OrderSprinter checks by different triggers (e.g. page view, closing creation, configuration change) whether there is a newer version of the software than the installed one. If this is the case, a user with administration rights can update the version on the server by a simple button click within the administration view. As part of the version check, the server sends its own version and the installation date to the OrderSprinter page www.ordersprinter.de. The web server also logs the time, the IP number and the browser type (user agent) of the requesting computer.
+			<li>Email notifications: Daily reports can be sent to pre-selected and freely definable e-mail addresses. In the guest module reservation confirmations can be emailed to guests. The feedback form allows users to send messages to the provider and determine the scope of data transmission. The e-mail service only works if the e-mail configuration has been entered in the administration view (exception: the feedback form transmits the messages via http).
+			<li>Automatic creation of a customer website, which results from the configured menu.
+			<li>Managing from remote site with "OrderSprinter Spider"
+			<li>If an error occurs on the server side, a debug report is sent to www.ordersprinter.de. This serves only to improve the software. The following information will be provided:
+				<ul>
+					<li>The IP address of the instance: Only in this way can I tell whether sent errors occurred independently of each other or are connected to each other.
+					<li>The executed command on the server side and the command on the client side, which could not be executed afterwards.
+					<li>Version: Of course I also need to know in which version the error occurred.
+					<li>xhr-responseText: This is the http response of the server to requests
+					<li>Status: The status of the web server
+					<li>PHP version: PHP is not fully backwards compatible, this information helps in debugging. 
+				</ul>
+		</ul>
+	</div>
+	<div id="datasec_es" style="text-align:left;border: 1px solid #666666;border-radius: 25px;padding: 10px;background-color: #fef79b;display:none;">
+		<br><b><u>Información sobre protección de datos:</u></b><br>
+El servicio web OrderSprinter no requiere una conexión a Internet. Sin embargo, si el servidor web de OrderSprinter puede conectarse a Internet, están disponibles las siguientes funciones:
+		<ul>
+			<li>Actualizaciones semiautomáticas del software: Mientras se trabaja en la vista de administración, OrderSprinter comprueba mediante diferentes disparadores (por ejemplo, la vista de página, la creación de la programación diaria, el cambio de configuración) si existe una versión más reciente del software que la instalada. Si este es el caso, un usuario con derechos de administración puede actualizar la versión en el servidor con un simple clic de botón dentro de la vista de administración. Como parte de la comprobación de la versión, el servidor envía su propia versión y la fecha de instalación a la página de OrderSprinter www.ordersprinter.de. El servidor web también registra la hora, el número IP y el tipo de navegador (User Agent) del ordenador solicitante.
+			<li>Notificaciones por correo electrónico: Los informes diarios se pueden enviar a direcciones de correo electrónico definidas y libremente definibles. En el módulo de huéspedes las confirmaciones de reserva pueden ser enviadas por correo electrónico a los huéspedes. El formulario de feedback permite a los usuarios enviar mensajes al proveedor y determinar el alcance de la transmisión de datos. El servicio de correo electrónico sólo funciona si la configuración de correo electrónico se ha introducido en la vista de administración (excepción: el formulario de feedback transmite los mensajes a través de http).
+			<li>Creación automática de un sitio web para el cliente, que resulta del menú configurado. 
+			<li>Administración por "OrderSprinter Spider" a distancia.
+			<li>Si se produce un error en el lado del servidor, se envía un informe de depuración a www.ordersprinter.de. Esto sólo sirve para mejorar el software. Se proporcionará la siguiente información:
+				<ul>
+					<li>La dirección IP de la instancia: Sólo de esta manera puedo saber si los errores enviados se produjeron independientemente uno del otro o si están conectados entre sí.
+					<li>El comando ejecutado en el lado del servidor y el comando en el lado del cliente, que no se pudo ejecutar posteriormente.
+					<li>Versión: Por supuesto, también necesito saber en qué versión se produjo el error.
+					<li>xhr-respuestaTexto: Esta es la respuesta http del servidor a las peticiones
+					<li>Estado: El estado del servidor web
+					<li>Versión PHP: PHP no es totalmente compatible con versiones anteriores, esta información ayuda en la depuración. 
+				</ul>
+		</ul>
+	</div>
+</div>
+
+<div id="generalsettings" class="installcenterdiv">
+	<form id="generalsettingsform" >
+			<p><table class="installtable">
+				<tr><th id="gensettingstxt" colspan="2">Gen. Einst.</tr>
+				<tr><th id="category" width="200px" style="padding-top: 20px;" >Einstellung<th id="setting" style="padding-top: 20px;" width="300px">Wert</tr>
+				<tr><td><span id="restmodetxt" class="generalsettingtxt" style="font-weight:bold;">Restmode</span>
+					<td><select id="restmodeselection" style="height:50px;font-family : monospace;font-size : 17pt;width:100%;">
+                                                        <option value="1" selected>Restaurant</option>
+                                                        <option value="2">Friseur</option>
+                                                        <option value="3">Events</option>
+                                                        <option value="4">Geschäft</option>
+						</select>
+				</tr>
+                                
+                                <tr><td><span id="cat1name_txt" class="generalsettingtxt">Kategorie 1</span>
+                                        <td><input type="text" id="cat1name" class="genconfiginput" >
+                                </tr>
+                                <tr><td><span id="cat2name_txt" class="generalsettingtxt">Kategorie 2</span>
+					<td><input type="text" id="cat2name" class="genconfiginput" />
+				</tr>
+                                <tr><td><span id="prodlistname_txt" class="generalsettingtxt">Artikelliste</span>
+					<td><input type="text" id="prodlistname" class="genconfiginput" />
+				</tr>
+                                <tr><td><span id="cat1viewname_txt" class="generalsettingtxt">Ansichtsname der Kategorie 1</span>
+					<td><input type="text" id="cat1viewname" class="genconfiginput" />
+				</tr>
+                                <tr><td><span id="cat2viewname_txt" class="generalsettingtxt">Ansichtsname der Kategorie 2</span>
+					<td><input type="text" id="cat2viewname" class="genconfiginput" />
+				</tr>
+                                <tr><td><span id="deskviewname_txt" class="generalsettingtxt">Ansichtsname der Desktop</span>
+					<td><input type="text" id="deskviewname" class="genconfiginput" />
+				</tr>
+                                <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+				<tr><td><span id="dsfinvk_name_txt" class="generalsettingtxt">Name</span>
+					<td><input type="text" id="dsfinvk_name" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_street_txt" class="generalsettingtxt">Str</span>
+					<td><input type="text" id="dsfinvk_street" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_postalcode_txt" class="generalsettingtxt">PLZ</span>
+					<td><input type="text" id="dsfinvk_postalcode" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_city_txt" class="generalsettingtxt">Ort</span>
+					<td><input type="text" id="dsfinvk_city" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_country_txt" class="generalsettingtxt">Land</span>
+					<td><input type="text" id="dsfinvk_country" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_stnr_txt" class="generalsettingtxt">Stnr</span>
+					<td><input type="text" id="dsfinvk_stnr" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="dsfinvk_ustid_txt" class="generalsettingtxt">UStID</span>
+					<td><input type="text" id="dsfinvk_ustid" class="genconfiginput" />
+				</tr>
+				<tr><td><span id="paydeskid_txt" class="generalsettingtxt">ID</span>
+					<td><input type="text" id="paydeskid" class="genconfiginput" />
+				</tr>
+
+				<tr>
+					<td><span id="defaultviewtxt" class="generalsettingtxt">Standardview</span>
+					<td><select id="defaultmodeselection" style="height:50px;font-family : monospace;font-size : 17pt;width:100%;">
+							<option value="0" selected>Mobil</option>
+							<option value="1">Desktop</option>
+						</select>
+				</tr>
+				<tr>
+					<td><span id="cancelcodetxt" class="generalsettingtxt">Stornocode</span>
+					<td><input id="cancelcode" type="text" />
+				</tr>
+				<tr>
+					<td><span id="printcodetxt" class="generalsettingtxt">P.code</span>
+					<td><input id="printcode" type="text" />
+				</tr>
+				<tr><td id="gensettingschangeabletxt" colspan="2" style="background-color: grey;color:black;"></tr>
+				<tr><td colspan="2"><button id="setgeneralsettingsbtn"><span id="setgeneralsettingsbtntxt">Weiter </span>&nbsp;&gt;&gt;</button></tr>
+			</table>
+	</form>
+</div> <!-- generalsettings -->
+
+<div id="installsettings" class="installcenterdiv">
+<form id="formid">
+  <table class="installtable">
+	<tr><th id="category" width=200px>Kategorie<th id="setting" width=200px;>Einstellung<th id="value" width=200px>Wert</tr>
+  	<tr>
+  		<td id="db" rowspan="9">Datenbank
+    	<td id="dbserver" align="right">Datenbank-Server:</td>
+      <td><input id="db_host" type="text" size="30" maxlength="70" placeholder="localhost"></td>
+    </tr>
+    
+    <tr>
+    	<td id="dbport" align="right">Datenbank-Port:</td>
+      <td><input id="db_port" type="text" size="30" maxlength="70"></td>
+    </tr>
+    <tr>
+    	<td id="dbname" align="right">Datenbank-Name:</td>
+      <td><input id="db_name" type="text" size="30" maxlength="70"></td>
+    <tr> </tr>
+    <tr>
+      <td id="dbusertxt" align="right">Datenbank-Benutzer:</td>
+      <td><input id="dbuser" type="text" size="30" maxlength="70"></td>    	
+    </tr>
+    <tr>
+      <td id="dbpassword" align="right">Datenbank-Passwort:</td>
+      <td><input id="dbpass" type="password" size="30" maxlength="70"></td> 	
+    </tr>
+    <tr>
+      <td id="prefix" align="right">Präfix für die Tabellen:</td>
+      <td><input id="table_prefix" type="text" size="30" maxlength="30"></td>    	
+    </tr>
+    <tr>
+    	<td  id=testdbbutton><button type="submit" id="testdb">Teste DB-Zugriff</button>
+    	<td  align=center id=testdbstatus>
+    </tr>
+    <tr id="repliline">
+    	<td id="dbrepli" align="right">Replikation-DB(s):</td>
+        <td><input id="replidbs" type="text" size="30" maxlength="300" placeholder="host1:port;host2:port;..."></td>    
+    </tr>
+    
+    <tr><td id="writeaccess" rowspan=3>Schreibberechtigungen
+    	<td id="phpdir" align="right">php-Verzeichnis
+    	<td align=center id=writeaccessconfigfolder>&nbsp;
+    </tr>
+    <tr>
+    	<td  align="right">config.php
+    	<td align=center id=writeaccessconfigfile>&nbsp;
+    </tr>
+    <tr>
+    	<td><button type="submit" id="testwriteaccess" onclick="checkWriteAccess();">Teste Schreibberechtigungen</button>
+    	<td align=center id=writestatus>
+    </tr>
+	<tr class="applarea">
+	  <td id="application" rowspan=4>Applikation
+	  <td id="adminpassword" align="right">Administrator-Passwort:</td>
+	  <td><input id="adminpass" type="password" size="30" maxlength="30" /></td> 	
+	</tr>
+	<tr class="applarea">
+	  <td id="adminpasswordrepeat" align="right">Administrator-Passwort (Wdh.):</td>
+	  <td><input id="adminpass2" type="password" size="30" maxlength="30"></td>    	
+	</tr>
+	<tr class="applarea">
+	  <td id=currencytxt align="right">Währung:</td>
+	  <td><input id="currency" value="Euro" size="30" maxlength="30"/></td>    	
+	</tr>
+	<tr class="applarea">
+	    <td id="decimalpoint" align="right">Dezimaltrennzeichen:</td>
+	    <td><select name="point" id="point" style="width:100%;">
+			  <option id="commachar" selected>Komma</option>
+			  <option id="pointchar">Punkt</option>
+	    </td>
+	</tr>
+    <tr>
+    	<td>PHP-Status
+    	<td id=phpstatusfield colspan=2>?
+    </tr>
+    
+    <tr>
+            <td align="center"><button type="submit" id="startinstall" class="startbtn">Starte Installation</button></td>
+            <td><div id=progress>&nbsp;<img id="freshinstallprogressindicator" style="display:none;" src="php/3rdparty/images/ajax-loader.gif" alt="Progress indication"/></div></td>
+                        <td style="vertical-align: middle;"><span id="installprogressmsg" style="display:none;"/></td>
+    </tr>
+  </table>
+</form>
+</div> <!--  installsettings -->
+
+
+<div id="workflowsettings" class="installcenterdiv">
+	<br><br>
+	<span id="workflowheadline" style="font-size:20px;color:white;">WorkflowTitel</span>
+	<br><br>
+		<table class="installtable" id="startSettingsTableWorkflow">
+			<tr><th><span id=workflowtabletitle>Start</span></tr>
+			<tr><td id="workflow_digi_btn"><span id="workflowdigital" style="font-size:20px;">digi</span></tr>
+			<tr><td id="workflow_receipts_btn"><span id="workflowworkreceipts" style="font-size:20px;">work receipts</span></tr>
+			<tr><td id="workflow_both_btn"><span id="workflowworkboth" style="font-size:20px;">both</span></tr>
+		</table>
+	<br>
+</div> <!--  workflowsettings  -->
+	
+<div id=samplesettings class="installcenterdiv">
+	<br>
+	<br>
+	<span id="sampleheadline" style="font-size:20px;color:white;">Titel</span>
+	<br><br>
+		<table class="installtable" id="startSettingsTableSamples">
+			<tr><th><span id=samplesettingstitel>Start</span></tr>
+			<tr><td id="sample_empty"><span id="sampleempty" style="font-size:20px;">leer<br>nur Admin-Benutzer</span></tr>
+			<tr><td id="sample_tables_user_menu"><span id="sampletableuser" style="font-size:20px;">6 Tische<br>Beispielspeisekarte<br>Admin- und Kellner-Benutzer</span></tr>
+			<tr><td id="sample_rooms_tables_user_menu"><span id="sampleroomtableuser" style="font-size:20px;">2 Räume<br>je 6 Tischen<br>grafische Tischauswahl<br>Beispielspeisekarte<br>Admin- und Kellner-Benutzer</span></tr>
+		</table>
+	<br>
+	<span id="samplewaiterinfo" style="font-size:20px;color:white;" ></span>
+</div> <!--  samplesettings  -->
+
+
+</body>
+
+</html>

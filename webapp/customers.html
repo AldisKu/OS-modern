@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+
+    <title>Ansicht Gäste</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+ 
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   
+	<link rel="stylesheet" href="php/3rdparty/jquerymobiledatepicker/jquery.mobile.datepicker.css" />
+	<script src="php/3rdparty/jquerymobiledatepicker/jquery.mobile.datepicker.js"></script>
+	
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script> 
+   <script src="php/3rdparty/jquery.mobile-1.4.5.min.js"></script>
+	
+	<link rel="stylesheet" href="php/3rdparty/jqueryui1-11-4/jquery-ui.min.css" />
+	<script src="php/3rdparty/jqueryui1-11-4/jquery-ui.min.js"></script>
+	<script src="php/3rdparty/jqueryui1-11-4/jquery-ui-i18n.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+   <script src="elements/customers.js?v=2.9.12"></script>
+</head>
+
+<body>
+
+<script> 
+
+var CUS_CUSTOMERS = ["Gäste...","Guests...", "Clientes..." ];
+var CUS_GROUPS = ["Gruppen...","Groups...", "Grupos..." ];
+var CUS_ADR_LABEL = ["Adresse:","Address:","Dirección:"];
+var CUS_REMARK_LABEL = ["Bemerkung:","Remark:","Comentario:"];
+var CUS_PHONE_LABEL = ["Telefon","Phone","Telefono"];
+var CUS_MOBIL_LABEL = ['Mobil','Mobile','Móvil'];
+var CUS_WWW_LABEL = ['Webseite','Home page', ' Página web'];
+var CUS_HELLO_LABEL = ["Anrede (für Emails)","Saludation (for emails)","Encabezamiento (email)"];
+var CUS_REGARDS_LABEL = ["Gruß (Email-Abschluss)","Greeting (end of email)","Abrazo (Email)"];
+var CUS_ROOM_LABEL = ['Zimmer','Room','Habitación'];
+var CUS_NEW_CUS_BTN = ["Gast anlegen","Create guest","Crear cliente"];
+var CUS_EMPTY_NAME = ["Gästenamen nicht angegeben","Name of the guest not specified","Ningún nombre del cliente"];
+var GROUP_EMPTY_NAME = ["Gruppenname nicht angegeben","Name of the group not specified","Ningún nombre del grupo"];
+var CUS_ACTION_FAILED = ["Aktion fehlgeschlagen","Action failed","Error"];
+var CUS_ALREADY_CUS_NAME = ["Der Kunde wurde angelegt. Allerdings gab es bereits %number% Kunden mit dem Namen.",
+	"The customer is created, although there have been already %number% customers with this name",
+	"El cliente esta creado aunque había sido ya %number% clientes con este nombre."];
+var CUS_SEARCH_LABEL = ["Name/Email:","Name/Email:","Nombre/Email:"];
+var CUS_SEARCH_REMARK = ["Bemerkung:","Remark:","Comentario:"];
+var CUS_SEARCH_ADDRESS = ["Adresse:","Address:","Dirección:"];
+var CUS_APPLY = ["Anwenden","Apply","Aplicar"];
+var CUS_DEL = ["Löschen","Delete","Removar"];
+var CUS_DEL_TEXT = ["Diesen Gast unwiederbringlich aus der Datenbank löschen?","Delete this guest irretrievably from the data base?","Removar este cliente?"];
+var GRP_DEL = ["Löschen","Delete","Removar"];
+var GRP_DEL_TEXT = ["Diese Gruppe unwiederbringlich aus der Datenbank löschen?","Delete this group irretrievably from the data base?","Removar este grupo?"];
+var CUS_CREATED = ["Erstellt","Created","Creado"];
+var CUS_LAST_MODIFIED = ["Zuletzt geändert","Last modified","Cambio último"];
+var CUS_GROUP_EXISTS = ["Eine Gruppe mit dem Namen existiert bereits.","A group with this name already exists.","Ya hay un grupo con este nombre."];
+var CUS_GRP_ASS_LIST = ["Gruppenzuordnung","Group assignment","Grupos del cliente"];
+var CUS_ALERT_TEXT_LEN = ["Text zu lang: ","Text too long: ","Texto tan largo: "];
+var CUS_CONTAINED_IN_GRP = ["Gäste in dieser Gruppe","Guests in this group","Clientes en este grupo"];
+var CUS_NEW_CUS_HEADER = ["Neuer Gast","New guest","Cliente nuevo"];
+var CUS_CHECKIN_AFTER_OUT = ["Das Check-in-Datum liegt nach dem Check-out-Datum","Check-in date is after check.out date","Check-in despues Check-out"];
+var CUS_VACATIONS = ["Aufenthalte","Stays","Estancias"];
+var CUS_NEWVACATIONS = ["Neuer Aufenthalt","New Stay","Estancia nueva"];
+var CUS_DATE = ["Anwesenheitsdatum","Customer present at","Cliente esta durante"];
+var CUS_BILLS = ["Kassenbons","Receipts","Tiquetes"];
+var CUS_BILLID = ["ID des Lieferbons","Delivery Receipt id","ID del recibo de etraga"];
+var CUS_BILLDATE = ["Bondatum","Date of receipt","Fecha de recibo"];
+var CUS_BILLBRUTTO = ["Betrag","Brutto","Pagar"];
+var CUS_GUESTINFO = ["Angabe zum Gast","Guest info","Información del client"];
+var CUS_DECLAREPAY = ["Deklariere bezahlt","Declare paid","Declarar pagado"];
+var CUS_DECLAREUNPAY = ["Deklariere unbezahlt","Declare unpaid","Declarar no pagado"];
+var CUS_PRINTBILL = ["Drucken","Print","Imprimir"];
+var CUS_DECLARE_ALL_PAY = ["Alle unbezahlten Bons als bezahlt deklarieren","Declare all unpaid receipts as paid","Declarar todo pagado"];
+var CUS_PRINT_ALL = ["Alle Bons drucken","Print all receipts","Imprimir todos los tiquetes"];
+var CUS_REPORT = ["Report über alle offenen Rechnungen","Report about all open bills","Resumen de todos las facturas non-pagadas"];
+var CUS_FILTER_OPEN_BILLS = ["Filter Gäste mit offenen Rechnungen","Filter on customers with ooen bills","Filtrar clientes con tiquets non-pagados"];
+var CUS_LOGBTN = ["Rechnungslog (csv)","Log of payments (csv)","Protocolo de los pagos (csv)"];
+var CUS_SEND_EMAIL = ["Email an alle Gruppenmitglieder senden","Send email to all group members","Enviar email a todos los miembros"];
+var CUS_EMAIL_WARNING = ["Emails lassen sich nur versenden, wenn die Email-Konfiguration vorgenommen wurde.","Emails can only be sent if the email configuration was done.","Sólo puede enviar emails si la configuración es completada."];
+var CUS_STORNO_QUEST_TITLE = ["Storno?","Cancel?","Contrapartida?"];
+var CUS_STORNO_QUEST_TEXT = ["Bon als vom Gast unbezahlt deklarieren?","Cancel the payment of the guest?","Contrapartida del tique por el cliente?"];
+var CUS_YES = ["Ja","Yes","Si"];
+var CUS_PLACEHOLDER_HINT = ["Im Text können die Platzhalter {NAME}, {ANREDE}, {GRUSS} verwendet werden.",
+	"You can use {NAME}, {ANREDE}, {GRUSS} as placeholder for the name, the salutation or the greeting in the text.",
+	"En el texto se puede usar {NAME}, {ANREDE}, {GRUSS} para sustituir nombre, encabezamiento o abrazo."];
+var CUS_GUEST_ACT_ALL = ["Aktionen für alle Gäste","Actions on all guests","Acciones para todos los huespedes"];
+var CUS_CLOSED = ["abgeschlossen","closed","cerrado"];
+var CUS_FILTER = ["Kundenlisten filtern","Filter customers","Filter"];
+var CUS_CUSLIST_SECTION_TXT = ["Gästeliste","List of customers","Huespedes"];
+var CUS_ACTIONS_FILTERLIST_TXT = ["Aktionen für gefilterte Kundenliste","Actions on filtered list","Acciones para lista"];
+var CUS_ASSIGN = ["Zuweisen","Assign","Asignar"];
+var CUS_UNASSIGN = ["Aus Gruppe entfernen","Remove from group","Removar del grupo"];
+var CUS_ASSIGN_TO_NEW_GROUP = ["Zuweisen zu neuer Gruppe","Assign to new group","Asignar a grupo nuevo"];
+var CUS_PERMANENTGUEST = ["Dauergast","Permanent guest","Huésped permanente"];
+
+var l = 0;
+
+function setLanguage(language) {
+	l = language;
+	
+	$("#customersbtn").html(CUS_CUSTOMERS[l]);
+	$("#groupsbtn").html(CUS_GROUPS[l]);
+	$("#newcusadrlabel").html(CUS_ADR_LABEL[l]);
+	$("#newcusremarklabel").html(CUS_REMARK_LABEL[l]);
+	$("#newcusphonelabel").html(CUS_PHONE_LABEL[l]);
+	$("#newcusmobillabel").html(CUS_MOBIL_LABEL[l]);
+	$("#newcuswwwlabel").html(CUS_WWW_LABEL[l]);
+	$("#newcushellolabel").html(CUS_HELLO_LABEL[l] + ":");
+	$("#newcusregardslabel").html(CUS_REGARDS_LABEL[l] + ":");
+	$("#newcusroomlabel").html(CUS_ROOM_LABEL[l]);
+        $("#newcustomerpermanentlabel").html(CUS_PERMANENTGUEST[l]);
+	$("#newcustomerbtn").html(CUS_NEW_CUS_BTN[l]);
+	$("#customersearchlabel").html(CUS_SEARCH_LABEL[l]);
+	$("#customersearchremarklabel").html(CUS_SEARCH_REMARK[l]);
+	$("#customersearchaddresslabel").html(CUS_SEARCH_ADDRESS[l]);
+	$("#newguestheader").html(CUS_NEW_CUS_HEADER[l]);
+	$("#customerdatetxt").html(CUS_DATE[l]);
+	$("#customeropenbillstxt").html(CUS_FILTER_OPEN_BILLS[l]);
+	$("#customerlog").html(CUS_LOGBTN[l]);
+	$("#reportbills").html(CUS_REPORT[l]);
+	$("#guestoverviewdiv").html(CUS_GUEST_ACT_ALL[l]);
+	$("#filtertxt").html(CUS_FILTER[l]);
+	$("#listofcustomerssectiontxt").html(CUS_CUSLIST_SECTION_TXT[l]);
+	$("#filteredlistactionsdiv").html(CUS_ACTIONS_FILTERLIST_TXT[l]);
+	$("#assfilteredlisttxt").html(CUS_ASSIGN[l]);
+	$("#removefromgroupbtntxt").html(CUS_UNASSIGN[l]);
+	$("#assignfilteredllisttonewgrptxt").html(CUS_ASSIGN_TO_NEW_GROUP[l]);
+}
+
+$(document).on("pageinit", "#info-page", function () {
+	initializeMainMenu("#modulemenu");
+	hideMenu();
+	getGeneralConfigItemsCus();
+	
+});
+	
+</script>
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext" style="margin:20px;padding:50px;"></div>
+</div>
+<div data-role="page" id="info-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1><span id="reportttitletxt">Gäste</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" /> <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="content">
+			
+	<div class="ui-grid-a noprint">
+			<div class="ui-block-a"><button type="submit" data-theme="c" class="" data-icon="arrow-d" id="customersbtn">Gäste</button></div>
+			<div class="ui-block-b"><button type="submit" data-theme="c" class="" data-icon="arrow-d" id="groupsbtn">Gruppen</button></div>
+	</div> 
+	    
+	    <div id="customersarea" style="display:none;">
+
+		    <div data-role="collapsible" data-theme="e" data-content-theme="c" data-collapsed="true">
+			    <h3><span id="filtertxt">Filterung</span></h3>
+			    <p /><form>
+			    <div class="ui-field-contain">
+				    <label id="customersearchlabel" for="customersearch">Suche:</label>
+				    <input id='customersearch' type="text" value="" data-mini="true" placeholder="Name / Email" class="whiteinput" />
+			    </div>
+			    <div class="ui-field-contain">
+				    <label id="customersearchremarklabel" for="customersearchremark">Bem.:</label>
+				    <input id='customersearchremark' type="text" value="" data-mini="true" placeholder="Bemerkung" class="whiteinput" />
+			    </div>
+			    <div class="ui-field-contain">
+				    <label id="customersearchaddresslabel" for="customersearchremark">Adr.:</label>
+				    <input id='customersearchaddress' type="text" value="" data-mini="true" placeholder="Adresse" class="whiteinput" />
+			    </div>
+
+			    <div class="ui-field-contain">
+				    <label for="customeropenbills"><span id=customeropenbillstxt>Nur mit offenen Rechnungen</span>: </label>
+				    <input data-role="date" data-inline="true" type="checkbox" id="customeropenbills" data-theme="a">
+			    </div>
+
+			    <div class="ui-field-contain">
+				    <label for="customerdate"><span id=customerdatetxt>Datum</span>: </label>
+				    <input data-role="date" data-inline="true" type="text" id="customerdate" data-theme="a">
+			    </div>
+			</form>
+		    </div> <!-- collapsible for filter -->
+		    
+		    <div id="logarea">
+			    <div data-role="collapsible" data-theme="e" data-content-theme="c">
+				    <h3><span id='guestoverviewdiv'>Gast-Aktionen</span></h3>
+                                    <p /><button type="submit" data-theme="f" class="" data-icon="check" id="reportbills">Report</button>
+                                    <p /><div id='buttonsforguestexport' style="display:none;">
+                                            <button type="submit" data-theme="f" class="" data-icon="arrow-d" id="guestexport">Export</button>
+                                    </div>        
+                                    <div style="display:none;">
+                                        <p><button type="submit" data-theme="f" class="" data-icon="check" id="customerlog">Rechnungsprotokoll</button>    
+                                        <p><div id='payalldiv'></div>
+                                    </div>
+			    </div>
+		    </div>
+		    
+		    <div id="actionsonfilterarea">
+			    <div data-role="collapsible" data-theme="e" data-content-theme="c">
+				    <h3><span id='filteredlistactionsdiv'>Filter Gast-Aktionen</span></h3>
+				    <p /><div id="grpassdiv"></div>
+				    <p /><button type="submit" data-theme="f" class="" data-icon="plus" id="newgrpforassbtn"><span id='assignfilteredllisttonewgrptxt'>Neu</span></button>
+				    <button type="submit" data-theme="f" class="" data-icon="plus" id="existentgrpforassbtn"><span id='assfilteredlisttxt'>Zuweisen</span></button>
+				    <button type="submit" data-theme="d" class="" data-icon="plus" id="removefromgroupbtn"><span id='removefromgroupbtntxt'>Entf.</span></button>
+			    </div>
+		    </div>
+		    
+		    <div data-role="collapsible" id="newcustomerdiv" data-theme="d" data-content-theme="d">
+			    <h3><span id="newguestheader">Neuer Kunde</span></h3>
+			    <p>
+			    <form>
+				    <div class="ui-field-contain">
+					    <label for="newcustomername">Name:</label>
+					    <input id='newcustomername' type="text" value="" data-mini="true" placeholder="Name" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label id="newcusadrlabel" for="newcustomeraddress">Adresse:</label>
+					    <textarea cols="40" rows="8" name="newcustomeraddress" id="newcustomeraddress" data-theme="a"></textarea>
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label for="newcustomerphone" id="newcusphonelabel">Tel.:</label>
+					    <input id='newcustomerphone' type="text" value="" data-mini="true" placeholder="01234 - 56789" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label for="newcustomermobil" id="newcusmobillabel">Handy:</label>
+					    <input id='newcustomermobil' type="text" value="" data-mini="true" placeholder="0170 - 1234567" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label for="newcustomeremail">E-Mail:</label>
+					    <input id='newcustomeremail' type="text" value="" data-mini="true" placeholder="E-Mail" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label for="newcustomerwww">Homepage:</label>
+					    <input id='newcustomerwww' type="text" value="" data-mini="true" placeholder="www.the-homepage-of-the-guest.de" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label id="newcushellolabel" for="newcustomerhello">Anrede</label>
+					    <input id='newcustomerhello' type="text" value="" data-mini="true" placeholder="Sehr geehrter Herr xyz" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label id="newcusregardslabel" for="newcustomerregards">Gruß</label>
+					    <textarea cols="40" rows="8" name="newcustomerregards" id="newcustomerregards" data-theme="a" placeholder='Viele Grüße, Dein Max Mustermann'></textarea>
+				    </div>
+				    
+				    <div data-role="fieldcontain" id="datepickerareacheckin">
+					    <label for="newcustomercheckin"><span id=datetxtcheckin>Check-In</span>: </label>
+					    <input data-role="date" data-inline="true" type="text" id="newcustomercheckin" data-theme="a">
+					</div>
+				    
+				    <div data-role="fieldcontain" id="datepickerareacheckout">
+					    <label for="newcustomercheckout"><span id=datetxtcheckout>Check-Out</span>: </label>
+					    <input data-role="date" data-inline="true" type="text" id="newcustomercheckout" data-theme="a">
+					</div>
+				    
+                                    <div class="ui-field-contain">
+                                            <label for="newcustomerpermanent"><span id="newcustomerpermanentlabel">DG</span></label>
+					    <input id="newcustomerpermanent" data-inline="true" type="checkbox" />
+				    </div>
+                                    
+				    <div class="ui-field-contain">
+					    <label for="newcustomerroom" id="newcusroomlabel">Zimmer</label>
+					    <input id='newcustomerroom' type="text" value="" data-mini="true" placeholder="Zimmer" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label id="newcusremarklabel" for="newcustomerremark">Bemerkung:</label>
+					    <textarea cols="40" rows="8" name="newcustomerremark" id="newcustomerremark" data-theme="a" ></textarea>
+				    </div>
+				    
+				    <button type="submit" data-theme="c" class="" data-icon="check" id="newcustomerbtn">Anlegen</button>
+			    </form>
+		    </div>
+		    
+		    <p><b><span id="listofcustomerssectiontxt">Kunden</span>:</b>
+			    
+		    <div id="customersearchresult"></div>
+
+	    </div>
+
+	    <div id="groupsarea" style="display:none;">
+		    <form>
+			<div class="ui-field-contain">
+				<label id="groupsearchlabel" for="groupsearch">Suche:</label>
+				<input id='groupsearch' type="text" value="" data-mini="true" placeholder="Name" class="whiteinput" />
+			</div>
+		    </form>
+		    
+		    <div data-role="collapsible" id="newgroupdiv" data-theme="d" data-content-theme="d">
+			    <h3>Neue Gruppe</h3>
+			    <p>
+			    <form>
+				    <div class="ui-field-contain">
+					    <label for="newgroupname">Name:</label>
+					    <input id='newgroupname' type="text" value="" data-mini="true" placeholder="Name" class="whiteinput" />
+				    </div>
+				    
+				    <div class="ui-field-contain">
+					    <label id="newgroupremarklabel" for="newgroupremark">Bemerkung:</label>
+					    <textarea cols="40" rows="8" name="newgroupremark" id="newgroupremark" data-theme="a" ></textarea>
+				    </div>
+				    
+				    <button type="submit" data-theme="c" class="" data-icon="check" id="newgroupbtn">Anlegen</button>
+			    </form>
+		    </div>
+		    
+		    <div id="groupsearchresult"></div>
+	    </div>
+	    
+				
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+</div>
+
+<!--  Dialog page -->
+<div data-role="dialog" id="sure" data-title="Entfernen?">
+  	<div data-role="content">
+    <h3 class="sure-1">?</h3>
+    <p class="sure-2">?</p>
+    <a href="#" class="sure-do" data-role="button" data-theme="b" data-rel="back">Ja</a>
+    <a href="#" data-role="button" data-theme="c" data-rel="back">Nein</a>
+  	</div>
+</div>
+
+
+<!--  Dialog page -->
+<div data-role="dialog" id="cancelsure" data-title="Entfernen?">
+  	<div data-role="content">
+    <h3 class="sure-1">?</h3>
+    <p class="sure-2">?</p>
+    <form>
+	    <label for="stornoreason"><span id="stornoreasontxt">Stornogrund:</span></label>
+	  	<input type="text" id="stornoreason" value="" data-mini="true /">
+	    <label for="stornocode">Stornocode: </label>
+	    <input type="password" id="stornocode" value="" data-mini="true">
+	    <a href="#" class="sure-do" data-role="button" data-theme="b" data-rel="back"><span id="stornoyes">Ja</span></a>
+	    <a href="#" data-role="button" data-theme="c" id="nocancelbtn"><span id="stornono">Nein</span></a>
+    </form>
+  	</div>
+</div>
+
+</body>
+
+</html>

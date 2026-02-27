@@ -1,0 +1,16 @@
+{TAB:}
+{-:links:Abholbon:hochbreit}
+
+{workid:mittig::hochbreit}
+
+{time:links:Uhrzeit}
+
+START:products
+{TAB::1:5}
+{longname:links}{-: }{togo:links}
+{TAB:}
+START:extras
+{name:links: + }
+END:extras
+{option:links: }
+END:products

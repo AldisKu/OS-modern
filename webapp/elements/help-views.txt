@@ -1,0 +1,17 @@
+<H2>Ansichten</H2>
+
+<p>Oben rechts befindet sich das Hauptmenü, über welches die verschiedenen Ansichten aufgerufen werden können. Die auswählbaren Ansichten hängen von den Rechten des eingebuchten Benutzers und dem gewählten Arbeitsablauf ab.
+
+<p>Üblicherweise haben Kellner folgende Ansichten in der Mobilansicht zur Auswahl:
+<ul>
+	<li><i>Bestellung</i>: In dieser Ansicht kann die Bestellaufnahme vorgenommen werden. Sie beginnt mit der Raum- und der Tischauswahl. Anschließend können die Produkte ausgewählt werden. Je nach Festlegung in der persönlichen Einstellungsseite wird nach der Auswahl eines Produktes wieder auf die oberste Auswahlwahlebene zurückgesprungen oder die Auswahl verbleibt in der Kategorie.
+	<li><i>Kasse</i>: Um einen Tisch abzurechnen, kann über den Button 'Kasse' direkt zur Abrechnung des gewählten Tisches gesprungen werden. Alternativ ist die Kassenansicht auch über das Hauptmenü erreichbar. Im zweiten Fall muss der Kellner noch den abzurechnenden Tisch auswählen und nach Abrechnung eines Tisches bleibt er in der Kassenansicht statt wie im ersten Fall wieder in die Bestellansicht zurückzuwechseln.
+	<li><i>Kassenbons</i>: In der Ansicht 'Kassenbons' kann der Kellner die erstellten Kassenbons einsehen, erneut drucken oder in Bewirtungsbelege umändern. Nach Eingabe eines Stornocodes kann er auch Kassenbons stornieren, wenn sie noch nicht in einem Tagesabschluss erfasst wurden.
+	<li><i>Einstellungen</i>: In der Einstellungsseite kann jeder Benutzer persönliche Einstellungen vornehmen (z.B. Sprache).
+</ul>
+
+<p>In der Desktop-Ansicht werden die Bestell- und Kassenansicht zur <i>Kellneransicht</i> zusammengefasst.
+
+<p>Verfügt der Benutzer über Verwaltungsrechte oder das Recht, einen Tagesabschluss durchzuführen, sieht er auch die <i>Administrationsansicht</i>.
+
+<p>Immer sichtbar ist die <i>Feedbackansicht</i>. In dieser Ansicht kann der Anwender dem Programmautor ein Nachricht zukommen lassen. Das funktioniert jedoch nur, wenn der OrderSprinter-Server einen Zugang zum Internet besitzt und der Administrator die Email-Konfiguration vorgenommen hat.

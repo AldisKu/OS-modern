@@ -1,0 +1,10 @@
+<h2>Kassenbons</h2>
+
+<p>Kassenbons werden bei einer Abrechnung immer erstellt, auch wenn diese nicht ausgedruckt werden. Erstellte Kassenbons können jederzeit erneut gedruckt werden.
+
+<p>Auch Ein- und Auslagen werden intern als Kassenbons gespeichert, jedoch nicht in der Kassenbonansicht dargestellt. Ein-/Auslagen-Bons können jedoch über den Datenexport in der Administrationsansicht eingesehen werden.
+
+<p>Sind Kassenbons noch nicht in einem Tagesabschluss erfasst, so können sie nach Eingabe eines Stornocodes storniert werden. Es wird dabei ein negativer Kassenbon erzeugt.
+
+<p>Ähnlich erfolgt die Umwandlung in einen Bewirtungsbeleg: Der ursprüngliche Kassenbon wird storniert und ein neuer Bon als Bewirtungsbeleg erstellt. Diese Aktion ist auch ohne Eingabe eines Stornocodes möglich.
+

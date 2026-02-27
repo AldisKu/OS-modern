@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+    <title>Ansicht Kassenbons</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="author" content="Stefan Pichel">
+
+    <link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+
+    <link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+    <link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+
+    <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+
+    <link rel="stylesheet" href="php/3rdparty/jquerymobiledatepicker/jquery.mobile.datepicker.css" />
+    <script src="php/3rdparty/jquerymobiledatepicker/jquery.mobile.datepicker.js"></script>
+
+    <script src="php/3rdparty/jquery-2.2.4.min.js"></script> 
+    <script src="php/3rdparty/jquery.mobile-1.4.5.min.js"></script>
+
+    <link rel="stylesheet" href="php/3rdparty/jqueryui1-11-4/jquery-ui.min.css" />
+    <script src="php/3rdparty/jqueryui1-11-4/jquery-ui.min.js"></script>
+    <script src="php/3rdparty/jqueryui1-11-4/jquery-ui-i18n.min.js"></script>
+    <script src="utilities.js?v=2.9.12"></script>
+    <script src="receiptutils.js?v=2.9.12"></script>
+   
+<script>
+var P_DESCR=["Beschreibung","Description","Descripci\u00f3n"],P_PRICE=["Preis","Price","Precio"],P_TOTAL=["Total","Total","Total"],P_ID=["Id:","Id:","Id:"],P_ROOMSEL=["Raumauswahl","Room selection","Selecci\u00f3n de espacio"],P_PAYDESK_ACTIONS=["Kassenaktionen","Paydesk actions","Acciones de caja"],P_BAR_INPUT=["Bareinlage/-auslage","Input and output money","Insertar/Extrahir dinero"],P_BAR_GET=["Barentnahme","Take money","Sacar dinero"],P_BAR_SUM=["Einnahmen","Revenue","Cobro"],P_AUSTRIA_ZERO_RECEIPT=
+["Nullbeleg erstellen (RKSV/\u00d6sterreich)","Create 'Nullbeleg' (RKSV/Austria)","Crear 'Nullbeleg' (RKSV/Austria)"],P_TITLE=["Kasse","Paydesk","Caja"],P_TABLE=["Tisch","Table","Mesa"],P_TABLE_SEL=["Tischauswahl","Select table","Qu\u00e9 mesa?"],P_NOT_PAID=["Ausstehend f\u00fcr ","Not paid for ","Impagado para "],P_OPS=["Operationen","Operations","Operaciones"],P_ALL=["Alles","All","Todo"],P_ONLY_MY_JOBS=["Zeige nur meine Bestellungen","Show only my orders","Mostrar s\u00f3lo mis pedidos"],P_CONTENT_RECEIPT=
+["Inhalt Kassenbon","Content of receipt","Contenido del tique"],P_ONLY_PAY=["Nur Zahlung","Only pay","Solo pagar"],P_PAY_PRINT=["Bondruck","Pay+Print","Pagar+Imprimir"],P_CHANGE_CALC=["Wechselgeldrechner:","Change Calculator:","Calculadora de Cambio:"],P_TOTALSUM=["Summe","Sum","Total"],P_CHOOSE_PAYWAY=["Auswahl der Zahlungsart:","Selection of method of payment:","Selecci\u00f3n del modo de pago:"],P_CANCEL=["Abbrechen","Cancel","Cancelar"],P_CASHTAKEOUT=["Barentnahme aus der Kasse","Cash take-out",
+"Sacar dinero"],P_CASHTAKIN=["Barein-/auslage in/aus Kasse","Cash insert/extract","Insertar/exportar dinero"],P_AMOUNT=["Betrag:","Amount:","Valor:"],P_OVERVIEW=["\u00dcbersicht Kellnerkasse","Overview waiter purse","Resumen cartera de bolsillo"],P_PUT_IN=["Einlegen/Entnehmen","Insert/Take out","Insertar"],P_TAKE_OUT=["Entnehmen","Take out","Sacar"],P_OVERV_DETAILS=["Diese \u00dcbersicht zeigt die Einnahmen durch den Kellner pro Zahlungsweg seit der letzten Tageslosung sowie als weiteren Wert den Kassenstand unter Ber\u00fccksichtigung der eigenen Eingaben und Entnahmen.",
+"This overview contains the amount of money of this waiter since the last closing as well as the total amount of money including the own cash insert and take-out actions.","Este resumen contiene todo el dinero del camarero, y tambi\u00e9n el dinero incluido con acciones de insertar y sacar."],P_CASH_SUM=["Bewirtungseinnahmen (ohne Ein-/Auslagen):","Cash by payment (without inserts/take-outs):","Cobro (sin tomas/entradas):"],P_INCLUDE_OWN=["<b>Bar</b>bestand inkl. eigener Kassenein-/auslagen:","Cash incl. own cash insert/take-outs:",
+"Cash  incl. tomas y entradas proprias:"],P_NO_ELEM=["Keine Rechnungselemente","No items selected","Ning\u00fan producto selecionado"],P_NO_ELEM_DETAILS=["Es wurden keine abrechenbaren Produkte festgelegt (der Bon ist leer!).","There are no selected items. The receipt is empty!","No hay ning\u00fan elemento seleccionado para pagar."],P_CASHACTION_OK=["Kassenaktion abgeschlossen.","Action completed.","Acci\u00f3n terminado."],P_NAV=["Navigation","Navigation","Navigaci\u00f3n"],P_ORDER_ACTION=["-> Bestellansicht",
+"-> Order view","-> Vista de Orden"],P_TO_PAY=["Zu zahlen: ","To pay: ","Pagar total: "],P_PAY_RETURN=["Zur\u00fcck: ","Return: ","Torna: "],P_CALC_PAYBACK=["Berechne","Calculate","Calcular"],P_HAS_PAID=["Bezahlt: ","Paid: ","Pagado: "],P_TOGO=["Au\u00dfer-Haus-Verkauf","Sale with Tax No 2","Venta IVA 2"],P_TIP=["nur Trinkg.: ","Only tip: ","Solo prop.: "],P_TOTAL_INCL_TIP=["Zielbetrag:","Target pay:","Quiere pagar:"],CALC_TIP_TXT=["Angabe extra Trinkg.","Do Tip separate","Propina individual"],CALC_TOTAL_TXT=
+["Angabe inkl. Trinkg.","Do Tip incl.","Propina incl."],P_GUESTS=["G\u00e4ste","Guests","Habitaciones"],P_OF_WORK_RECEIPT=[" von Arbeitsbon ","of work receipt "," del ticket de trabajo "],P_OF_ORDER_JOB=[" von Lieferauftrag "," of Order/Delivery "," de la Entrega "],P_FOR=["f\u00fcr","for","para"],P_BILL_TITLE=["Rechnung","Bill","Factura"],CALC_NONE=0,CALC_TOTAL=1,CALC_TIP=2,showHostTemplate=!1,guests=[],internalguests=[],hotelinterface=0,PAYMENT_CARD=2,PAYMENT_HS3=7,PAYMENT_GUEST=8,currentPaymentId=
+7,showpayments=1,showpayment2=1,showpayment3=1,showpayment4=1,showpayment5=1,showpayment6=1,showpayment7=1,showpayment8=1,forceprint=0,showhostprint=1,billprintjobs=0,prodsByPrintjob=[],prodsByOrder=[],currentSelectedIsTogo=!1,usercandocashop=0,allprodstoreceipt=0,deskviewname="",lastCalcBruttoSum=0,cheaptestAlreadySubtracted=!1,allowminuscheapest=0,showreceiptinpaydesk=1,showonlymyjobscheck=0,usershowonlymyjobs=0,austriaenabled=0,austriabind=0,cancelinpaydesk="";
+function getGeneralConfigItems(){doAjax("GET","php/contenthandler.php?module=admin&command=getGeneralConfigItems",null,insertGeneralConfigItems,"Fehler Konfigurationsdaten",SYNC)}function getPayments(a){doAjax("GET","php/contenthandler.php?module=admin&command=getPayments",null,a,"Fehler Zahlungswege")}function toHtmlInPaydesk(a){return void 0===a||null==a?"":"string"===typeof a?a.replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"):a}
+function insertGeneralConfigItems(a){if("OK"===a.status){a=a.msg;decpoint=a.decpoint;$("#info-page").data("decpoint",a.decpoint);currency=a.currency;usercandocashop=a.usercandocashop;allprodstoreceipt=a.allprodstoreceipt;deskviewname=a.deskviewname;austriaenabled=a.austria;austriabind=a.austriabind;var b=a.tax,c=b.replace(".",decpoint);$("#info-page").data("usstGerVal",c);$("#info-page").data("usst",b);b=a.togotax;c=b.replace(".",decpoint);$("#info-page").data("togoTaxGerVal",c);$("#info-page").data("togotax",
+b);$("#info-page").data("companyinfo",a.companyinfo);$("#info-page").data("payPrintType",a.payprinttype);$("#info-page").data("currency",a.currency);$("#info-page").data("billlanguage",a.billlanguage);$("#info-page").data("userlanguage",a.userlanguage);receiptfontsize=parseInt(a.receiptfontsize);$("#receiptpart").css("font-size",receiptfontsize+"px");paymentconfig=a.paymentconfig;showpayments=a.showpayments;showpayment2=a.showpayment2;showpayment3=a.showpayment3;showpayment8=a.showpayment8;showpayment7=
+a.showpayment7;showpayment6=showpayment5=showpayment4=0;forceprint=a.forceprint;$("#curtopay2").html(" "+a.currency);workflowconfigfood=a.workflowconfig;workflowconfigdrinks=a.workflowconfigdrinks;digigopaysetready=a.digigopaysetready;showhostprint=a.showhostprint;restaurantmode=a.restaurantmode;billprintjobs=a.billprintjobs;sumupforcard=a.sumupforcard;affiliatekey=a.affiliatekey;appid=a.appid;serverurl=a.serverurl;allowminuscheapest=a.allowminuscheapest;showreceiptinpaydesk=parseInt(a.showreceiptinpaydesk);
+showonlymyjobscheck=parseInt(a.showonlymyjobscheck);usershowonlymyjobs=parseInt(a.usershowonlymyjobs);cancelinpaydesk=a.cancelinpaydesk;serverurl.endsWith("/")&&(serverurl=serverurl.substr(0,serverurl.length-1));$("#desktopviewname").html(deskviewname);setLanguage(a.userlanguage)}else $("#contentpart").hide(),setTimeout(function(){document.location.href="index.html"},250)}
+function addEntryOrIncreaseCount(a,b){var c,d=!1,e=b.prodid+"-"+b.extras.join("_")+b.price+"-"+b.pricelevelname+"#"+b.tax+"_"+b.togo;for(c=0;c<a.length;c++){var f=a[c];f[2]==e&&(f[0]+=1,d=!0)}d||a.push([1,b,e]);return a}
+function genCreateReceiptHeader(a,b,c,d,e,f,g){d=P_WAITER[a]+" "+d;b="<tr><td colspan=6>&nbsp;</tr><tr><td colspan=4>"+(P_TABLE[a]+" "+c+'\t\t\t<td id="billid" colspan=2 style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">ID:'+b+'</tr><tr><td colspan=4>&nbsp;<td id="billdate" colspan=2 style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;"></tr>');b+="<tr><td colspan=6>"+d+"</tr><tr><td colspan=6>&nbsp</tr>";""!=f&&(b+="<tr><td colspan=6>Gast: "+
+toHtmlInPaydesk(f)+"</tr>",b+="<tr><td colspan=6>&nbsp</tr>");null!=g&&(b+="<tr><td colspan=6>Zahlungsweg: "+g+"</tr>",b+="<tr><td colspan=6>&nbsp</tr>");return b+="<tr><td>"+P_NO[a]+"<td colspan=3>"+P_DESCR[a]+'<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+P_PRICE[a]+'<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+P_TOTAL[a]+"</tr>"}
+function genCreateReceiptFooterNoSum(a,b,c,d){return genCreateReceiptFooter(a,b,c,"","","",d)}
+function genCreateReceiptFooter(a,b,c,d,e,f,g){a="<tr><td colspan=6>&nbsp</tr><tr><td colspan=2>"+(P_MWST[b]+'%\t\t<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+P_MWST[b]+'<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+P_NETTO[b]+'<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;" colspan=2>'+P_BRUTTO[b]+"</tr>");for(var h=0;h<g.length;h++){var k=g[h];k=k.replace(",","-");
+a+='<tr><td id="taxval'+k+'" colspan=2><td id="mwst'+k+'" style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+d+'<td id="netto'+k+'" style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+e+'<td id="brutto'+k+'" style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;" colspan=2>'+f+"</tr>"}a=a+"<tr><td colspan=6>&nbsp</tr><tr><td>\t&nbsp;\t<td colspan=3>"+(P_SUM[b]+'<td id="priceinreceipt2" style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;" colspan=2>'+
+f+"</td></tr>");a=a+'<tr><td colspan=6>&nbsp</tr><tr><td style="text-align:center;vertical-align:bottom;" colspan=6><center>&nbsp;<br>'+toHtmlInPaydesk(c).replace(/(?:\r\n|\r|\n)/g,"<br />");return a+"</center></tr>"}
+function generateOneProdLine(a,b,c,d,e,f){var g=parseFloat(c).toFixed(2).replace(".",e);"A"!=d&&(b+=" ("+d+")");1==f&&(b="To-Go: "+b);d="<tr>";c=(a*c).toFixed(2).replace(".",e);0==a&&(c=g=a="");return d=d+('<td style="border: solid black 0px;padding: 3px;text-align:center;vertical-align:bottom;" id="count">'+a+'<td colspan=3 style="white-space: nowrap;overflow: hidden;text-overflow:ellipsis;width: 60%;">'+b)+'<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+
+g+('<td style="border: solid black 0px;padding: 3px;text-align:right;vertical-align:bottom;">'+c+"</tr>")}function generateProdPartByDbContent(a,b){var c;tablecontent="";for(c=0;c<b.length;c++){var d=b[c];tablecontent+=generateOneProdLine(d.count,d.productname,d.price,d.pricelevel,a)}return tablecontent}function listTaxes(a,b){for(var c=[],d=0;d<a.length;d++){var e=parseFloat(String(a[d]));e=e.toFixed(2).replace(".",b);0>c.indexOf(e)&&(c[c.length]=e)}return c}
+function listTaxesBasedOnUntenList(a){for(var b=[],c=0;c<prodsOnReceiptList.length;c++)b.push(prodsOnReceiptList[c].tax);return listTaxes(b,a)}
+function calcSum(){for(var a=listTaxesBasedOnUntenList(decpoint),b=[],c=[],d=[],e=0;e<a.length;e++)b[e]=0,c[e]=0,d[e]=0;for(var f=0,g=0,h=0;h<prodsOnReceiptList.length;h++){var k=prodsOnReceiptList[h],l=parseFloat(k.price);k=k.tax;e=parseFloat(k);k=k.replace(".",decpoint);var n=l/(1+e/100),p=l-n,m=0;for(e=0;e<a.length;e++)a[e]==k&&(m=e);b[m]+=n;c[m]+=l;d[m]+=p;f+=n;g+=l}for(h=0;h<a.length;h++)e=a[h],l=e.replace(",","-"),$("#taxval"+l).html(e+"%"),$("#mwst"+l).html(d[h].toFixed(2).replace(".",decpoint)),
+$("#netto"+l).html(b[h].toFixed(2).replace(".",decpoint)),$("#brutto"+l).html(c[h].toFixed(2).replace(".",decpoint));billbrutto=g;billnetto=f;$("#priceinreceipt").html(g.toFixed(2).replace(".",decpoint)+" "+currency);$("#priceinreceipt2").html(g.toFixed(2).replace(".",decpoint)+" "+currency);lastCalcBruttoSum=g}
+function bindCashButton(){$("#cashbutton").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();$("#cashdlg").dialog({autoOpen:!1,modal:!0,height:520,width:500,buttons:{Abbrechen:function(){$(this).dialog("close")},"Einlegen/Entnehmen":function(){cashOperation()}}});$("#includeowncash").html(P_INCLUDE_OWN[lang]);$("#cashmoney").val("");$("#cashremark").val("");$("#cashdlg").dialog("open");doAjax("POST","php/contenthandler.php?module=bill&command=getCashOverviewOfUser",
+null,insertCashValues,"Fehler Kassenaktion");$(".ui-dialog-buttonset .ui-button").css("font-weight","bold");$(".ui-dialog-buttonset .ui-button").css("color","black");$(".ui-dialog-buttonset .ui-button:nth-child(2)").css("background-color","#e0e0d1");$(".ui-dialog-buttonset .ui-button:nth-child(2)").css("background-color","#ccff99");$(".ui-dialog-buttonset .ui-button:nth-child(3)").css("background-color","#ffcc99")})}
+function insertCashValues(a){if("OK"!==a.status)$("#cashbyguests").html(""),$("#onlycashsum").html(""),$("#cashtotal").html(""),$(".currencyplaceholder").html(""),alert("Fehler bei Verbuchung einer Barein-/auslage: "+a.msg);else{var b=generateCashOverviewOfUser(a.cashperpayments);$("#cashbyguests").html(b);b=parseFloat(a.onlycash);$("#onlycashsum").html(b.toFixed(2).replace(".",decpoint));$("#cashtotal").html(parseFloat(a.total).toFixed(2).replace(".",decpoint));$(".currencyplaceholder").html(currency)}}
+function cashOperation(){var a=$("#cashmoney").val().replace(",",".");if(isNaN(a))alert("Keine Zahl!");else{$("#cashdlg").dialog("close");var b=$("#cashremark").val(),c=$("#cashtype").val();checkForCashActionAndUserWill(c,a)?doAjax("POST","php/contenthandler.php?module=bill&command=doCashAction",{money:a,remark:b,cashtype:c},handleCashActionResult,"Fehler Kassenaktion"):alert("Abbruch")}}
+function handleCashActionResult(a){"ERROR"===a.status?alert("Fehler "+a.msg):"OK"==a.status&&alert(P_CASHACTION_OK[lang])}function _findChepestPriceEntry(a){var b=Number.MAX_VALUE,c=null;a.forEach(function(d){var e=parseFloat(d.price);e<b&&(b=e,c=d)});return c}
+function cancelAnArticle(a,b,c,d){var e=0-a.price;0!=a.unit&&(e=1*e/a.unitamount);a={id:a.id,name:a.longname,option:"",prodid:a.prodid,price:0-a.price,orderid:a.orderid,ordername:a.ordername,tax:a.tax,extras:[],changedPrice:e,togo:a.togo,unit:a.unit,unitamount:a.unitamount,phase:0,viewmode:b,isAlreadyOnReceipt:c};b="desktop"===b?_getTableId():$("#info-page").data("tid");doAjaxTransmitData("POST","php/contenthandler.php?module=queue&command=cancelinpaydesk",{tableid:b,prods:[a],print:0,payprinttype:"s",
+paydeskstornocode:d},_manageAddedProd,"Fehler Produktbuchung",a)}function doCertainArticleStorno(a,b,c,d){var e=null;let f=[],g=!1;"onreceipt"===c?(f=prodsOnReceiptList,g=!0):f=prodsToPayList;f.forEach(function(h){h.id==a&&(e=h)});null!==e?cancelAnArticle(e,b,g,d):alert("ID Not found ")}
+function bindMinusCheapestButton(a){$("#minuscheapest").off("click").on("click",function(b){b.stopImmediatePropagation();b.preventDefault();cheaptestAlreadySubtracted?alert("Billigstes Produkt wurde bereits in Negation hinzugef\u00fcgt"):(b=_findChepestPriceEntry(prodsOnReceiptList),null!==b&&cancelAnArticle(b,a,!0,""))})}
+function _manageAddedProd(a,b){if("OK"===a.status){stornoDoneAlready=!0;showStornoButtons=!1;$(".stornoarticleswitchon").hide();$(".stornoarticle").hide();let c=b.viewmode,d=b.isAlreadyOnReceipt;if("mobile"!==c||d)if("mobile"===c&&d)listToAddProductTo=prodsOnReceiptList;else if("desktop"===c&&d)listToAddProductTo=prodsToPayList;else return;else listToAddProductTo=prodsToPayList;_manageAddedProdCore(a,b,listToAddProductTo)}else alert("Fehler: "+a.msg)}
+function _manageAddedProdCore(a,b,c){var d=b.viewmode;a={count:1,extras:[],id:a.queueids[0],longname:b.name,orderid:b.orderid,ordername:b.ordername,price:b.price,privelevelname:"A",printjobid:0,prodid:b.prodid,prodimageid:0,tax:b.tax,togo:b.togo,pricelevelname:"A"};c[c.length]=a;"mobile"===d&&(displayProdsOnReceipt(),displayProdsToPayForTable(),$("#minuscheapest").hide());"desktop"===d&&(aProdToPayIsClicked(a),displayProdsToPayForTable(),displayProdsOnReceipt());cheaptestAlreadySubtracted=!0}
+function bindHostButton(a){if(1==showhostprint)$("#hostbutton").off("click").on("click",function(b){b.stopImmediatePropagation();b.preventDefault();showHostTemplate=showHostTemplate?!1:!0;null!=a&&($(a).removeClass("ui-icon-check"),$(a).removeClass("ui-icon-delete"),$(a).removeClass("btnswitchoff"),$(a).removeClass("btnswitchon"),showHostTemplate?($(a).addClass("ui-icon-check"),$(a).addClass("btnswitchon")):($(a).addClass("ui-icon-delete"),$(a).addClass("btnswitchoff")));0==$("#info-page").data("billlanguage")?
+createAllEntriesInReceipt():0==lang?alert("Bewirtungsbeleg steht nur f\u00fcr deutsche Kassenbons zur Verf\u00fcgung."):1==lang?alert("Bewirtungsbeleg is only possible for German receipts."):2==lang&&alert("Bewirtungsbeleg se puedo usar solo para tiques alemanes.")})}function printBill(a){doAjax("POST","php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob",{billid:a,useaddrecprinter:1},null,"Druckfehler")}
+function generateGuestResult(a,b,c){$("#hotelroomfoundguest").html("");a=a.trim().toLowerCase();if(""===a)$("#hotelroomselection").html("");else{var d="",e=!1,f=0,g="",h=guests;c==PAYMENT_GUEST&&(h=internalguests);$.each(h,function(k,l){var n=l.object.toString();l=l.guest;var p=0<=n.toLowerCase().indexOf(a),m=0<=l.toLowerCase().indexOf(a);if(p||m)f++,g=toHtmlInPaydesk(n+" - "+l),e?d+='<option value="'+k+'" >'+toHtmlInPaydesk(n+" - "+l)+"</option>":(e=!0,d+='<option value="'+k+'" selected>'+toHtmlInPaydesk(n+
+" - "+l)+"</option>")});1===f&&$("#hotelroomfoundguest").html(g);$("#hotelroomselection").html(d)}b&&$("#hotelroomselection").selectmenu("refresh")}function generateCashOverviewOfUser(a){for(var b="",c=0;c<a.length;c++){var d=a[c];b+=d.payment+": <b>"+parseFloat(d.value).toFixed(2).replace(".",decpoint)+"</b> "+currency+"<br>"}return b}
+function fillProdByPrintJobsList(a){prodsByPrintjob=[];for(var b=a.length,c=0;c<b;c++){var d=a[c],e=d.printjobid;0!=e&&(e in prodsByPrintjob?(e=prodsByPrintjob[e],e[e.length]=d):prodsByPrintjob[e]=[d])}}function fillProdByOrders(a){prodsByOrder=[];a.forEach(function(b){var c=b.orderid;c in prodsByOrder?(c=prodsByOrder[c],c[c.length]=b):prodsByOrder[c]=[b]})}
+function setCalcModusBtn(){calcmodus==CALC_TOTAL?($("#payway").html(P_CHANGE_CALC[lang]),$("#calculatorarea").show(),$("#totalpricearea").hide(),$("#calcmodus").html("-&gt; "+CALC_TIP_TXT[lang]),$("#tiptxt").html(P_TOTAL_INCL_TIP[lang])):calcmodus==CALC_TIP?($("#payway").html(P_CHANGE_CALC[lang]),$("#calculatorarea").show(),$("#totalpricearea").hide(),$("#calcmodus").html("-&gt; "+CALC_TOTAL_TXT[lang]),$("#tiptxt").html(P_TIP[lang])):($("#payway").html(P_TOTALSUM[lang]),$("#totalpricearea").show(),
+$("#calculatorarea").hide())}function fillValuesInCalc(a,b,c){$("#topayval").html(a);$("#totalpricearea").html(a);$("#haspaid").attr("placeholder",a);$("#haspaid").val("");$("#topayback").html("0"+b+"00");$("#tipfield").attr("placeholder","0.00".replace(".",b)+" "+c);$("#tipfield").val("")}function bindCalcReturn(){$("#calcreturnbtn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();calcChangeMoney()})}
+function checkForCashActionAndUserWill(a,b){var c=!0;7==a&&0<b?c=confirm("\u00dcblicherweise wird die Einnahme f\u00fcr Trinkgeld beim Kassieren registriert und die \u00dcbergabe an den Arbeitnehmer als Entnahme aus der \u00fcber diesen Dialog angezeigt. Bei einem positiven Betrag sagen Sie jedoch, dass Sie Trinkgeld f\u00fcr den Arbeitnehmer einlegen. Ist das gewollt?"):1==a&&0<b?c=confirm("Ein positiver Betrag sagt aus, dass Geld als Privateinlage in die Kasse eingelegt werden soll. Ist das gewollt?"):
+1==a&&0>=b?c=confirm("Ein negativer Betrag sagt aus, dass Geld als Privatentnahme aus der Kasse entnommen werden soll. Ist das gewollt?"):3==a&&0<b?c=confirm("Normalerweise nutzt man den Geldtransit, um zu beschreiben, dass Geld aus der Kasse entnommen wird. Ein positiver Betrag sagt jedoch aus, dass Geld in die Kasse gelegt werden soll. Ist das gewollt?"):6==a&&0<b&&(c=confirm("Bei einer Auszahlung wird ein negativer Betrag erwartet, weil der Kasse Geld entnomen wird. Wird jedoch ein positiver Betrag angegeben, w\u00fcrden Sie das Gegenteil aufzeichnen. Ist das gewollt?"));
+return c}
+function calcChangeMoney(){try{var a=$("#haspaid").val().trim(),b=parseFloat(a.replace(decpoint,".")),c=$("#topayval").html(),d=parseFloat(c.replace(decpoint,".")),e=0;if(calcmodus==CALC_TIP){var f=$("#tipfield").val().trim();f=""===f?0:parseFloat(f.replace(decpoint,"."));e=b-(d+f)}else{var g=$("#tipfield").val().trim();""==g?""==a?e="NaN":(e=b-d,$("#tipfield").val(c)):(g=parseFloat(g.replace(decpoint,".")),e=b-g)}if($.isNumeric(parseFloat(e))){var h=e.toFixed(2).replace(".",decpoint);$("#topayback").html(h)}else $("#topayback").html("?")}catch(k){$("#topayback").html("?")}}
+function valueWithoutCurrency(a){return a.split(" ")[0]}function checkAndCalcRightTip(a,b){a=$("#tipfield").val().trim().replace(a,".");a=valueWithoutCurrency(a);if(""!==a&&isNaN(a))return{status:"ERROR",msg:"Trinkgeldfeld muss eine Zahl sein"};var c=parseFloat(a);""!==a&&b==CALC_TOTAL&&(c-=lastCalcBruttoSum);""===a&&(c=null);return null!==a&&0>c?{status:"ERROR",msg:"Negative Trinkgelder k\u00f6nnen bei einer Abrechnung nicht angegeben werden."}:{status:"OK",value:c}};
+</script>
+
+<style>	
+	@media handheld
+	{
+		.receipttable {width: 100%; background-color: #cccccc;}
+	}
+	@media all
+	{
+		.receipttable {width: 100%; background-color: #cccccc;}
+	}
+	@media all
+	{
+		#colWithBillOverview { vertical-align:top;}
+	}
+	@media all
+	{
+		#receiptbill {display: none;}
+	}
+	@media print
+	{
+		.receipttable {width: 100%;};
+	}
+	@media print
+	{
+		#receiptbill {width: 100%; display: block;};
+	}
+	@media print
+	{
+		#theheader,#modulemenu,#billlist,#thefooterr,#updatebtn,#datepickerarea,#vouchersarea {display: none;}
+	}
+</style>
+
+
+</head>
+
+<body>
+
+<script>
+
+var BILL_TABLE = ["Tisch","Table","Mesa"];
+var BILL_UPDATE = ["Aktualisieren","Update","Actualizar"];
+var BILL_PRINT = ["Drucken","Print","Imprimir"];
+var BILL_STORNO = ["Storno","Cancel","Contrapartida"];
+var BILL_STORNO_AND_DELETE = ["Storno und Produkte löschen","Cancel and Remove Products","Contrapartida y removar productos"];
+var BILL_CLOSED = ["abgeschlossen","closed","cerrado"];
+var BILL_DO_HOST = ["Bewirtungsbeleg","Guest receipt","Tique de invitados"];
+var BILL_UNDO_HOST = ["Rückgängig Bewirtungsbeleg","Undo guest receipt","No tique de invitados"];
+var BILL_TITLE = ["Kassenbons","Receipts","Tiques"];
+var BILL_YES = ["Ja","Yes","Si"];
+var BILL_NO = ["Nein","No","No"];
+var BILL_STORNO_QUEST_TITLE = ["Storno?","Cancel?","Contrapartida?"];
+var BILL_STORNO_DEL_QUEST_TITLE = ["Storno und Bestellung entfernen?","Cancel and remove products?","Contraüartida y removar productos?"];
+var BILL_STORNO_QUEST_TEXT = ["Bon stornieren und Artikel als unbezahlt im System lassen?","Cancel the receipt and leave productis as unpaid in the queue?","Contrapartida del tique y quedar productis en el systema?"];
+var BILL_STORNO_DEL_QUEST_TEXT = ["Bon stornieren und Bestellung entfernen?","Cancel the receipt and remove the orders?","Contrapartida del tique y removar las ordenes"];
+var BILL_NO_CANCEL_POSS = ["Der Stornovorgang ist fehlgeschlagen. Die wahrscheinlichste Ursache ist ein Tagesabschluss, der den zu stornierenden Bon einschließt. In diesem Fall darf der Bon rückwirkend nicht mehr annuliert werden.",
+                           "Cancelling was not possible. Probably the receipt to cancel is already part of a closing. In this case the receipt cannot be cancelled.",
+                           "Contrapartida no fue posible. Probablemente el tique esta ya cerrado."];
+var BILL_DATE = ["Datum","Date","Fecha"];
+var BILL_STORNO_REASON = ["Stornogrund","Reason","Razón"];
+var BILL_TOGGLE_HOST = ["Der ursprüngliche Bon wurde storniert und mit geänderter Bewirtungseigenschaft neu angelegt. Er befindet sich an erster Stelle in der Bonliste.", 
+                        "Der original receipt was discarded and recreated with the changed guest receipt property. The new receipt is on top of the list",
+                        "El tique original esta descartado y iniciado de nuevo en la forma modificada."];
+var BILL_CHANGE_PAYMENT = ["Der ursprüngliche Bon wurde storniert und mit geänderter Zahlungsart neu angelegt. Er befindet sich an erster Stelle in der Bonliste.", 
+                        "Der original receipt was discarded and recreated with the changed payment way. The new receipt is on top of the list",
+                        "El tique original esta descartado y iniciado de nuevo en la forma modificada."];
+var BILL_WRONG_FORMAT = ["Falsches Zahlenformat","Wrong number format","Formato de precio incorecto"];
+var BILL_FIRST_JOB = ["Erste Bon-ID","First job id","Id primero"];
+var BILL_LAST_JOB = ["Letzte Bon-ID","Last job id","Id último"];
+var BILL_BATCH = ["Stapelverarbeitung","Batch processing","Accion con muchos elementos"];
+var BILL_VOUCHERS_HEADER = ["Ausgestellte Gutscheine","Issued vouchers","Vales emitidos"];
+var BILL_GUEST_BILL = ["Lieferbon","Delivery receipt","Recibo de entrega"];
+var BILL_CANCEL_ALSO_TIP = ["Trinkgeld auch zurückbuchen","Cancel also the tip","Descartar tambien consejo"];
+var BILL_MORE_ACTIONS = ["Weitere Aktionen","Further actions","Màs opciones"];
+var BILL_AS = ["als","as","como"];
+var BILL_SHOW_TIPS = ["Zeige auch Trinkgeldbons","Show also tips receipts","Mostrar también propinas"];
+var BILL_SHOW_ONLY_MY_BILLS = ["Zeige nur eigene Bons","Show only my receipts","Mostrar solo mi tiquets"];
+
+var lang = 0;
+
+var when = 0;
+
+var decpoint = ".";
+
+var jsonBills = "";
+var vouchersAreaOpened = false;
+var vouchers = [];
+var allowedPayments = [];
+
+	function setLanguage(language) {
+		lang = language;
+		$("#updatebtntxt").html(BILL_UPDATE[lang]);
+		$("#showtipstxt").html(BILL_SHOW_TIPS[lang]);
+		$("#showonlymybillstxt").html(BILL_SHOW_ONLY_MY_BILLS[lang]);
+		$("#billtitletxt").html(BILL_TITLE[lang]);
+		$("#stornoyes").html(BILL_YES[lang]);
+		$("#stornono").html(BILL_NO[lang]);
+		$("#billnocancelposs").html(BILL_NO_CANCEL_POSS[lang]);
+		$("#datetxt").html(BILL_DATE[lang]);
+		$("#stornoreasontxt").html(BILL_STORNO_REASON[lang]);
+
+		$("#printjobstxt").html(BILL_PRINT[lang]);
+		$("#fromjobidtxt").html(BILL_FIRST_JOB[lang]);
+		$("#tojobidtxt").html(BILL_LAST_JOB[lang]);
+		$("#batchheadertxt").html(BILL_BATCH[lang]);
+		$("#vouchersheadertxt").html(BILL_VOUCHERS_HEADER[lang]);
+		$("#tipstornocheckboxtxt").html(BILL_CANCEL_ALSO_TIP[lang]);
+
+		var langtxt = "de";
+		if (lang == 1) {
+			langtxt = "en";
+		} else if (lang == 2) {
+			langtxt = "es";
+		}
+
+		var currentYear = new Date().getFullYear();
+		var yearRangeTxt = (currentYear - 5) + ":" + (currentYear);
+
+		$("#datepicker").datepicker($.datepicker.regional[langtxt]).datepicker("option", {
+			changeMonth: true,
+			changeYear: true,
+			yearRange: yearRangeTxt
+		});
+
+		$('#datepicker').datepicker('setDate', new Date());
+	}
+
+	function updatelistener() {
+		$("#updatebtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			getLastBills();
+		});
+	}
+
+	function showtipslistener() {
+		$("#showtips").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			getLastBills();
+		});
+	}
+
+	function showonlymybillslistener() {
+		$("#showonlymybills").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			getLastBills();
+		});
+	}
+
+	function batchjoblistener() {
+		$("#printjobsbtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			var start = $("#fromjobidfield").val();
+			var end = $("#tojobidfield").val();
+
+			if (!isInt(start) || !isInt(end)) {
+				alert(BILL_WRONG_FORMAT[lang]);
+				return;
+			}
+			doAjax("POST", "php/contenthandler.php?module=printqueue&command=batchReceiptPrintJob", { start: start, end: end }, handleBatchResult, null);
+		});
+	}
+
+	function vouchersBinding() {
+		$("#vouchersarea").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			if (!vouchersAreaOpened) {
+				vouchersAreaOpened = true;
+				getVouchers();
+			}
+		});
+	}
+
+	function getVouchers() {
+		if (vouchersAreaOpened) {
+			doAjax("GET", "php/contenthandler.php?module=vouchers&command=getvouchers", null, showVouchers, null, true);
+		}
+	}
+
+	function showVouchers(answer) {
+		if (answer.status != "OK") {
+			return;
+		}
+		vouchers = answer.msg;
+
+		var text = "";
+
+		vouchers.forEach(function (aVoucher) {
+			var voucherStatus = "e";
+			if (aVoucher.removed == 1) {
+				voucherStatus = "b";
+			}
+			text += '<div id="voucher_' + aVoucher.id + '" data-role="collapsible" data-collapsed="true" data-theme="' + voucherStatus + '" data-content-theme="c" class="voucher">';
+			text += '<p /><h3>' + aVoucher.creationdate + ' ' + toHtml(aVoucher.name) + ' ' + aVoucher.price + '</h3>';
+			text += '<div id="vouchercontent_' + aVoucher.id + '"></div>';
+			text += '</div>';
+		});
+		$("#voucherslistarea").html(text);
+		$("#voucherslistarea").trigger("create");
+		bindSingleVoucherExpand();
+	}
+
+	function bindSingleVoucherExpand() {
+		$(".voucher").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			var voucherid = this.id.split("_")[1];
+			var voucher = findVoucher(voucherid);
+			if (voucher != null) {
+				var txt = "Ausgestellt: " + voucher.creationdate + "<br>";
+				txt += "Aussteller: " + voucher.creatoruser + "<br>";
+				txt += "Eingelöst am: " + voucher.redeemdate + "<br>";
+				txt += "Einlösender Bediener: " + voucher.redeemeruser + "<br>";
+				txt += "Preis: " + voucher.price;
+				if (voucher.removed == 1) {
+					txt += "<br>Status: gelöscht";
+				}
+				$("#vouchercontent_" + voucherid).html(txt);
+			}
+		});
+	}
+
+	function findVoucher(voucherid) {
+		var foundVoucher = null;
+		vouchers.forEach(function (aVoucher) {
+			if (aVoucher.id == voucherid) {
+				foundVoucher = aVoucher;
+			}
+		});
+		return foundVoucher;
+	}
+
+	function handleBatchResult(answer) {
+		if (answer.status !== "OK") {
+			alert("Fehler " + answer.code + ": " + answer.msg);
+		} else {
+			$("#fromjobidfield").val("");
+			$("#tojobidfield").val("");
+		}
+	}
+
+	function getLastBills() {
+		var showonlymybills = 0;
+		if ($("#showonlymybills").is(":checked")) {
+			showonlymybills = 1;
+		}
+		var date = $("#datepicker").datepicker("getDate");
+		var data = {
+			day: date.getDate(),
+			month: (date.getMonth() + 1),
+			year: date.getFullYear(),
+			showonlymybills: showonlymybills
+		};
+		doAjax("GET", "php/contenthandler.php?module=bill&command=getLastBillsWithoutContent", data, displayBillsWithContent, "letzte Bons");
+	}
+
+	function doAjaxCancelBill(billid, stornocode, reason, tipcheckbox) {
+		var canceltip = 0;
+		if (tipcheckbox) {
+			canceltip = 1;
+		}
+		var data = {
+			billid: billid,
+			stornocode: stornocode,
+			reason: reason.trim(),
+			removeproducts: 0,
+			canceltip: canceltip
+		};
+		doAjax("POST", "php/contenthandler.php?module=bill&command=cancelBill", data, cancelBill, "Bonstorno abgebrochen");
+	}
+
+	function doAjaxCancelDeleteBill(billid, stornocode, reason, tipcheckbox) {
+		var canceltip = 0;
+		if (tipcheckbox) {
+			canceltip = 1;
+		}
+		var data = {
+			billid: billid,
+			stornocode: stornocode,
+			reason: reason.trim(),
+			removeproducts: 1,
+			canceltip: canceltip
+		};
+		doAjax("POST", "php/contenthandler.php?module=bill&command=cancelBill", data, cancelBill, "Bonstorno abgebrochen");
+	}
+	function cancelBill(jsonText) {
+		if (jsonText.status !== "OK") {
+			alert("Fehler: " + jsonText.msg);
+			return;
+		}
+		setTimeout(function () { location.reload(); }, 1000);
+	}
+
+	function changeHostBill(jsonText) {
+		if (jsonText.status !== "OK") {
+			alert("Fehler: " + jsonText.msg);
+			return;
+		}
+		alert(BILL_TOGGLE_HOST[lang]);
+		setTimeout(function () { location.reload(); }, 1000);
+	}
+
+	function changePayment(answer) {
+		if (answer.status !== "OK") {
+			alert("Fehler: " + answer.msg);
+		} else {
+			alert(BILL_CHANGE_PAYMENT[lang]);
+			setTimeout(function () { location.reload(); }, 500);
+		}
+	}
+
+
+
+	function handleClickOnBill() {
+		$(".billcollapsible").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			var billid = this.id.split("_")[1];
+
+			getBillWithId(billid);
+
+			$("#collapse_" + billid).trigger("create");
+
+			$(".printbuttons").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				var contentToPrint = $("#print_" + billid).data("entrydata");
+				$("#receiptbill").html(contentToPrint[2]);
+				$("#receiptbill table").css('width', '100%');
+
+				$("#receiptbill").find("#billdate").html(contentToPrint[1]);
+				$("#receiptbill").find("#billid").html(contentToPrint[0]);
+				var payPrintType = $("#bill-page").data("payPrintType");
+				if (payPrintType == 's') {
+					printBill(billid);
+				} else {
+					window.print();
+				}
+			});
+
+			$(".cancelbuttons").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				$("#stornocode").val("");
+				$("#stornoreason").val("");
+				areYouSure(BILL_STORNO_QUEST_TITLE[lang], BILL_STORNO_QUEST_TEXT[lang], BILL_YES[lang], billid, function () {
+					doAjaxCancelBill(billid, $("#stornocode").val(), $("#stornoreason").val(), $("#tipcheckbox").prop("checked"));
+				});
+			});
+
+			$(".canceldeletebuttons").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				$("#stornocode").val("");
+				$("#stornoreason").val("");
+				areYouSure(BILL_STORNO_DEL_QUEST_TITLE[lang], BILL_STORNO_DEL_QUEST_TEXT[lang], BILL_YES[lang], billid, function () {
+					doAjaxCancelDeleteBill(billid, $("#stornocode").val(), $("#stornoreason").val(), $("#tipcheckbox").prop("checked"));
+				});
+			});
+
+			$(".changehostbuttons").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				var isNowHost = this.id.split("_")[2];
+				$("#stornocode").val("");
+				$("#stornoreason").val("");
+
+				var data = {
+					billid: billid,
+					isNowHost: isNowHost
+				};
+				doAjax("POST", "php/contenthandler.php?module=bill&command=changeBillHost", data, changeHostBill, "Bonaktion abgebrochen");
+			});
+			$(".changepaymentbuttons").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				var newPaymentId = this.id.split("_")[2];
+				var data = {
+					billid: billid,
+					newpaymentid: newPaymentId
+				};
+				doAjax("POST", "php/contenthandler.php?module=bill&command=changepayment", data, changePayment, "Bonaktion abgebrochen");
+			});
+			$(".showreceiptmanagementarea").off("click").on("click", function (e) {
+				var billid = this.id.split("_")[1];
+				$(this).hide();
+				$("#receiptmanagementarea_" + billid).show();
+			});
+		});
+	}
+
+	function displayBillsWithContent(jsonContent) {
+		if (jsonContent.status !== "OK") {
+			$("#billlist").html("");
+			$('#billlist').trigger('create');
+			alert("Fehler " + jsonContent.code + ": " + jsonContent.msg);
+			return;
+		}
+
+		jsonBills = jsonContent;
+		$("#billlist").html("");
+		var currency = $("#bill-page").data("currency");
+		var txt = "";
+		allowedPayments = jsonContent.payments;
+		jsonContent = jsonContent.msg;
+
+		var showtips = 0;
+		if ($("#showtips").is(":checked")) {
+			showtips = 1;
+		}
+
+		for (var i = 0; i < jsonContent.length; i++) {
+			var entry = jsonContent[i];
+			var id = entry.id;
+			if ((entry.istipbill == 0) || ((entry.istipbill == 1) && (showtips == 1))) {
+				var istipbill = entry.istipbill;
+				var billuid = entry.billuid;
+				var shortdate = entry.shortdate;
+				var tablename = entry.tablename;
+				var brutto = (entry.brutto).replace(".", decpoint);
+
+				var collapse_elem_id = 'collapse_' + id;
+				var collapse_elem = '<div data-role="collapsible" data-content-theme="e" id="' + collapse_elem_id + '" data-collapsed="true" data-theme="c" class="billcollapsible">';
+				var idPart = "(" + billuid + ") ";
+				var header = '<h3>' + idPart + shortdate + ":  " + BILL_TABLE[lang] + " &lt;" + tablename + "&gt; " + brutto + ' ' + currency;
+				if (entry.isClosed == 1) {
+					header += ' -' + BILL_CLOSED[lang] + '-';
+				}
+				if (entry.isguestbill == 1) {
+					header += ' -' + BILL_GUEST_BILL[lang] + '-';
+				}
+				header += '</h3>';
+				var waitTxt = '<p><img src=php/3rdparty/images/ajax-loader.gif /></p>';
+				txt += collapse_elem + header + waitTxt + "</div>";
+			}
+		}
+
+		$("#billlist").html(txt);
+		$('#billlist').trigger('create');
+
+		handleClickOnBill();
+	}
+
+	function getPureBillEntryWithId(id) {
+		var bills = jsonBills.msg;
+
+		// get entry with that billid
+		var entry = null;
+		var billCount = bills.length;
+		for (var i = 0; i < billCount; i++) {
+			if (bills[i].id == id) {
+				entry = bills[i];
+				break;
+			}
+		}
+		return entry;
+	}
+
+	function getBillWithId(id) {
+		doAjax("GET", "php/contenthandler.php?module=bill&command=getBillContentForBillsView", { id: id }, handleGetBillWithId, "", SYNC);
+	}
+
+	function handleGetBillWithId(serverAnswer) {
+		if (serverAnswer.status !== "OK") {
+			alert("Fehler: " + serverAnswer.msg);
+			return;
+		}
+		var currency = $("#bill-page").data("currency");
+
+		var billDetails = serverAnswer.msg;
+
+		var hosthtml = billDetails.hosthtml;
+		let allowedPayments = billDetails.payments;
+
+		// get entry with that billid
+		var entry = billDetails.bill;
+		var billid = billDetails.bill.id;
+
+		if (entry == null) {
+			alert("ERROR - Rechnung mit ID " + id + " konnte nicht gefunden werden");
+			return;
+		}
+		var content = generateHtmlBillFromScratch(lang, entry, currency, hosthtml, decpoint);
+
+		var printbuttonid = 'print_' + billid;
+		var cancelbuttonid = 'cancel_' + billid;
+		var canceldeletebuttonid = 'cancelanddelete_' + billid;
+		var changehostbuttonid = 'changehost_' + billid + "_" + entry.host;
+
+		var printbutton = '<a href="#" data-role="button" id="' + printbuttonid + '" data-theme="f" class="printbuttons">' + BILL_PRINT[lang] + '</a>';
+
+		var cancelButton = '<a href="#" data-role="button" id="' + cancelbuttonid + '" data-theme="f" class="cancelbuttons">' + BILL_STORNO[lang] + '</a>';
+		var cancelAndDeleteButton = '<a href="#" data-role="button" id="' + canceldeletebuttonid + '" data-theme="f" class="canceldeletebuttons">' + BILL_STORNO_AND_DELETE[lang] + '</a>';
+		var toggleHostTxt = BILL_DO_HOST[lang];
+		if (entry.host == 1) {
+			toggleHostTxt = BILL_UNDO_HOST[lang];
+		}
+		var changehostbutton = '<a href="#" data-role="button" id="' + changehostbuttonid + '" data-theme="f" class="changehostbuttons">' + toggleHostTxt + '</a>';
+
+		var paymentStr = "";
+		var noOfAlternativePayments = 0;
+		allowedPayments.forEach(function (aPayment) {
+			var thisPaymentid = aPayment.id;
+			var thisPaymentname = aPayment.name;
+			if (entry.paymentid != thisPaymentid) {
+				var paymentDisplayName = BILL_AS[lang] + " " + thisPaymentname;
+				paymentStr += '<a href="#" data-role="button" id="changepayment_' + billid + '_' + thisPaymentid + '" data-theme="f" class="changepaymentbuttons">' + paymentDisplayName + '</a>';
+				noOfAlternativePayments++;
+			}
+		});
+
+		var areaStartChangeReceipt = '<a href="#" data-role="button" id="showreceiptmanagementarea_' + billid + '" data-theme="f" class="showreceiptmanagementarea">' + BILL_MORE_ACTIONS[lang] + '</a>';
+		areaStartChangeReceipt += '<div id="receiptmanagementarea_' + billid + '" style="display:none;">';
+		var areaEndChangeReceipt = "</div>";
+
+		var bi = entry.billcontent.billoverallinfo;
+		var date_time = bi.billday + "." + bi.billmonth + "." + bi.billyear + " " + bi.billhour + ":" + bi.billmin;
+
+
+		var txt = '<center>' + printbutton;
+		if (entry.isClosed == 0) {
+			if (entry.iscashbill == 0) {
+				if ((noOfAlternativePayments === 0) || (entry.paymentid > 3)) {
+					txt += cancelButton + cancelAndDeleteButton + changehostbutton + '<br>' + content + '</center>';
+				} else if (noOfAlternativePayments === 1) {
+					txt += cancelButton + cancelAndDeleteButton + changehostbutton + paymentStr + '<br>' + content + '</center>';
+				} else {
+					txt += cancelButton + cancelAndDeleteButton + areaStartChangeReceipt + changehostbutton + paymentStr + areaEndChangeReceipt + '<br>' + content + '</center>';
+				}
+			} else {
+				txt += content + '</center>';
+			}
+		} else {
+			txt += '<p><center>' + '<br>' + content + '</center>';
+		}
+
+		// eBon
+		let eBonStr = "";
+		if ((entry.ebonurl !== '') && (entry.ebonref !== '') && (entry.isClosed == 0)) {
+			var infoTxt = "<span style='font-size:30px;'>QR-Code zum Abruf des elektronischen Kassenbons</span>";
+			var link = entry.ebonurl + "/index.php?ebonref=" + entry.ebonref;
+			var qrCode = '<p><img src="php/utilities/osqrcode.php?cmd=link&arg=' + link + '" style="width:300px;" />';
+			var reference = "<a href='" + link + "'>" + link + "</a>";
+			eBonStr = "<p>" + infoTxt + qrCode + "<p>" + reference;
+		}
+		txt += eBonStr;
+
+		$("#collapse_" + billid + " p").html(txt);
+
+		var longdate = entry.longdate;
+
+		var printbuttonid = 'print_' + billid;
+		var cancelbuttonid = 'cancel_' + billid;
+		var canceldeletebuttonid = 'cancelanddelete_' + billid;
+
+		$("#collapse_" + billid).find("#billdate").html(date_time);
+		var contentToPrint = new Array(billid, longdate, txt);
+		$("#" + printbuttonid).data("entrydata", contentToPrint);
+		if (entry.isClosed == 0) {
+			$("#" + cancelbuttonid).data("billid", billid);
+			$("#" + canceldeletebuttonid).data("billid", billid);
+		}
+	}
+
+
+	function printBill(billid) {
+		doAjax("POST", "php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob",
+			{ billid: billid, useaddrecprinter: 0 }, null, "Druckfehler");
+	}
+
+	function areYouSure(text1, text2, button, billid, callback) {
+		var currency = $("#bill-page").data("currency");
+		var theBillToCancel = getPureBillEntryWithId(billid);
+		var showTipArea = true;
+		if (theBillToCancel.tip === "0.00") {
+			showTipArea = false;
+		}
+		var tip = theBillToCancel.tip.replace(".", decpoint) + " " + currency;
+		if (!showTipArea) {
+			$("#tipcheckboxarea").hide();
+		} else {
+			$("#tipamount").html(tip);
+			$("#tipcheckboxarea").show();
+			$("#tipcheckbox").prop('checked', true);
+		}
+
+		$("#sure .sure-1").text(text1);
+		$("#sure .sure-2").text(text2);
+		$("#sure .sure-do").text(button).off("click.sure").on("click.sure", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			$("#nocancelbtn").off("click");
+			$("#sure").dialog("close");
+			$.mobile.changePage("#bill-page");
+			callback();
+			$(this).off("click.sure");
+		});
+
+		$("#nocancelbtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			$("#sure .sure-do").text(button).off("click.sure");
+			$("#sure").dialog("close");
+			$.mobile.changePage("#bill-page");
+		});
+
+		$.mobile.changePage("#sure");
+		setTimeout(function () {
+			$("#stornocode").val("");
+			$("#stornoreason").val("");
+		},
+			1000);
+	}
+
+	function getGeneralConfigItems() {
+		doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertGenConfigStartRest, "Fehler Konfigurationsdaten");
+	}
+
+	function insertGenConfigStartRest(configResult) {
+		if (configResult.status === "OK") {
+			var values = configResult.msg;
+			$("#bill-page").data("payPrintType", values.payprinttype);
+			$("#bill-page").data("currency", values.currency);
+			$("#bill-page").data("billanguage", values.billlanguage);
+			$("#bill-page").data("logourl", values.logourl);
+			$("#bill-page").data("companyinfo", values.companyinfo);
+			decpoint = values.decpoint;
+			setLanguage(values.userlanguage);
+			document.getElementById("showtips").checked = false;
+			document.getElementById("showonlymybills").checked = false;
+			showtipslistener();
+			showonlymybillslistener();
+			getLastBills();
+			updatelistener();
+			batchjoblistener();
+			vouchersBinding();
+			bindWhenSelection();
+
+			if (values.payprinttype == "s") {
+				$("#batchpanel").show();
+				$("#vouchersarea").show();
+			}
+			$("#billtitletxt").addClass("page-ready");
+		} else {
+			setTimeout(function () { document.location.href = "index.html" }, 250); // not logged in
+		}
+	}
+
+	function bindWhenSelection() {
+		$("#datepicker").off("change").on("change", function (e) {
+			var date = $("#datepicker").datepicker("getDate");
+			getLastBills();
+			updatelistener();
+			bindWhenSelection();
+		});
+	}
+
+	$(document).on("pageinit", "#bill-page", function () {
+		initializeMainMenu("#modulemenu");
+		hideMenu();
+		$.ajaxSetup({ cache: false });
+		getGeneralConfigItems();
+		$("#fromjobidfield").val("");
+		$("#tojobidfield").val("");
+	});
+
+
+</script>
+
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext" style="margin:20px;padding:50px;"></div>
+</div>
+
+<div data-role="page" id="bill-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1><span id="billtitletxt">Kassenbons</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" /> <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+		 <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch"><span id="modulstxt2">Hauptmenü</span></a> 
+		 </div>
+    </div>
+    <div data-role="content">
+    	
+    	<div data-role="fieldcontain" id="datepickerarea" style="z-index: 10;">
+    		<label for="datepicker"><span id=datetxt>Datum</span>: </label>
+    		<input data-role="date" data-inline="true" type="text" id="datepicker" data-theme="d">
+    	</div>
+    	
+            <div style="z-index: -10;">
+                <a href="#" data-role="button" data-theme="f"  id="updatebtn"><span id="updatebtntxt">Aktualisieren</span></a><br>
+                <label>
+                    <input type="checkbox" data-theme="e" name="showtips" id="showtips"><span id="showtipstxt">TG</span>
+                </label>
+                <label>
+                    <input type="checkbox" data-theme="e" name="showonlymybills" id="showonlymybills"><span id="showonlymybillstxt">Meine Bons</span>
+                </label>
+            </div>
+    	<br><br>
+    	<div id=billlist></div>
+        
+        <div id="batchpanel" data-role="collapsible" data-collapsed="false" data-theme="e" data-content-theme="c" style="display:none;">
+            <h3><span id="batchheadertxt">Stapelverarbeitung</span></h3>
+            <p>
+            <form>
+                <span id="fromjobidtxt">Erste Bon-ID:</span><input type="number" id="fromjobidfield" style="background-color:white;color:black;"/><br>
+                <span id="tojobidtxt">Letzte Bon-ID:</span><input type="number" id="tojobidfield" style="background-color:white;color:black;" /><br>
+                <a href="#" data-role="button" data-icon="check" id="printjobsbtn" data-theme="f"><span id="printjobstxt">Drucken</span></a> 
+            </form>
+        </div>
+	
+	<div id="vouchersarea" data-role="collapsible" data-collapsed="true" data-theme="f" data-content-theme="c" style="display:none;">
+            <h3><span id="vouchersheadertxt">Gutscheine</span></h3>
+            <p>
+            <div id="voucherslistarea"></div>
+        </div>
+	
+        
+    	<div id=receiptbill></div>
+    </div>   
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+    
+   <div data-role="popup" id="cancelfailed" data-overlay-theme="a" style="max-width:70%;" class="ui-corner-all">
+	   <div data-role="header" class="ui-corner-top">
+	      <h1>Storno fehlgeschlagen</h1>
+	   </div>
+	    <a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right"></a>
+	   <div data-role="content" class="ui-corner-bottom ui-content">
+	      <p><span id="billnocancelposs">Der Stornovorgang ist fehlgeschlagen. Die wahrscheinlichste Ursache ist ein Tagesabschluss, der den zu
+	      stornierenden Bon einschließt. In diesem Fall darf der Bon rückwirkend nicht mehr annuliert werden.</span></p>
+	   </div>
+	</div>  <!--  popup for reading sample queue data -->
+
+</div>
+
+<!--  Dialog page -->
+<div data-role="dialog" id="sure" data-title="Entfernen?">
+  	<div data-role="content">
+    <h3 class="sure-1">?</h3>
+    <p class="sure-2">?</p>
+    <form>
+	    <label for="stornoreason"><span id="stornoreasontxt">Stornogrund:</span></label>
+	  	<input type="text" id="stornoreason" value="" data-mini="true /">
+	    <label for="stornocode">Stornocode: </label>
+	    <input type="password" id="stornocode" value="" data-mini="true">
+            <div id="tipcheckboxarea"><label><input id="tipcheckbox" type="checkbox" name="stornotip" /><span id="tipstornocheckboxtxt">Trinkgeld auch zurückbuchen</span> (<span id="tipamount"></span>)</label></div>
+	    <a href="#" class="sure-do" data-role="button" data-theme="b" data-rel="back"><span id="stornoyes">Ja</span></a>
+	    <a href="#" data-role="button" data-theme="c" id="nocancelbtn"><span id="stornono">Nein</span></a>
+    </form>
+  	</div>
+</div>
+
+</body>
+</html>

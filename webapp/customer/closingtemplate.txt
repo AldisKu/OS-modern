@@ -1,0 +1,70 @@
+// Abkürzungen:
+#[GRAU]=background-color:#cccccc;
+#[BLAU]=background-color:#81F7D8;
+#[WEISS]=background-color:#ffffff;
+#[B]=font-weight:bold;
+#[K]=font-style: italic;
+#[ABSTAND]=letter-spacing: 3px;
+#[BIG_PADDING]=padding-top: 25px;padding-right: 15px;padding-bottom: 25px;padding-left: 40px;
+#[SMALL_PADDING]=padding-top: 10px;padding-right: 15px;padding-bottom: 10px;padding-left: 20px;
+#[BREITE150]=width:150px;
+#[SCHRIFT]=style='font-family: Helvetica, Arial, Sans-Serif;'
+#[RAND]=border-collapse: collapse;border: 1px solid black;
+#[BLANK]=border: 0px solid black;
+#[PADDING]=padding:10px;
+#[RECHTS]=text-align:right;
+#[BEREICH]=border-radius:25px;background: #bbbbbb;padding: 10px;border-style: solid;border-color: green;width: 400px;border-spacing: 5px;}
+
+// Ab hier beginnt die eigentliche Vorlage:
+// 
+<h1 style=[SCHRIFT]>Tageserfassung <span style="[ITALICS]">{Id}</span></h1><br>
+<table style="[BLANK]">
+<tr><td style="[PADDING]">{Logo-gross}<td style="[PADDING]">{Betriebsinfo}</tr>
+</table><br>
+
+<table style="[RAND][SCHRIFT]">
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>ID: <td style='[K][RAND][PADDING]'>{Id}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Datum: <td style='[K][RAND][PADDING]'>{Tag}.{Monat}.{Jahr}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Kommentar: <td style='[K][RAND][PADDING]'>{Bemerkung}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Uhrzeit: <td style='[K][RAND][PADDING]'>{Stunde}:{Minute}:{Sekunde}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Anzahl Bons: <td style='[K][RAND][PADDING]'>{Bonanzahl}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Verkäufe ({Einheit}): <td style='[K][RAND][PADDING]'>{Verkauf}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Trinkgelder ({Einheit}): <td style='[K][RAND][PADDING]'>{Trinkgelder}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Barein-/auslagen ({Einheit}): <td style='[K][RAND][PADDING]'>{Bareinauslagen}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Geldtransit ({Einheit}): <td style='[K][RAND][PADDING]'>{Geldtransit}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Diff Soll Ist ({Einheit}): <td style='[K][RAND][PADDING]'>{DiffSollIst}</tr>
+<tr><td style='[B][K][RAND][PADDING][GRAU]'>Bestellstornos ({Einheit}): <td style='[K][RAND][PADDING]'>{Bestellstornos}</tr>
+</table><br><br>
+
+<table style="[RAND][SCHRIFT]">
+<tr><th colspan=5 style='[B][K][RAND][PADDING][BLAU][ABSTAND]'>Übersicht</tr>
+<tr><th style='[B][K][RAND][PADDING][GRAU]'>Brutto ({Einheit})
+    <th style='[B][K][RAND][PADDING][GRAU]'>Netto ({Einheit})
+    <th style='[B][K][RAND][PADDING][GRAU]'>Steuer (Prozent)
+    <th style='[B][K][RAND][PADDING][GRAU]'>Vorgang
+    <th style='[B][K][RAND][PADDING][GRAU]'>Zahlungsweg</tr>
+>>ZUSAMMENFASSUNG
+<tr><td style='[K][RAND][PADDING][RECHTS]'>{Brutto}
+    <td style='[K][RAND][PADDING][RECHTS]'>{Netto}
+    <td style='[K][RAND][PADDING][RECHTS]'>{Steuer}
+    <td style='[K][RAND][PADDING]'>{Vorgang}
+    <td style='[K][RAND][PADDING]'>{Zahlungsweg}
+<<ZUSAMMENFASSUNG
+</table><br><br>
+
+<br><br>
+<table style="[RAND][SCHRIFT]">
+<tr><th colspan=5 style='[B][K][RAND][PADDING][BLAU][ABSTAND]'>Produktstatistik</tr>
+<tr><th style='[B][K][RAND][PADDING][GRAU]'>Anzahl
+    <th style='[B][K][RAND][PADDING][GRAU]'>Produktname
+    <th style='[B][K][RAND][PADDING][GRAU]'>Steuer (%)
+    <th style='[B][K][RAND][PADDING][GRAU]'>Einzelpreis ({Einheit})
+    <th style='[B][K][RAND][PADDING][GRAU]'>Gesamtpreis ({Einheit})</tr>
+>>PRODUKTE
+<tr><td style='[K][RAND][PADDING]'>{Anzahl}
+    <td style='[K][RAND][PADDING]'>{Produktname}
+    <td style='[K][RAND][PADDING][RECHTS]'>{Steuer}
+    <td style='[K][RAND][PADDING][RECHTS]'>{Einzelpreis}
+    <td style='[K][RAND][PADDING][RECHTS]'>{Gesamtpreis}</tr>
+<<PRODUKTE
+</table>

@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+    <title>Ansicht persönliche Einstellungen</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+ 
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.0.3.min.js"></script>
+   <!-- 2.2.4 is not compatible with jquery mobile 1.4.*- _> no .popup() would appear. Therefore let's use 2.0.3 -->
+   <script src="php/3rdparty/jquery.mobile-1.4.5.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+       <link href="php/3rdparty/hayageek_uploadfile.css" rel="stylesheet">
+   <script src="php/3rdparty/hayageek_jquery_uploadfile.js"></script>
+</head>
+
+<body>
+
+<script>
+
+var PREF_HEADER = ["Persönliche Einstellungen für ","User specific settings for ","Propriedades para usario "];
+var PREF_PASSWORD = ["Passwort","Password","Contraseña"];
+var PREF_OLD_PASSWORD = ["Altes Passwort:","Old password:","Contraseña obsoleta:"];
+var PREF_NEW_PASSWORD = ["Neues Passwort:","New password:","Contraseña nueva:"];
+var PREF_LANGUAGE = ["Sprache","Language","Idioma"];
+var PREF_ORDERTON = ["Orderton","Order sound","Sonido de la orden"];
+var PREF_CHANGE_PASSWD = ["Passwort ändern","Change password","Cambiar contraseña"];
+var PREF_WRONG_OLDASS = ["Das Passwort konnte nicht geändert werden. Bitte prüfen Sie, ob das alte Passwort korrekt eingegeben wurde.",
+                         "The password could not be changed. Please verify that the old password was entered correctly.",
+                         "No se puede cambiar la contraseña. Has enterado corectamente la contraseña vieja?"];
+
+var PREF_PASS_CHANGED = ["Das Passwort wurde geändert.","Password changed.","La contraseña esta cambiado."];
+var PREF_VOL = ["Lautstärke:", "Volume:", "Volumen:"];
+var PREF_RECEIPT_PRINTER = ["Bondrucker","Receipt printer","Impresora de tique"];
+var PREF_PRINTER_HEAD = ["Kasse","Paydesk","Facturas"];
+var PREF_PRINTER_SEL = ["Kassenbondrucker","Printer for receipts","Impresora para facturas"];
+var PREF_QUICKCASH = ["Schnellkasse","Quick cash","Factura rápida"];
+var PREF_QUICKCASH_HINT = ["<b>Schnellkasse</b> bedeutet, dass die Bestellung mit der Übermittlung an den Server als barbezahlt deklariert wird. Der Kassen-Button wird in diesem Fall nicht eingeblendet. Ist die Schnellkasse in der allgemeinen Konfiguration abgeschaltet, so kann ein Benutzer diese in diesen Einstellungen für sich dennoch aktivieren.","<b>Quick cash</b> means that thre ordert will be declared paid with cash by sending it to the server. The paydesk button will not be displayed in this case. If the quick cash is not activated imn the general settings each user can activate it here user-specifically.","<b>Factura rápida</b> significa que el pedido se declara con la transmisión al servidor como pago en efectivo. En este caso, el botón de pago no se muestra. Si la salida rápida está desactivada en la configuración general, el usuario puede activarla por sí mismo en estos ajustes."];
+var PREF_SIZE_SMALL = ["klein","small","pequeño"];
+var PREF_SIZE_MIDDLE = ["mittel","middle","medio"];
+var PREF_SIZE_BIG = ["groß","big","grande"];
+var PREF_ROOM_BTN_SIZE = ["Raumauswahl","Room selection","Selección de espacio"];
+var PREF_TABLE_BTN_SIZE = ["Tischauswahl","Table selection","Selección de mesas"];
+var PREF_PROD_BTN_SIZE = ["Produktauswahl","Product selection","Selección de productos"];
+var PREF_BTN_SIZE_TXT = ["Buttongrößen","Button sizes","Tamaño de los botones"];
+var PREF_TM = ["Tischauswahl bevorzugt","Prefer table selection","Prerefir selección de mesas"];
+var PREF_TM_GR = ["Grafische Tischkarte","Tablemap as image","Mapa de cartas"];
+var PREF_TM_DIRECT = ["Direkte Tischangabe (Mobil), Karte (Desktop)","Direct table input (mobil), map (Desktop)","Mesa direct (movil)"];
+var PREF_TM_TEXT = ["Text-Buttons","Text buttons","botones con textos"];
+
+var PREF_IMG_DESK = ["Produktbilder in Desktopansicht","Images in Desktop view","Imagenes en vista de desktop"];
+var PREF_IMG_MOBILE = ["Produktbilder in Mobilansicht","Images in mobile view","Imagenes en vista de móviles"];
+var PREF_SHOW_PLUS_MINUS = ["Anzahl (#/+/-) in Mobilansicht","Amount (#,+/-) in mobile view","Ajustar numero en vista móvil"];
+var PREF_IMG_FIX_BTNS = ["Fixierte Navigationsbuttons (mobile Bestellansicht)","Fixed Navigation Buttons (mobile order view)","Botones fijos de navigación (vista movíl de ordenes)"];
+var PREF_NO = ["Nein","No","No"];
+var PREF_YES = ["Ja","Yes","Si"];
+
+var PREF_KTL_TITEL = ["Navigation in der Bestellansicht","Order Navigation","Navigacion de ordenar"];
+var PREF_KTL = ["Bestellnavigation","Order Navigation","Navigacion de ordenar"];
+var PREF_KTL_KEEP = ["Produktkategorie beibehalten","Keep on product type level","No cambiar categoría"];
+var PREF_KTL_GO_HIGH = ["-> oberste Produkthierarchie","-> top product hierarchy","-> empezar ariba"];
+var PREF_KTL_DESC = ["Soll in der Bestellansicht nach Auswahl eines Produktes wieder an den Anfang der Produkthierarchie gesprungen werden?",
+		"Do you prefer to jump to the top of the product hierachy after selecting a product in the waiter view?",
+				"Donde quiere Usted empezar después de seleccion de un producto?"];
+var PREF_APPLY_EXTRA_POS = ["Position Extras-Anwenden-Button","Position apply extras button","Posicion aplicar boton extras"];
+var PREF_APPLY_EXTRAS_OPTION_TOP = ["Listenanfang","Start of list","Al inicio de la lista"];
+var PREF_APPLY_EXTRAS_OPTION_BOTTOM = ["Listenende","End of list","Al final de la lista"];
+var PREF_APPLY_EXTRAS_OPTION_BOTH = ["Listenanfang und -ende","Start and end of list","Al inicio y final de la lista"];
+var PREF_TABLES_AFTER_SEND = ["Mobilansicht: Nach Produktübermittlung","Mobile view: After sending to server","Vista movíl: Despues transmitir"];
+var PREF_TABLES_AFTER_SEND_TABLES = ["Tischauswahl","Table selection","Seleccion de las mesas"];
+var PREF_TABLES_AFTER_SEND_ROOMS = ["Raumauswahl","Room selection","Seleccion de las habitaciones"];
+
+var PREF_THEME_TITEL = ["Design","Appearance","Design"];
+var PREF_THEME = ["Mobil-Ansicht","Mobile view","Vista movíl"];
+var PREF_THEME_HINT = ["Bitte beachten: Möglicherweise wirkt eine Änderung erst, wenn die jeweilige Ansicht im Internetbrowser erneut geladen wird (Reload-Button).",
+	"It may be necessary to press the reload button of a view to get the changed design to be applied.",
+	"Quizás es necesario reload las paginas despues de un cambio."];
+var PREF_IMG_ICON_DISPLAY = ["Bild-/Iconanzeige","Display of images/icons","Icons/Imagenes en las vistas"];
+var PREF_MISC = ["Verschiedenes","Misc","Otros temas"];
+var PREF_CALC_PREF = ["Bevorzugter Wechselgeldrechnermodus","Preferred change money calculation mode","Modus para calcular de cambio"];
+var PREF_CALC_NONE_TXT = ["Kein Wechselgeldrechner","No calculator","Ningún calculador de cambio"];
+var PREF_CALC_TIP_TXT = ["Angabe extra Trinkg.","Do Tip separate","Propina individual"];
+var PREF_CALC_TOTAL_TXT = ["Angabe inkl. Trinkg.","Do Tip incl.","Propina incl."];
+var PREF_NFC_SERVER_URL_FAILED = ["Da die Webserver-Adresse in der Konfiguration nicht oder inkorrekt angegeben wurde, kann kein QR-Code/NFC für das Einloggen per virtuellem Kellnerschloss angezeigt werden.","Since the web server address was not or incorrectly specified in the configuration, no QR code/NFC can be displayed for logging in using the virtual waiter lock.","Dado que la dirección del servidor web no se especificó o se especificó incorrectamente en la configuración, no se puede mostrar ningún código QR/NFC para iniciar sesión utilizando la cerradura de servidor virtual."];
+var PREF_NFC_SERVER_LOCALHOST = ["Da die Webserver-Adresse offenbar ein localhost enthält, ist ein Einloggen per QR-Code/NFC nur auf dem Server möglich.","Since the web server address obviously contains a localhost, logging in using QR code/NFC is only possible on the server.", "Dado que la dirección del servidor web contiene obviamente un localhost, sólo es posible iniciar sesión utilizando el código QR/NFC en el servidor."];
+var PREF_NFC_LOGIN = ["Über diesen QR-Code kann man sich einloggen. Wenn der Link dieses QR-Codes auf ein NFC-Tag (z.B. als Schlüsselbund-Anhänger) übertragen wird, hat man so ein physisches Kellnerschloss.","You can log in using this QR code. If the link of this QR code is transferred to an NFC tag (e.g. as a keychain pendant), you have a physical waiter lock.","Puede iniciar sesión utilizando este código QR. Si el enlace de este código QR se transfiere a una etiqueta NFC (por ejemplo, como un llavero colgante), tiene una cerradura física de camarero."];
+var PREF_WAITERSLOCK = ["Kellnerschloss","Waiter lock","Cerradure física de camarero"];
+var PREF_PHOTO_HEADER = ["Profilbild","Photo","Fotografía"];
+var PREF_DEL_PHOTO = ["Bild entfernen","Remove picture","Removar imagen"];
+
+var l=0;
+
+var serverurl = "";
+
+function doAjaxPasswordChange(oldPass,newPass,errorMsg) {
+	var data = {
+		oldPass: oldPass,
+       	newPass: newPass
+	};
+	doAjax("POST","php/contenthandler.php?module=admin&command=changeOwnPassword",data,changePassword,"Passwortproblem");
+}
+
+function getGeneralConfigItems() {
+	doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertGeneralConfigItems, "Fehler Konfigurationsdaten");
+}
+
+function insertSettings(waiterSettings) {
+	if (waiterSettings.status !== undefined && waiterSettings.status != "OK") {
+		setTimeout(function(){document.location.href = "index.html"},250); // probably not logged in
+		return;
+	}
+
+	if (waiterSettings.isUserLoggedIn == 0) {
+		setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+		return;
+	}
+
+	$("#username").removeClass("page-ready");
+	const generalConfig = waiterSettings.config;
+	$("#pref-page").data("receiptprinter",generalConfig.receiptprinter);
+	$("#pref-page").data("quickcash",generalConfig.quickcash);
+	
+	$("#pref-page").data("userlanguage",generalConfig.userlanguage);
+	serverurl = generalConfig.serverurl;
+
+
+	$("#username").html(waiterSettings.currentuser);
+	fillOrderVolume(waiterSettings.ordervolume);
+	fillButtonSizes(waiterSettings.buttonsizes);
+	fillPreferTableMap(waiterSettings.prefertablemap);
+	fillPreferimgdesk(waiterSettings.preferimgdesk);
+	fillPreferimgmobile(waiterSettings.preferimgmobile);
+	fillPreferfixbtns(waiterSettings.preferfixbtns);
+	fillPrefershowplusminus(waiterSettings.showplusminus);
+	fillKeepTypeLevel(waiterSettings.keeptypelevel);
+	fillMobileTheme(waiterSettings.mobiletheme);
+	fillExtrasApplyBtnPosPart(waiterSettings.extrasapplybtnpos);
+	fillTablesAfterSendPart(waiterSettings.tablesaftersend);
+	fillCalcPref(waiterSettings.calcpref);
+
+	setLanguage(generalConfig.userlanguage);
+
+	// for auto tests make an indication that the page is ready:
+	$("#username").addClass("page-ready");
+}
+
+
+function reloadPageWithTimeout() {
+ 	setTimeout(function(){document.location.href = "preferences.html"},250);
+}
+
+function createLanguagePart(language) {
+	var html = '<div class="ui-field-contain">';
+    html += '<label for="language">' + PREF_LANGUAGE[language] + ':</label>';
+    html += '<select name="language" id="language" data-theme="e">';
+    if (language == '0') {
+    	html += '<option value="0" selected>Deutsch</option>';
+    	html += '<option value="1">English</option>';
+    	html += '<option value="2">Español</option>';
+    } else if (language == '1'){
+    	html += '<option value="0">Deutsch</option>';
+    	html += '<option value="1" selected>English</option>';
+    	html += '<option value="2">Español</option>';
+    } else {
+    	html += '<option value="0">Deutsch</option>';
+    	html += '<option value="1">English</option>';
+    	html += '<option value="2" selected>Español</option>';
+    }
+    html += '</select></div>';
+    return html;
+}
+
+function createReceiptPrinterPart(language) {
+	var printer = $("#pref-page").data("receiptprinter");
+	var quickcash = $("#pref-page").data("quickcash");
+	var html = '<div class="ui-field-contain">';
+    html += '<label for="receiptprinter">' + PREF_PRINTER_SEL[language] + ':</label>';
+    html += '<select name="receiptprinter" id="receiptprinter" data-theme="e">';
+    
+    html += '<option value="1"' + isSelected(1,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #1</option>';
+    html += '<option value="2"' + isSelected(2,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #2</option>';
+    html += '<option value="3"' + isSelected(3,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #3</option>';
+    html += '<option value="4"' + isSelected(4,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #4</option>';
+    html += '<option value="5"' + isSelected(5,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #5</option>';
+    html += '<option value="6"' + isSelected(6,printer) + '>' + PREF_RECEIPT_PRINTER[language] + ' #6</option>';
+ 
+    html += '</select></div>';
+    
+    html += '<div class="ui-field-contain">';
+    html += '<label for="quickcash">' + PREF_QUICKCASH[language] + ':</label>';
+    html += '<select name="quickcash" id="quickcash" data-theme="e">';
+    html += '<option value="0"' + isSelected(0,quickcash) + '>' + PREF_NO[language] + '</option>';
+    html += '<option value="1"' + isSelected(1,quickcash) + '>' + PREF_YES[language] + '</option>';
+    html += '</select></div>';
+    html += "<br><i>" + PREF_QUICKCASH_HINT[language] + "</i>";
+    
+    return html;
+}
+
+function setLanguage(lang) {
+	l = lang;
+	$("#languagepart").html(createLanguagePart(lang));
+	$("#languagebox").trigger("create");
+	
+	$("#receiptprinterpart").html(createReceiptPrinterPart(lang));
+	$("#receiptprinterpartbox").trigger("create");
+	
+	$("#prefheader").html(PREF_HEADER[lang]);
+	$("#passwordgen").html(PREF_PASSWORD[lang]);
+	$("#oldpassword").html(PREF_OLD_PASSWORD[lang]);
+	$("#newpassword").html(PREF_NEW_PASSWORD[lang]);
+	$("#languagetxt").html(PREF_LANGUAGE[lang]);
+	$("#printertxt").html(PREF_PRINTER_HEAD[lang]);
+	$("#ordertonetxt").html(PREF_ORDERTON[lang]);
+	
+	var changepassbtn = '<input type="submit" value="' + PREF_CHANGE_PASSWD[lang] + '" data-theme="d" id="changepasswordbutton"/>';
+	$("#changepassbtnpart").html(changepassbtn);
+	$("#userpart").trigger("create");
+	
+	$("#language").off('change').on('change', function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		var newLang = $("#language").find(":selected").val();
+		doAjax("POST","php/contenthandler.php?module=admin&command=setUserLanguage",{language:newLang},null,"Sprachenaenderung");
+		setLanguage(newLang);
+	});
+	
+	$("#OLDPASSW_WRONG").html(PREF_WRONG_OLDASS[lang]);
+	$("#PASSWORD_CHANGED").html(PREF_PASS_CHANGED[lang]);
+	$("#voltxt").html(PREF_VOL[lang]);
+	
+	$("#btnsizetxt").html(PREF_BTN_SIZE_TXT[lang]);
+	$("#roombtnsizetxt").html(PREF_ROOM_BTN_SIZE[lang]);
+	$("#tablebtnsizetxt").html(PREF_TABLE_BTN_SIZE[lang]);
+	$("#prodbtnsizetxt").html(PREF_PROD_BTN_SIZE[lang]);
+	
+	$("#prefertmtxt").html(PREF_TABLE_BTN_SIZE[lang]);
+	$("#prefertmlabeltxt").html(PREF_TM[lang]);
+	
+	$("#preferktltxt").html(PREF_KTL_TITEL[lang]);
+	$("#preferktldesc").html(PREF_KTL_DESC[lang]);
+	
+	$("#preferthemetxt").html(PREF_THEME_TITEL[lang]);
+	$("#preferthemehint").html(PREF_THEME_HINT[lang]);
+	
+	$("#preferimgtxt").html(PREF_IMG_ICON_DISPLAY[lang]);
+	
+	$("#prefermisctxt").html(PREF_MISC[lang]);
+	$("#waiterslock").html(PREF_WAITERSLOCK[lang]);
+	$("#photoheadertxt").html(PREF_PHOTO_HEADER[lang]);
+	$("#removephototxt").html(PREF_DEL_PHOTO[lang]);
+	
+	initializeMainMenu("#modulemenu");
+	binding();
+	
+	updateQRNFC();
+}
+
+function updateUserPhoto() {
+	d = new Date();
+	$("#userphotoimg").attr("src", "php/contenthandler.php?module=admin&command=getuserphotoinsession&"+d.getTime());
+}
+
+function updateQRNFC() {
+	if ((serverurl == null) || (serverurl == "")) {
+		$("#nfcinfotxt").html(PREF_NFC_SERVER_URL_FAILED[l]);
+	} else {
+		var d = new Date();
+		var dStamp = d.getTime()
+		$("#qrnfcimg").html('<img src="php/utilities/osqrcode.php?cmd=userlogin&d=' + dStamp + '" style="width: 135px;">');
+		if (serverurl.indexOf("localhost") < 0) {
+			$("#nfcinfotxt").html(PREF_NFC_LOGIN[l]);	
+		} else {
+			$("#nfcinfotxt").html(PREF_NFC_SERVER_LOCALHOST[l]);
+		}
+	}
+}
+
+function changePassword(jsonContent) {
+	if (jsonContent == "OK") {
+		$("#passwordchangedpopup").popup( "open", {transition: 'flip'} );
+		updateQRNFC();
+	} else {
+		$("#passwordnotchangedpopup").popup( "open", {transition: 'flip'} );
+	}
+}
+
+function fillCurrentUserIntoMask(username) {
+	$("#username").html(username);
+}
+
+
+function fillOrderVolume(volume) {
+	$("#slidervolume").val(volume);
+	$("#slidervolume").slider('refresh');
+}
+
+
+	function createSelectionPart(currentvalue, label, labeltxt, optionsArray,startIndex,loopIncrement) {
+		var html = '<div class="ui-field-contain">';
+		html += '<label for="' + label + '"><span id="' + label + 'txt">' + labeltxt + '</span>:</label>';
+		html += '<select name="' + label + '" id="' + label + '" data-theme="e">';
+		if (loopIncrement > 0) {
+			for (var arrayIndex = 0; arrayIndex < (optionsArray.length); arrayIndex += loopIncrement) {
+				const i = arrayIndex+startIndex;
+				html += '<option value="' + i + '"' + isSelected(i, currentvalue) + '>' + optionsArray[arrayIndex][l] + '</option>';
+			}
+		} else {
+			// let's assume that options go from n to 0:
+			for (var i = startIndex; i >= 0; i += loopIncrement) {
+				html += '<option value="' + i + '"' + isSelected(i, currentvalue) + '>' + optionsArray[i][l] + '</option>';
+			}
+		}
+		html += '</select></div>';
+		return html;
+	}
+
+
+function createBtnSizePart(size,label,labeltxt) {
+	return createSelectionPart(size, label, labeltxt, [PREF_SIZE_SMALL,PREF_SIZE_MIDDLE,PREF_SIZE_BIG],0,1);
+}
+
+function createPreferTMPart(prefervalue,label,labeltxt) {
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_TM_TEXT,PREF_TM_GR,PREF_TM_DIRECT],0,1);
+}
+
+function createPreferImgPart(prefervalue,label,labeltxt) {
+	if (prefervalue == null) {
+		prefervalue = 0;
+	}
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_NO,PREF_YES],0,1);	
+}
+
+function createPreferKTLPart(prefervalue,label,labeltxt) {
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_KTL_KEEP,PREF_KTL_GO_HIGH],1,-1);
+}
+
+function createPreferExtrasApplyBtnPosPart(prefervalue,label,labeltxt) {
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_APPLY_EXTRAS_OPTION_BOTTOM,PREF_APPLY_EXTRAS_OPTION_TOP,PREF_APPLY_EXTRAS_OPTION_BOTH],1,1);
+}
+
+function createPreferTablesAfterSendPart(prefervalue,label,labeltxt) {
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_TABLES_AFTER_SEND_ROOMS,PREF_TABLES_AFTER_SEND_TABLES],0,1);
+}
+
+function createPreferCalcPart(prefervalue,label,labeltxt) {
+	return createSelectionPart(prefervalue, label, labeltxt, [PREF_CALC_NONE_TXT,PREF_CALC_TOTAL_TXT,PREF_CALC_TIP_TXT],0,1);
+}
+
+function fillButtonSizes(buttonsizes) {
+	$("#roombtnpart").html(createBtnSizePart(buttonsizes.roombtnsize, "roombtnsize", PREF_ROOM_BTN_SIZE[l]));
+	$("#tablebtnpart").html(createBtnSizePart(buttonsizes.tablebtnsize, "tablebtnsize", PREF_TABLE_BTN_SIZE[l]));
+	$("#prodbtnpart").html(createBtnSizePart(buttonsizes.prodbtnsize, "prodbtnsize", PREF_PROD_BTN_SIZE[l]));
+	$("#btnsizepartbox").trigger("create");
+}
+
+function fillPreferTableMap(preferTablemap) {
+	$("#prefertmbtnpart").html(createPreferTMPart(preferTablemap, "prefertmlabel", PREF_TM[l]));
+	$("#prefertmpartbox").trigger("create");
+}
+
+function fillPreferimgdesk(preferredVaue) {
+	$("#preferimgdeskbtnpart").html(createPreferImgPart(preferredVaue, "preferimgdesklabel", PREF_IMG_DESK[l]));
+	$("#preferimgpartbox").trigger("create");
+}
+function fillPreferimgmobile(preferredVaue) {
+	$("#preferimgmobilebtnpart").html(createPreferImgPart(preferredVaue, "preferimgmobilelabel", PREF_IMG_MOBILE[l]));
+	$("#preferimgpartbox").trigger("create");
+}
+function fillPreferfixbtns(preferredVaue) {
+	$("#preferfixbtnspart").html(createPreferImgPart(preferredVaue, "preferfixbtnslabel", PREF_IMG_FIX_BTNS[l]));
+	$("#preferthemepartbox").trigger("create");
+}
+function fillPrefershowplusminus(preferredVaue) {
+	$("#prefershowplusminusbtnpart").html(createPreferImgPart(preferredVaue, "prefershowplusminuslabel", PREF_SHOW_PLUS_MINUS[l]));
+	$("#preferimgpartbox").trigger("create");
+}
+function fillKeepTypeLevel(preferKeepTypeLevel) {
+	$("#preferktlbtnpart").html(createPreferKTLPart(preferKeepTypeLevel, "preferktllabel", PREF_KTL[l]));
+	$("#preferktlpartbox").trigger("create");
+}
+
+function fillMobileTheme(mobileTheme) {
+	$("#preferthemebtnpart").html(createPreferMobileThemePart(mobileTheme, "preferthemelabel", PREF_THEME[l],l));
+	$("#preferthemepartbox").trigger("create");
+}
+function fillExtrasApplyBtnPosPart(applyPos) {
+	$("#preferapplypospart").html(createPreferExtrasApplyBtnPosPart(applyPos, "preferapplyposlabel", PREF_APPLY_EXTRA_POS[l]));
+	$("#preferktlpartbox").trigger("create");
+}
+function fillTablesAfterSendPart(thevalue) {
+	$("#prefertablesaftersendpart").html(createPreferTablesAfterSendPart(thevalue, "prefertablesaftersendlabel", PREF_TABLES_AFTER_SEND[l]));
+	$("#preferktlpartbox").trigger("create");
+}
+
+function fillCalcPref(calcPref) {
+	$("#prefercalcpart").html(createPreferCalcPart(calcPref, "prefercalclabel", PREF_CALC_PREF[l]));
+	$("#prefermiscpartbox").trigger("create");
+}
+
+function handleBtnSize(jsonResult) {
+	if (jsonResult != "OK") {
+		alert("Fehler");
+	}
+}
+
+function handleGeneralAnswer(json) {
+	if (json.status != "OK") {
+		alert("Fehler");
+	}
+}
+
+function handlePhotoAnswer(answer) {
+	if (answer == null) {
+		updateUserPhoto();
+	} else {
+		if (answer.status == "OK") {
+			updateUserPhoto();
+		} else {
+			alert("Fehler: " + answer.msg);
+		}
+	}
+}
+
+function binding() {
+	$("#changepasswordbutton").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		var oldp = $("#oldpass").val();
+		var newp = $("#newpass").val();
+		doAjaxPasswordChange(oldp,newp,"Password change impossible");
+		$("#oldpass").val("");
+		$("#newpass").val("");
+	});
+	
+	$("#slidervolume").off('slidestop').on('slidestop', function(e) {
+		doAjax("POST","php/contenthandler.php?module=admin&command=setOrderVolume",{volume:$("#slidervolume").val()},null,"Orderton nicht einstellbar");
+	});
+	
+	$("#receiptprinter").off('change').on('change', function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		
+		var newPrinter = $("#receiptprinter").find(":selected").val();
+		$("#pref-page").data("receiptprinter",newPrinter);
+
+		$("#receiptprinterpart").html(createReceiptPrinterPart($("#pref-page").data("userlanguage")));
+		$("#receiptprinterpartbox").trigger("create");
+		
+		doAjax("POST","php/contenthandler.php?module=admin&command=setUserReceiptPrinter",{printer:newPrinter},null,"Bondruckeränderung");
+		binding();
+	});
+	
+	$("#quickcash").off('change').on('change', function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		
+		var newQuickcash = $("#quickcash").find(":selected").val();
+		$("#pref-page").data("quickcash",newQuickcash);
+
+		$("#receiptprinterpart").html(createReceiptPrinterPart($("#pref-page").data("userlanguage")));
+		$("#receiptprinterpartbox").trigger("create");
+		
+		doAjax("POST","php/contenthandler.php?module=admin&command=setUserQuickcash",{value:newQuickcash},null,"Schnellkasse");
+		binding();
+	});
+	$("#quickcash-button").addClass("isactive");
+	
+	$("#roombtnsize").off('change').on('change', function(e) {
+		var newSize = $("#roombtnsize").find(":selected").val();
+		$("#roombtnsize").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setBtnSize",{btn:0,size:newSize},handleBtnSize,"Buttonsize");
+		binding();
+	});
+	
+	$("#tablebtnsize").off('change').on('change', function(e) {
+		var newSize = $("#tablebtnsize").find(":selected").val();
+		$("#tablebtnsize").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setBtnSize",{btn:1,size:newSize},handleBtnSize,"Buttonsize");
+		binding();
+	});
+	
+	$("#prodbtnsize").off('change').on('change', function(e) {
+		var newSize = $("#prodbtnsize").find(":selected").val();
+		$("#prodbtnsize").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setBtnSize",{btn:2,size:newSize},handleBtnSize,"Buttonsize");
+		binding();
+	});
+	
+	$("#prefertmlabel").off('change').on('change', function(e) {
+		var newVal = $("#prefertmlabel").find(":selected").val();
+		$("#prefertmlabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPreferTableMap",{prefertablemap:newVal},handleGeneralAnswer,"Table Map");
+		binding();
+	});
+	$("#prefertmlabel").addClass("isactive");
+	
+	$("#preferimgdesklabel").off('change').on('change', function(e) {
+		var newVal = $("#preferimgdesklabel").find(":selected").val();
+		$("#preferimgdesklabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPreferimgdesk",{preferredvalue:newVal},handleGeneralAnswer,"Produktbilder Desktop");
+		binding();
+	});
+	$("#preferimgmobilelabel").off('change').on('change', function(e) {
+		var newVal = $("#preferimgmobilelabel").find(":selected").val();
+		$("#preferimgmobilelabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPreferimgmobile",{preferredvalue:newVal},handleGeneralAnswer,"Produktbilder Mobil");
+		binding();
+	});
+	// setPreferfixbtns
+	$("#preferfixbtnslabel").off('change').on('change', function(e) {
+		var newVal = $("#preferfixbtnslabel").find(":selected").val();
+		fillPreferfixbtns(newVal);
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPreferfixbtns",{preferredvalue:newVal},handleGeneralAnswer,"Fix-Buttons");
+		binding();
+	});
+	$("#prefershowplusminuslabel").off('change').on('change', function(e) {
+		var newVal = $("#prefershowplusminuslabel").find(":selected").val();
+		$("#prefershowplusminuslabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPrefershowplusminus",{preferredvalue:newVal},handleGeneralAnswer,"Mengenanwahlicons Mobil");
+		binding();
+	});
+	
+	$("#preferktllabel").off('change').on('change', function(e) {
+		var newVal = $("#preferktllabel").find(":selected").val();
+		$("#preferktllabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setKeepTypeLevel",{keeptypelevel:newVal},handleGeneralAnswer,"Keep Type Level");
+		binding();
+	});
+	
+	$("#preferthemelabel").off('change').on('change', function(e) {
+		var newVal = $("#preferthemelabel").find(":selected").val();
+		$("#preferthemelabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setMobileTheme",{mobiletheme:newVal},reloadPageWithTimeout,"Mobile Theme");
+		binding();
+	});
+	
+	$("#preferapplyposlabel").off('change').on('change', function(e) {
+		var newVal = $("#preferapplyposlabel").find(":selected").val();
+		$("#preferapplyposlabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setApplyExtrasBtnPos",{applyextrasbtnpos:newVal},handleGeneralAnswer,"Apply Extras Button Position");
+		binding();
+	});
+	
+	$("#prefertablesaftersendlabel").off('change').on('change', function(e) {
+		var newVal = $("#prefertablesaftersendlabel").find(":selected").val();
+		$("#prefertablesaftersendlabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setTablesAfterSend",{tablesaftersend:newVal},handleGeneralAnswer,"Anwenden Auswahl nach Bestellübvermittlung");
+		binding();
+	});
+	
+	$("#prefercalclabel").off('change').on('change', function(e) {
+		var newVal = $("#prefercalclabel").find(":selected").val();
+		$("#prefercalclabel").selectmenu('refresh');
+		doAjax("POST","php/contenthandler.php?module=admin&command=setPreferCalc",{preferredvalue:newVal},handleGeneralAnswer,"Anwenden Auswahl nach Bestellübermittlung");
+		binding();
+	});
+	$("#removephoto").off('click').on('click', function(e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		doAjax("POST","php/contenthandler.php?module=admin&command=removeuserphoto",null,handlePhotoAnswer,"Photo entfernt");
+		binding();
+	});
+}
+
+function initPhotoFileUpload() {
+	var settings = {
+			url: "php/contenthandler.php?module=admin&command=uploaduserphoto",
+			method: "POST",
+			allowedTypes:"jpg,png,gif,webp,jpeg",
+			fileName: "imagefile",
+			multiple: false,
+			uploadQueueOrder: 'replace',
+			showFileCounter: false,
+			dragDropStr: "<span>Bilddatei</span>",
+			extErrorStr: " ist nicht erlaubt. Erlaubte Dateiendung: ",
+		onSuccess:function(files,data,xhr)
+		{
+			var answer = jQuery.parseJSON(data);
+			if (answer.status != "OK") {
+				alert("Upload war nicht erfolgreich: " + answer.msg);
+			} else {
+				handlePhotoAnswer(null);
+			}
+		},
+		onError: function(files,status,errMsg)
+		{		
+			$("#uploadphotostatus").html("<font color='red'>Upload fehlgeschlagen</font>");
+		}
+	};
+	$("#uploadphotofilearea").uploadFile(settings);
+
+	$("#uploadphotofilearea").trigger("create");
+}
+	
+function getWaiterSettings() {
+	doAjax("GET", "php/contenthandler.php?module=admin&command=getWaiterSettings", null, insertSettings, "Fehler Konfigurationsdaten", ASYNC);
+}
+
+$(document).on("pageinit", "#pref-page", function () {
+	initializeMainMenu("#modulemenu");
+	hideMenu();
+	getWaiterSettings();
+	initPhotoFileUpload();
+});
+
+
+</script>
+
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext"></div>
+</div>
+
+<div data-role="page" id="pref-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay" class="noprint">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" class="noprint" style="background-color:black;">
+         <h1><span id=prefheader></span><span id="username"></span></h1>
+		 <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content">   
+    	
+        <div id="userpart" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+				<h3><span id=passwordgen>Passwort</span></h3>
+				<form>
+	   		<span id=oldpassword>Altes Passwort:</span><input type="password" name="oldpassword" id="oldpass"/><br />
+	   		<span id=newpassword>Neues Passwort:</span><input type="password" name="newpassword" id="newpass"/><br />
+	   		<div id="changepassbtnpart"></div>
+			
+			<div id="nfc" data-role="collapsible" data-collapsed="true" data-theme="f" data-content-theme="c" class="noprint">
+				<h3><span id="waiterslock">Kellnerschloss</span></h3>
+				<p /><div id="qrnfcimg"></div>
+				<p /><span id="nfcinfotxt"></span>
+			</div>
+  		</form>
+		</div> <!-- Benutzerpasswort -->
+		
+		<div id="volume" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="ordertonetxt">Orderton</span></h3>
+			<label for="slidervolume"><span id="voltxt">Lautstärke:</span></label>
+			<input type="range" name="slidervolume" id="slidervolume" value="0" min="0" max="10" />
+		</div>
+		
+		<div id="languagebox" data-role="collapsible" data-collapsed="false" data-theme="c" data-content-theme="e" class="noprint">
+			<h3><span id="languagetxt">Sprache</span></h3>
+			<div id="languagepart"></div>
+		</div>
+
+		<div id="receiptprinterpartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="printertxt">Kassendrucker</span></h3>
+			<div id="receiptprinterpart"></div>
+		</div>
+		
+		<div id="btnsizepartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="btnsizetxt">Buttongrößen</span></h3>
+			<div id="roombtnpart"></div>
+			<div id="tablebtnpart"></div>
+			<div id="prodbtnpart"></div>
+		</div>
+		 
+		<div id="prefertmpartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="prefertmtxt">Tischplan</span></h3>
+			<div id="prefertmbtnpart"></div>
+		</div>
+		
+		<div id="preferimgpartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="preferimgtxt">Bildanzeige</span></h3>
+			<div id="preferimgdeskbtnpart"></div>
+			<div id="preferimgmobilebtnpart"></div>
+			<div id="prefershowplusminusbtnpart"></div>
+		</div>
+
+		<div id="preferktlpartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="preferktltxt">Bestellnavigation</span></h3>
+			<p><span id="preferktldesc">Beschreibung</span></p>
+			<div id="preferktlbtnpart"></div>
+			<div id="preferapplypospart"></div>
+			<div id="prefertablesaftersendpart"></div>
+		</div>
+		
+		<div id="preferthemepartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="preferthemetxt">Mobil-Design</span></h3>
+			<p><div id="preferthemebtnpart"></div>
+			<div id="preferapplythemepart"></div>
+			<div id="preferfixbtnspart"></div>
+			<div id="preferthemehint">Reload nach einer Änderung drücken!</div>
+		</div>
+		
+		<div id="prefermiscpartbox" data-role="collapsible" data-collapsed="false" data-theme="f" data-content-theme="e" class="noprint">
+			<h3><span id="prefermisctxt">Versch.</span></h3>
+			<p><div id="prefercalcpart"></div>
+			<hr>
+			<p /><div id="photo">
+				<div class="roundedborderarea">
+					<h3><span id="photoheadertxt" style="color:black;">Profilbild</span></h3>
+						<p /><img id="userphotoimg" src="php/contenthandler.php?module=admin&command=getuserphotoinsession" />
+						<p /><div id="uploadphotofilearea">Bildset-Upload</div>
+						<div id="uploadphotostatus"></div>
+
+
+					<p><button id="removephoto" type="submit" data-theme="d"><span id="removephototxt">Löschen</span></button>
+				</div>
+			</div>
+		</div>
+		
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+    
+	<div data-role="popup" id="passwordchangedpopup" data-overlay-theme="a" style="max-width:70%;" class="ui-corner-all">
+		<div data-role="header" class="ui-corner-top">
+		   <h1>Passwortänderung</h1>
+		</div>
+		<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right"></a>
+		<div data-role="content" class="ui-corner-bottom ui-content">
+		   <p><span id="PASSWORD_CHANGED">Das Passwort wurde geändert.</span></p>
+		</div>
+	</div>  <!--  popup for changed password -->
+
+	<div data-role="popup" id="passwordnotchangedpopup" data-overlay-theme="a" style="max-width:70%;" class="ui-corner-all">
+		<div data-role="header" class="ui-corner-top">
+		   <h1>Passwortänderung</h1>
+		</div>
+		<a href="#" data-rel="back" data-role="button" data-theme="a" data-icon="delete" data-iconpos="notext" class="ui-btn-right"></a>
+		<div data-role="content" class="ui-corner-bottom ui-content">
+		   <p><span id="OLDPASSW_WRONG">Das Passwort konnte nicht geändert werden. Bitte prüfen Sie, ob das alte Passwort korrekt eingegeben wurde.</span></p>
+		</div>
+	</div>  <!--  popup for failed password change -->
+</div>
+    
+</body>
+</html>

@@ -1,0 +1,20 @@
+{waiterphoto:30}
+{TAB::10}
+{-:links:KATEGORIE:hochbreit}{workid:rechts:ID:hoch}
+
+{TAB:}
+{table:links::hoch}
+{time:links}
+{orderoption:links:Bemerkung}
+
+START:products
+{TAB::1:5}
+{longname:links}{-: }{togo:links}
+{TAB:}
+START:extras
+{name:links: + }
+END:extras
+{option:links: }
+# Es folgt eine Leerzeile, um die Artikel auf dem Bon auseinanderzuziehen
+
+END:products

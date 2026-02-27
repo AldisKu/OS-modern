@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+
+    <title>Ansicht Bewertung</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+	<link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+</head>
+
+<body>
+
+<script> 
+
+
+var RAT_TITLE = ["Bewertung","Rating","Valoración"];
+var RAT_SERVICE = ["Bedienung und Service","Service","Servicio"];
+var RAT_KITCHEN = ["Küche","Kitchen","Cocina"];
+var RAT_FEEDBACK = ["Kontakt","Contact","Contacto"];
+var RAT_REMARK = ["Bemerkung","Remark","Nota"];
+var RAT_EMAIL_PHONE = ["Email oder Telefon","Email or Phone","Email o número de telefono"];
+var RAT_EMAIL_HINT = ["Bitte geben Sie Ihre E-Mail-Adresse oder eine Telefonnummer an, wenn Sie vom Gaststättenbetreiber kontaktiert werden möchten.",
+                      "Please leave your email address or phone number if you want to be contacted from the operating company.",
+                      "Por favor escriba su email o número de telefone si quiere que le contactemos."];
+var RAT_SEND_RATING = ["Absenden","Send","Enviar"];
+
+var l = 0;
+
+var kitchenrating = null;
+var servicerating = null;
+
+function setLanguage(language) {
+	l = language;
+	$("#reportttitletxt").html(RAT_TITLE[l]);
+	$("#servicetxt").html(RAT_SERVICE[l]);
+	$("#kitchentxt").html(RAT_KITCHEN[l]);
+	$("#feedbacktxt").html(RAT_FEEDBACK[l]);
+	$("#remarktxt").html(RAT_REMARK[l]);
+	$("#emailphonetxt").html(RAT_EMAIL_PHONE[l]);
+	$("#emailphonehinttxt").html(RAT_EMAIL_HINT[l]);
+	$("#sendbtntxt").html(RAT_SEND_RATING[l]);
+
+}
+  	
+  	function avoidCollapse() {
+  		$(".ui-collapsible-heading").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+  		});
+  	}
+  	
+	function getGeneralConfigItems() {
+		doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, setConfig, "Fehler Konfigurationsdaten");
+	}
+	
+	function setConfig(configResult) {
+		if (configResult.status == "OK") {
+			setLanguage(configResult.msg.userlanguage);
+		} else {
+			setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+		}
+	}
+	
+	function removeAllBorders(className) {
+		$(className).css('border', "solid 0px black");  
+	}
+	
+	function reloadPageWithTimeout(result) {
+ 		if (result.status != "OK") {
+ 			alert("Fehler aufgetreten - bitte Aktion wiederholen!");
+ 		} else {
+			setTimeout(function(){document.location.href = "rating.html"},250);
+ 		}
+  	}
+	
+	function binding() {
+		$("#submitrating").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var remark = $("#remarktf").val().trim();
+  			var contact = $("#emailphone").val().trim();
+			
+  			var data = {
+  	  				service : servicerating,
+  	  				kitchen : kitchenrating,
+  	  				remark: remark,
+  	  				contact: contact
+  	  		};
+  	  		doAjax("POST","php/contenthandler.php?module=rating&command=doRate",data,reloadPageWithTimeout,"Bewertung unmöglich");
+		});
+		
+		$(".serviceimg").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var feeling = (this.id.split("_"))[1];
+  			removeAllBorders(".serviceimg");
+  			$(this).css('border', "solid 3px green");
+  			servicerating = feeling;
+		});
+		
+		$(".kitchenimg").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var feeling = (this.id.split("_"))[1];
+  			removeAllBorders(".kitchenimg");
+  			$(this).css('border', "solid 3px green");
+  			kitchenrating = feeling;
+		});
+	}
+	$(document).on("pageinit", "#info-page", function () {
+		initializeMainMenu("#modulemenu");
+		hideMenu();
+		getGeneralConfigItems();
+		
+		$("#remarktf").val("");
+		$("#emailphone").val("");
+		avoidCollapse();
+		binding();
+	});
+	
+</script>
+
+<div data-role="page" id="info-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1><span id="reportttitletxt">Bewertung</span></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="content">
+	    		<div data-role="collapsible" data-collapsed="false" data-theme="e" data-content-theme="c" class="ratingfields" id="servicerating">
+					<h3><span id="servicetxt">Bedienung</span></h3>
+					<p>
+	    			<table style="width:100%;">
+	    				<tr>
+	    				<td><img src=img/smile_super.png style="height: 80px;width:100%;max-width:200px;" class="serviceimg" id="service_good"/>
+	    				<td><img src=img/smile_ok.png style="height: 80px;width:100%;max-width:200px;" class="serviceimg" id="service_ok" />
+	    				<td><img src=img/smile_angry.png style="height: 80px;width:100%;max-width:200px;" class="serviceimg" id="service_bad" /></tr>
+	    			</table>
+	    			</p>
+				</div>
+				
+	    		<div data-role="collapsible" data-collapsed="false" data-theme="e" data-content-theme="c" class="ratingfields" >
+					<h3><span id="kitchentxt">Küche</span></h3>
+					<p>
+	    			<table style="width:100%;">
+	    				<tr>
+	    				<td><img src=img/smile_super.png style="height: 80px;width:100%;max-width:200px;" class="kitchenimg" id="kitchen_good" />
+	    				<td><img src=img/smile_ok.png style="height: 80px;width:100%;max-width:200px;" class="kitchenimg" id="kitchen_ok" />
+	    				<td><img src=img/smile_angry.png style="height: 80px;width:100%;max-width:200px;" class="kitchenimg" id="kitchen_bad" /></tr>
+	    			</table>
+	    			</p>
+				</div>
+				
+				<form>
+				<div data-role="collapsible" data-collapsed="false" data-theme="e" data-content-theme="c" class="ratingfields" >
+					<h3><span id="feedbacktxt">Kontakt</span></h3>
+					<p>
+					
+	    			<div data-role="fieldcontain">
+						<label for="remarktf"><span id=remarktxt>Bemerkung</span>: </label>
+						<textarea cols="40" rows="8" name="remarktf" id="remarktf" data-theme="a" id="remarkta"></textarea>
+					</div>
+					<span id=emailphonehinttxt></span>
+					<div data-role="fieldcontain">
+						<label for="emailphone"><span id="emailphonetxt">Email oder Telefon:</span></label>
+						<input type="text" value="" data-mini="true" placeholder="" id="emailphone" data-theme="a" />
+					</div>
+					
+					
+	    			</p>
+				</div>
+				<button type="submit" data-theme="f" id="submitrating"><span id=sendbtntxt>Absenden</span></button>
+				</form>
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+</div>
+</body>
+
+</html>

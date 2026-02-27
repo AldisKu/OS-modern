@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+
+    <title>Ansicht Produkte</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+	<link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+   <script src="elements/product.js?v=2.9.12"></script>
+   <script src="elements/productgui.js?v=2.9.12"></script>
+   <script src="elements/extra.js?v=2.9.12"></script>
+    <link href="php/3rdparty/hayageek_uploadfile.css" rel="stylesheet">
+   <script src="php/3rdparty/hayageek_jquery_uploadfile.js"></script>
+</head>
+
+<body>
+
+<script> 
+
+var PROD_YES = ["Ja","Yes","Si"];
+var PROD_NO = ["Nein","No","No"];
+var PROD_NEW_PROD = ["Neuer Artikel","New article","Nuevo articolo"];
+var PROD_NO_TONE = ["Kein Ton","No audio","Ningún sonido"];
+var PROD_APPLY = ["Anwenden","Apply","Aplicar"];
+var PROD_CANCEL = ["Abbrechen","Cancel","Cancelar"];
+var PROD_PRICELEVEL = ["Preisstufe: ","Price level: ","Nivel de precio: "];
+var PROD_TYPE = ["Art","Type","Typo"];
+var PROD_KITCHEN_BAR = ["Küche/Bar","Kitchen/Bar","Cocina/Bar"];
+var PROD_SUPPLY = ["Bereitstellung","Provision","Preparados"];
+var PROD_NAME = ["Name:","Name:","Nombre:"];
+var PROD_FOOD = ["Speisen","Food","Comidas"];
+var PROD_DRINKS = ["Getränke","Beverage","Bebidas"];
+var PROD_PASS_KITCHEN = ["Durchlaufe Küche/Bar","Pass kitchen/bar","Pasar cocina/bar"];
+var PROD_NO_PASS_KITCHEN = ["Küche/Bar nicht durchlaufen","Do not pass kitchen/bar","No pasar cocina/bar"]; 
+var PROD_PASS_SUPPLY = ["Durchlaufe Bereitstellung","Pass supplydesk","Pasar punto >preparado<"];
+var PROD_NO_PASS_SUPPLY = ["Bereitstellung nicht durchlaufen","Do not pass supplydesk","No pasar punto >preparado<"];
+var PROD_NEW_CAT = ["Neue Kategorie","New category","Nueva categoría"];
+var PROD_ASSIGN = ["Produkt zuweisen","Assign product","Asignar producto"];
+var PROD_SORT_ALPHA = ["Produkte alphabetisch sortieren","Sort products alphabetical","Especie productos alfabéticamente"];
+var PROD_TITLE = ["Artikel","Articles","Productos"];
+var PROD_ENTER_CAT_NAME = ["Name der neuen Produktkategorie eingeben!","Enter name of new category!","Ningún nombre de la categoría nueva insertado!"];
+var PROD_WRONG_FORMAT = ["Falsches Zahlenformat oder fehlender Eintrag!","Wrong number format or missing entry!","Formato falso o ningún dato!"];
+var PROD_MAX_PRICE_EXCEEDED = ["Der Maximalwert für einen Preis wurde überschritten!","The max. value for a price is exceeded!","El valor de un precio es más que el maximum!"];
+var PROD_COMMENTS = ["Diese Bemerkungen können bei einer Bestellung zu jedem Produkt oder einer Bestellung hinzugefügt werden.","These remarks can be added to each product or an order during ordering.","Durante ordenar estos commentarios se puede añadido a cada producto o una orden."];
+var PROD_COMMENT = ["Bemerkungen","Remarks","Comentarios"];
+var PROD_DEL = ["Löschen","Delete","Removar"];
+var PROD_PRODIMAGES = ["Bildzuweisung","Image assignment","Asignar imagenes"];
+var PROD_EXTRAS = ["Extras/Optionen","Add-ons/Options","Opciones"];
+var PROD_ASS_EXTRAS = ["Zuweisung Extras/Optionen","Assign Add-ons/Options","Asignar opciones"];
+var PROD_ENTER_VALUES = ["Leere Datenfelder sind nicht erlaubt","Empty fields not allowed","Necesitamos valores"];
+var PROD_MENU = ["Speisekarte","Menu","Menú"];
+var PROD_DO_ASS = ["Zuweisung","Assignment","Asignar"];
+var PROD_ASSIGN_EXTRAS_ALL = ["Extras allen Produkten dieser Kategorie zuweisen:","Assign extras to all products of this type:","Asignar extra a todos los productos en este grupo:"];
+var PROD_PRINTER = ["Drucker","Printer","Imrpimadora"];
+var PROD_PRINTER_1 = ["Drucker 1","Printer 1","Imprimadora 1"];
+var PROD_PRINTER_2 = ["Drucker 2","Printer 2","Imprimadora 2"];
+var PROD_PRINTER_3 = ["Drucker 3","Printer 3","Imprimadora 3"];
+var PROD_PRINTER_4 = ["Drucker 4","Printer 4","Imprimadora 4"];
+var PROD_PRINTER_PRIO = ["Druckerpriorität","Priority of printer","Prioridad de la impresora"];
+var PROD_PRINTER_FIXB0 = ["Raumdrucker","Room printer","Impresora de la habitación"];
+var PROD_PRINTER_FIXB1 = ["Kategoriedrucker","Category printer","Impresora de la categoría"];
+var PROD_PLACEHOLDER_NEW_PRODTYPE = ["Name der neuen Kategorie", "Name of the new category","Nombre de la categoría nueva"];
+var PROD_APPLIED = ["Aktion wurde durchgeführt.","Action was performed.","Acción completa."];
+var PROD_TYPEPROPS = ["Kategorieeigenschaften ein-/ausblenden","Show/hide properties of type","Mostrar o ocultar characterística de typo"];
+var PROD_CATS_LIST = ["Unterkategorien","Sub Categories","Categorias contenidas"];
+var PROD_PRODUCTS_LIST = ["Artikel","Articles","Articulos"];
+var PROD_SET_TITLE = ["Gesamtes Bildmaterial","Full image set","Todos los imagenes"];
+var PROD_CLEAN_PRODIMAGES = ["Entferne nicht zugewiesene Bilder in der DB","Remove unassigned images from database","Removar imagenes non usados"];
+var PROD_DOWNLOAD_PRODIMAGES = ["Download gesamtes Bildmaterial","Download complete Image Set","Download todos los imagenes"];
+var PROD_GO_DESKTOP = ["Preisliste in Desktop-Ansicht öffnen","Open price list in desktop view","Abrir lista de precios en vista de desktop"];
+var PROD_EXTRA_COL_NAME = ["Name","Name","Nombre"];
+var PROD_EXTRA_COL_PRICE = ["Preis","Price","Precio"];
+var PROD_EXTRA_COL_PURCHASING_PRICE = ["Einkaufspreis","Purchasing price","Precio de compra"];
+var PROD_EXTRA_COL_MAXAMOUNT = ["Max. Anzahl","Max. amount","Max #"];
+var PROD_ALL_IMAGES_HINT = ["Über diesen Weg lässt sich ein Set aus mehreren gelabelten Bildern erstellen (Download) oder hochladen (Upload). Um einzelne Bilder hochzuladen oder vorhandene Bilder einzelnen Artikeln zuzuweisen, muss das entsprechende Artikelfeld aufgeklappt werden. Dort finden sich die passenden Buttons dazu.",
+        "This way, a set of several labeled images can be created (download) or uploaded. To upload individual images or assign existing images to individual articles, the corresponding article field must be opened. There you will find the appropriate buttons.",
+        "De esta manera, se puede crear un conjunto de varias imágenes etiquetadas (descargar) o subir. Para cargar imágenes individuales o asignar imágenes existentes a artículos individuales, debe abrirse el campo de articulo correspondiente. Allí encontrará los botones apropiados."];
+
+// this is the maximal price that a product may cost
+var MAX_PRICE = 9999.99;
+
+var decpoint = ".";
+var austria = 0;
+var prodlistname = "Speisekarte";
+var cat1name = ["Speisen","Speisen","Speisen"];
+var cat2name = ["Getränke","Getränke","Getränke"];
+var lang = 0;
+
+var p_allprods = [];
+
+var menu;
+
+var prodtypes = [];
+
+var prodleafs = [];
+
+var audiofiles;
+
+var p_allextras = [];
+
+var p_currenttypeid = null;
+var keynames = [];
+var prodImagesAreaWasOnceExpanded = false;
+
+function setLanguage(language) {
+	lang = language;
+	$("#prodtitletxt").html(PROD_TITLE[lang]);
+	$("#assignheader").html(PROD_ASSIGN[lang]);
+	$("#extrasheader").html(PROD_EXTRAS[lang]);
+	$("#prodimagesheader").html(PROD_PRODIMAGES[lang]);
+	$("#menuheader").html(prodlistname);
+	$("#headeroffullprodset").html(PROD_SET_TITLE[lang]);
+	$("#cleantxt").html(PROD_CLEAN_PRODIMAGES[lang]);
+	$("#downloadprodimagestxt").html(PROD_DOWNLOAD_PRODIMAGES[lang]);
+	$("#gotoproductsdesktop").html(PROD_GO_DESKTOP[lang]);
+        $("#prodallimageshint").html(PROD_ALL_IMAGES_HINT[lang]);
+}
+  	
+  	function getAudioFiles() {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getAudioFiles",null,setAvailableAudioFiles,"keine Audiofiles-Info bekommen");
+  	}
+  	
+  	function setAvailableAudioFiles(audioFiles) {
+  		this.audiofiles = audioFiles;
+  		$("#info-page").data("audioFiles",audioFiles);
+  		showDbProducts();
+  	}
+  	function showDbProducts() {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getAllAvailProdsAlphaSorted",null,saveProdsGetHierarchy,"keine Produktinformation bekommen");
+  	}
+  	function saveProdsGetHierarchy(prods) {
+  		p_allprods = prods;
+  		doAjax("GET","php/contenthandler.php?module=products&command=getMenu&ref=0",null,saveMenu,"keine Produkthierarchyinformation bekommen");
+  	}
+  	
+  	function saveMenu(jsonMenu) {
+  		menu = jsonMenu;
+  		var tablestructure = createMenuTableStructure(menu);
+  		$("#menulist").html(tablestructure);
+  		fillListTableWithContent();
+  		$("#menulist").trigger("create");
+		cmdBinding();
+		bindExpandProdImagesView();
+		bindExpandProdEntry();
+		bindGotoDesktopView();
+  	}
+
+        function bindExpandProdImagesView()  {
+                $("#prodimagesarea").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+                    if (!prodImagesAreaWasOnceExpanded) {
+			getProdsForProdsImageArea();
+                    }
+		});
+        }
+	function getProdsForProdsImageArea() {
+		doAjax("GET","php/contenthandler.php?module=products&command=getkeynames",null,insertkeynamesAndContinue,null);
+	}
+	function insertkeynamesAndContinue(answer) {
+		if (answer.status === "OK") {
+                        prodImagesAreaWasOnceExpanded = true;
+			keynames = answer.msg;
+			getAllIndividualProdsForProdsImageArea();
+		} else {
+			alert("Fehler: " + answer.msg);
+		}
+	}
+	function getAllIndividualProdsForProdsImageArea() {
+		doAjax("GET","php/contenthandler.php?module=products&command=getOnlyAllProds",null,fillProdImagesArea,null);
+	}
+	function fillProdImagesArea(answer) {
+		if (answer.status !== "OK") {
+			return;
+		}
+		
+		var prodlist = answer.msg;
+		var txt = "";
+		for (var i=0;i<prodlist.length;i++) {
+			var aProd = prodlist[i];
+			txt += createProdImageEntry(aProd.longname,aProd.id,aProd.chain);
+		}
+		$("#prodimageslist").html(txt);
+		$("#prodimageslist").trigger("create");
+		bindProdImageEntryClick();
+	}
+	
+	
+	function createProdImageEntry(longname,prodid,chain) {
+		var txt = '<div data-role="collapsible" data-content-theme="f" data-theme="c" id="prodimageentry_' + prodid+ '" class="prodimageentry" >';
+		
+		txt += '<h3>' + toHtml(longname) + '</h3>';
+		txt += '<p>' + toHtml(chain) + '<p>';
+		
+		txt += '<span class="imagepart"><img src="php/contenthandler.php?module=products&command=getprodimage&prodid=' + prodid + '" /></span>';
+		txt += '<div class="uploadarea"></div>';
+		
+		txt += '<a href="#" data-role="button" data-icon="delete" data-theme="d" data-ajax="false" id="prodimagedelete_' + prodid + '" class="deleteprodimage" >Bildzuordnung entfernen</a> '
+		
+		txt += '<select id="prodimageassignbox_' + prodid +'" data-theme="e" class="prodimageassbox">';
+		txt += '<option value="0">&nbsp;</option>';
+		keynames.forEach(function(aKey,index) {
+			txt += '<option value="' + aKey.id + '">' + aKey.keyname + '</option>';
+		});
+		txt += '</select>';
+		
+		txt += "</div>";
+		
+		return txt;
+	}
+	
+	function bindProdImageEntryClick() {
+		$(".prodimageentry").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			var id = this.id;
+			var prodid = id.split('_')[1];
+			
+			createProdEntryArea(prodid);
+			
+		});
+		
+		$(".deleteprodimage").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			var prodid = this.id.split('_')[1];
+			
+			doAjax("POST","php/contenthandler.php?module=products&command=deleteImageProdAssignment",{prodid:prodid},createProdEntryArea,"Aufhebung der Zuordnung ist fehlgeschlagen");
+		});
+		
+		$(".prodimageassbox").off("change").on("change", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			var id = this.id;
+			var prodid = id.split('_')[1];
+			var prodimageid = $("#" + id).val();
+			if (prodimageid != 0) {
+				var data = {
+					prodid: prodid,
+					prodimageid: prodimageid
+				};
+				doAjax("POST","php/contenthandler.php?module=products&command=assignProdImageToKey",data,createProdEntryAreaOfId,"Zuordnung ist fehlgeschlagen");
+			}
+		});
+	}
+	
+	function createProdEntryAreaOfId(answer) {
+		if (answer.status == "OK") {
+			createProdEntryArea(answer.prodid);
+		} else {
+			alert("Fehler: " + answer.msg);
+		}
+	}
+	function createProdEntryArea(prodid) {
+		updateProdImagePart(prodid);
+		var txt = "";
+		txt = '&nbsp;&nbsp;<div id="restorefilearea_' + prodid + '" >Upload</div>';
+		txt += '<div id="restorestatus_' + prodid + '" ></div>';
+
+		$("#prodimageentry_" + prodid + " .uploadarea").html(txt);
+		$("#restorefilearea_" + prodid).trigger("create");
+		initRestoreFileUpload(prodid);
+	}
+	
+	function updateProdImagePart(prodid) {
+		var millis = getMillis();
+		var src = 'php/contenthandler.php?module=products&command=getprodimage&prodid=' + prodid + "&millis=" + millis;
+		$("#prodimageentry_" + prodid + " .imagepart img").attr("src", src);
+	}
+	
+	function initFullProdimageSetFileUpload() {
+		var settings = {
+			url: "php/contenthandler.php?module=products&command=loadfullprodimageset",
+			method: "POST",
+			allowedTypes:"ocs,txt",
+			fileName: "textfile",
+			multiple: false,
+			uploadQueueOrder: 'replace',
+			showFileCounter: false,
+			dragDropStr: "<span>Datei</span>",
+			extErrorStr: " ist nicht erlaubt. Erlaubte Dateiendung: ",
+			onSuccess:function(files,data,xhr)
+			{
+				var answer = jQuery.parseJSON(data);
+				if (answer.status != "OK") {
+					alert("Upload war nicht erfolgreich: " + answer.msg);
+				} else {
+					alert("Import war erfolgreich.");
+					getProdsForProdsImageArea();
+				}
+			},
+			onError: function(files,status,errMsg)
+			{		
+				$("#uploadprodsetstatus").html("<font color='red'>Upload fehlgeschlagen</font>");
+			}
+		};
+		$("#uploadprodsetfilearea").uploadFile(settings);
+		
+		$("#uploadprodsetfilearea").trigger("create");
+	}
+	
+	function initRestoreFileUpload(prodid) {
+		var settings = {
+			url: "php/contenthandler.php?module=products&command=loadprodimage&prodid=" + prodid,
+			method: "POST",
+			allowedTypes:"jpg,png,gif,webp,jpeg",
+			fileName: "imagefile",
+			multiple: false,
+			uploadQueueOrder: 'replace',
+			showFileCounter: false,
+			dragDropStr: "<span>Bilddatei</span>",
+			extErrorStr: " ist nicht erlaubt. Erlaubte Dateiendung: ",
+			onSuccess:function(files,data,xhr)
+			{
+				var answer = jQuery.parseJSON(data);
+				if (answer.status != "OK") {
+					alert("Upload war nicht erfolgreich: " + answer.msg);
+				} else {
+					//alert("Import war erfolgreich.");
+					updateProdImagePart(prodid)
+				};
+			},
+			onError: function(files,status,errMsg)
+			{		
+				$("#restorestatus_" + prodid).html("<font color='red'>Upload fehlgeschlagen</font>");
+			}
+		};
+		$("#restorefilearea_" + prodid).uploadFile(settings);
+		
+		$("#restorefilearea_" + prodid).trigger("create");
+	}
+        
+        function initializeExtrasData() {
+            var allProds = menu.msg.containedProds;
+            allProds.forEach((aProd) => {
+                let prodid = aProd.id;
+                $("#prodextra_" + prodid).data("orig_assignedextras",null);
+                $("#prodextra_" + prodid).data("assignedextras",null);
+            });
+        }
+	
+  	function createMenuTableStructure(menu) {
+  		if (menu.status !== "OK") {
+  			return;
+  		}
+  		var content = menu.msg;
+  		
+  		prodleafs = [];
+  		prodtypes = [];
+  		
+  		var txt = "";
+  		var ct = content.currentType;
+  		if (ct !== null) {
+  			$("#goupimg_0").show();
+  			p_currenttypeid = ct.id;
+  			
+  			var prodtype = createProdType(ct.id,ct.name,ct.kind,ct.usekitchen,ct.usesupplydesk,ct.printer,ct.fixbind);
+  			prodtypes[prodtypes.length] = prodtype;
+  			txt += prodtype.createUpperMenuTypeStructure();
+  		} else {
+  			$("#goupimg_0").hide();
+  			p_currenttypeid = null;
+  		}
+  		
+		var cats = "";
+  		var it = content.containedTypes;
+  		if (it !== null) {
+  			
+  			var i=0;
+  			for (i=0;i<it.length;i++) {
+  				var aType = it[i];
+  				var name = aType.name;
+  				var id = aType.id;
+  				cats += '<button id="gotoprodtype_' + id + '" type="submit" data-theme="e" class="oscmd">' + name + ' &rArr;</button>';
+  			}
+  		}
+
+		if (cats !== "") {
+			txt += PROD_CATS_LIST[lang] + ":<br>" + cats;
+		}
+		
+		if (ct === null) {
+			// on highest levels show fields to create types on highest level
+			txt += '<br><input id="topleveltypefield" placeholder="' + PROD_PLACEHOLDER_NEW_PRODTYPE[lang] + '" style="background:white;color:black;" />';
+			
+			txt += '<div class="ui-grid-a">';
+			txt += '<div class="ui-block-a"><button id="createtoptypebtn_food" class="oscmd" type="submit" data-theme="c">' + PROD_NEW_CAT[lang] + " (" + cat1name[lang] + ") </button></div>";
+			txt += '<div class="ui-block-b"><button id="createtoptypebtn_drink" class="oscmd" type="submit" data-theme="c">' + PROD_NEW_CAT[lang] + " (" + cat2name[lang] + ") </button></div>";
+			txt += '</div>';
+		}
+		
+  		var pt = content.containedProds;
+  		if (pt !== null) {
+                        let productGui = new ProductGui();
+                        txt += productGui.createListOfProductsOfACategory(p_currenttypeid,pt,(ct !== null));
+                    }
+  		
+  		if (ct !== null) {
+  			txt += prodtype.createLowerMenuTypeStructure();
+  		}
+  		return txt;
+  	}
+	
+	function bindGotoDesktopView() {
+		$("#gotoproductsdesktop").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			setTimeout(function(){document.location.href = "productsdesktop.php";},250);
+		});
+	}
+        
+	function bindExpandProdEntry() {
+		$(".prodcollapsible").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+                        
+                        var allProdsOfThisCat = menu.msg.containedProds;
+                        let productGui = new ProductGui();
+                        var prodid = this.id.split("_")[1];
+                        if (this.id.toString().indexOf("new_") === 0) {
+                            var txt = productGui.createProdContentStructure({id:'newprod_' + prodid},menu.msg.proddef,true,lang);
+                            $("#newprod_" + prodid).html(txt);
+                        } else {
+                                for (var i=0;i<allProdsOfThisCat.length;i++) {
+                                    var prod = allProdsOfThisCat[i];
+                                    if (prod.id == prodid) {
+                                            updateProductGui(prod);
+                                    }
+                            }
+                        }
+                        $("#" + this.id).trigger("create"); 
+                        cmdBinding();
+		});
+	}
+  	
+	function fillListTableWithContent() {
+		var i=0;
+  		for (i=0;i<prodtypes.length;i++) {
+  			var aProdType = prodtypes[i];
+  			aProdType.insertValuesIntoMenuList();
+  		}
+  	}
+  	
+  	function extraBinding() {
+  		$(".extracmd").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var cmd = (this.id.split("_"))[0];
+  			var objid = (this.id.split("_"))[1];
+  			
+  			if (cmd === 'newextra') {
+  				createNewExtra();
+  			} else if (cmd === 'delextra') {
+  				delExtra(objid);
+  			} else if (cmd === 'applyextra') {
+  				applyExtra(objid);
+  			} else if (cmd === 'upextra') {
+				upExtra(objid);
+			}
+  		});
+  	}
+  	
+  	function cmdBinding() {
+  		$(".oscmd").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var cmd = (this.id.split("_"))[0];
+  			var objid = (this.id.split("_"))[1];
+
+  			if (cmd == "prodcancel") {
+  				prodcancel(objid);
+  			} else if (cmd == "prodapply") {
+  				prodapply(objid);
+  			} else if (cmd === "newprod") {
+  				prodnew(objid);
+  			} else if (cmd == "produp") {
+  				produp(objid);
+  			} else if (cmd == "proddown") {
+  				proddown(objid);
+  			} else if (cmd == "proddel") {
+  				proddel(objid);
+  			} else if (cmd == "newtype") {
+  				typenew(objid);
+			} else if (cmd == "createtoptypebtn") {
+				newtoptype(objid);
+  			} else if (cmd == "typeapply") {
+  				typeapply(objid);
+  			} else if (cmd == "typecancel") {
+  				typecancel(objid);
+  			} else if (cmd == "typedel") {
+  				typedelete(objid);
+  			} else if (cmd == 'assignprod') {
+  				assignStart(objid);
+  			} else if (cmd == 'gotoprodtype') {
+  				gotoprodtype(objid);
+  			} else if (cmd == 'goupimg') {
+  				goupprodtype();
+			} else if (cmd == 'sortalphaprod') {
+				sortAlpha(objid);
+  			} else if (cmd == 'prodextrainput') {
+  				doAjax("GET","php/contenthandler.php?module=products&command=getAssignedExtrasOfProd&prodid=" + objid,null,handleAssignedExtras,"Zugewiesene Optionen");
+  			} else if (cmd == 'toggleprodtype') {
+				toggleProdType(objid);
+			} else if (cmd == 'createtoptypebtn') {
+				
+			}
+  		});
+  	}
+  	
+  	function areEqual(arr1,arr2) {
+            if ((arr1 === undefined) && (arr2 === undefined)) {
+                return true;
+            } else if ((arr1 === undefined) || (arr2 === undefined)) {
+                return false;
+            }
+  		if (arr1.length !== arr2.length) {
+  			return false;
+  		}
+  		for (var i=0;i<arr1.length;i++) {
+  			if (arr2.indexOf(arr1[i]) < 0) {
+  				return false;
+  			} 
+  		}
+  		return true;
+  	}
+  	
+  	function handleAssignedExtras(res) {
+  		if (res.status !== "OK") {
+  			return;
+  		}
+  		var msg = res.msg;
+  		var prodid = res.prodid;
+  		$("#prodextra_" + prodid).data("orig_assignedextras",msg.slice(0));
+  		handleAssignedExtrasCore(msg.slice(0),res.prodid);
+ 	}
+
+  	function handleAssignedExtrasCore(msg,prodid) {
+  		$("#prodextra_" + prodid).data("assignedextras",msg);
+  		var aList = '<ul data-role="listview" data-divider-theme="a" data-inset="true">';
+		aList += '<li data-role="list-divider" data-theme="b" data-role="heading">' + PROD_EXTRAS[lang] + '</li>';	
+
+		var i=0;
+		for (i=0;i<p_allextras.length;i++) {
+			var anExtra = p_allextras[i];
+			var extraid = anExtra.id;
+			var name = toHtml(anExtra.name);
+			
+			if (msg.indexOf(extraid) >= 0) {
+				aList += '<li data-theme="f" data-icon="check"><a href="#" class="extradlgitem" id="prodextra_'+ extraid + '_' + prodid + '">' + name + '</a></li>';
+			} else {
+				aList += '<li data-theme="e" data-icon="plus"><a href="#" class="extradlgitem" id="prodextra_'+ extraid + '_' + prodid + '">' + name + '</a></li>';
+			}
+		}
+		aList += "</ul>";
+		
+		aList += '<div data-role="fieldcontain">';
+		aList += '<fieldset data-role="controlgroup">';
+		aList += '<legend>' + PROD_ASSIGN_EXTRAS_ALL[lang] + '</legend>';
+		aList += '<input type="checkbox" name="extrassignall_' + prodid + '" id="extrassignall_' + prodid + '"/>';
+		aList += '<label for="extrassignall_' + prodid + '">' + PROD_YES[lang] + '</label>';
+		aList += '</fieldset></div>';
+		
+  		$("#assextralist_" + prodid).html(aList);
+  		$("#assextralist_" + prodid).trigger("create");
+
+   		$(".extradlgitem").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var splits = this.id.split("_");
+  			var extraid = splits[1];
+  			var prodid = splits[2];
+  			var msg = $("#prodextra_" + prodid).data("assignedextras");
+  			if (msg.indexOf(extraid) >= 0) {
+  				msg.splice(msg.indexOf(extraid),1);
+  			} else {
+  				msg[msg.length] = extraid;
+  			}
+  			handleAssignedExtrasCore(msg,prodid);
+  		});
+  	}
+  	
+	function sortAlpha(typeid) {
+		var data = {
+			refid: typeid
+		};
+		doAjax("POST","php/contenthandler.php?module=products&command=sortProdAlpha",data,reloadPageWithTimeout,"Sortierung ist fehlgeschlagen");
+	}
+	
+	
+  	function goupprodtype() {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getMenuLevelUp&ref=" + p_currenttypeid,null,saveMenu,"keine Produkthierarchyinformation bekommen");
+  	}
+  	
+  	function gotoprodtype(id) {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getMenu&ref=" + id,null,saveMenu,"keine Produkthierarchyinformation bekommen");
+  	}
+  	
+  	function assignStart(typeid) {
+  		var txt = "<select>";
+  		
+  		var i=0;
+  		for (i=0;i<p_allprods.length;i++) {
+  			var aProd = p_allprods[i];
+  			var id = aProd.id;
+  			var longname = aProd.longname;
+  			var cat = aProd.category;
+  			
+  			if (cat != typeid) {
+  				txt += "<option value=" + id + ">" + toHtml(longname) + "</option>";
+  			}
+  		}
+  		
+  		txt += "</select>";
+  		$("#assprodlist").html(txt);
+  		$("#assigndialog").trigger("create");
+  		$("#assprodlist").data("typeid",typeid);
+  		$.mobile.changePage("#assigndialog");
+  		$("#assignprodbtnaftersel").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+  			var theType = $("#assprodlist").data("typeid");
+  			var prodid = $( "#assprodlist option:selected").val();
+  			
+  			var data = {
+  	  				productid : prodid,
+  	  				typeid : theType
+  	  		};
+  	  		doAjax("POST","php/contenthandler.php?module=products&command=reassign",data,reloadPageWithTimeout,"Produkt nicht zuweisbar");
+  		});
+  	}
+  	
+  	function prodcancel(prodid) {
+		var url = "php/contenthandler.php?module=products&command=getSingleProdData&id=" + prodid;
+		$("#assextralist_" + prodid).html("");
+		$("#assextralist_" + prodid).trigger("create");
+		actionOnProd(url,prodid,null,false);
+  	}
+  	
+	function toggleProdType(typeid) {
+		var currentDisplayState = $("#toggleprodtype_" + typeid).data("display");
+		if ((currentDisplayState == undefined) || (currentDisplayState == 0)) {
+			$("#toggleprodtype_" + typeid).data("display",1);
+			$("#typepropertiespart_" + typeid).show();
+		} else {
+			$("#toggleprodtype_" + typeid).data("display",0);
+			$("#typepropertiespart_" + typeid).hide();
+		}
+	}
+	
+	var prodproperties = [
+		{ prop: "longname", field: "prodlong_input", fieldtype: "v", default: '', isnum: false, allowempty: false},
+		{ prop: "shortname", field: "prodshort_input", fieldtype: "v", default: '', isnum: false, allowempty: "longname"},
+		{ prop: "priceA", field: "prodpriceA_input", fieldtype: "v", default: '', isnum: true, allowempty: false},
+		{ prop: "priceB", field: "prodpriceB_input", fieldtype: "v", default: '', isnum: true, allowempty: "priceA"},
+		{ prop: "priceC", field: "prodpriceC_input", fieldtype: "v", default: '', isnum: true, allowempty: "priceA"},
+		{ prop: "barcode", field: "prodbarcode_input", fieldtype: "v", default: '', isnum: false, allowempty: "barcode"},
+		{ prop: "unit", field: "produnit_input", fieldtype: "v", default: '', isnum: false, allowempty: true},
+		{ prop: "display", field: "proddisplay_input", fieldtype: "v", default: '', isnum: false, allowempty: true},
+		{ prop: "tax", field: "prodtax_input", fieldtype: "v", default: '1', isnum: true, allowempty: true},
+		{ prop: "togotax", field: "prodtogotax_input", fieldtype: "v", default: '2', isnum: true, allowempty: true},
+		{ prop: "amount", field: "prodamount_input", fieldtype: "v", default: 'null', isnum: false, allowempty: true},
+		{ prop: "taxaustria", field: "taxaustriasel", fieldtype: "sval", default: '', isnum: false, allowempty: true},
+		{ prop: "selectedAudioFile", field: "audiosel", fieldtype: "stext", default: '', isnum: false, allowempty: true},
+		{ prop: "available", field: "prodavail", fieldtype: "sval", default: '1', isnum: false, allowempty: true},
+		{ prop: "favorite", field: "prodfav", fieldtype: "sval", default: '1', isnum: false, allowempty: true},
+                { prop: "nameonworkrec", field: "prodnameonworkrec_input", fieldtype: "v", default: '', isnum: false, allowempty: true},
+                { prop: "description", field: "proddescription_input", fieldtype: "v", default: '', isnum: false, allowempty: true},
+                { prop: "tags", field: "prodtags_input", fieldtype: "v", default: '', isnum: false, allowempty: true}
+	];
+  	
+  	function prodapply(prodid) {	
+                //var prodid = "contprod_" + prodid;
+                var productGui = new ProductGui();
+                var data = productGui.getPropertiesOfProdFromGui(prodid,menu.msg.proddef);
+                data["category"] = menu.msg.category;
+                data["id"] = prodid;
+                
+                if ((data.priceA > MAX_PRICE) || (data.priceA > MAX_PRICE) || (data.priceA > MAX_PRICE)) {
+                    alert(PROD_MAX_PRICE_EXCEEDED[lang]);
+                    return;
+                }
+                
+  		var extrasAssignAllEl = '#extrassignall_' + prodid;
+  		var isAssignAllExtrasChecked = 0;
+  		if ( $(extrasAssignAllEl).length ) {
+  			isAssignAllExtrasChecked = ($(extrasAssignAllEl).prop("checked") ? 1:0);
+  		}
+  		
+                var origAssignedExtras = $("#prodextra_" + prodid).data("orig_assignedextras");
+                var doChangeExtras = 0;
+
+                var assignedExtras = null;
+                if (origAssignedExtras !== null) {
+                        var assignedExtras = $("#prodextra_" + prodid).data("assignedextras");
+
+                        var doChangeExtras = 0;
+                        if (!areEqual(origAssignedExtras, assignedExtras)) {
+                                doChangeExtras = 1;
+                                if (assignedExtras.length === 0) {
+                                        assignedExtras = null;
+                                }
+                        }
+                }
+			
+                //props["id"] = prodid;
+                data["changeExtras"] = doChangeExtras;
+                data["extras"] = assignedExtras;
+                data["assignextrastotype"] = isAssignAllExtrasChecked;
+
+                actionOnProd("php/contenthandler.php?module=products&command=applySingleProdData",prodid,data,true);
+
+                if (isAssignAllExtrasChecked === 1) {
+                        $(".assextralist").html("");
+                        $(".assextralist").trigger("create");
+                }
+		
+  	}
+  	
+  	function actionOnProd(url,prodid,postdata,confirmation) {
+		if (confirmation) {
+			if (postdata === null) {
+				doAjax("GET", url, null, refreshProductAndConfirm, "Fehler Produktdaten");
+			} else {
+				doAjax("POST", url, postdata, refreshProductAndConfirm, "Fehler Produktdaten");
+			}
+		} else {
+			if (postdata === null) {
+				doAjax("GET", url, null, refreshProduct, "Fehler Produktdaten");
+			} else {
+				doAjax("POST", url, postdata, refreshProduct, "Fehler Produktdaten");
+			}
+		}
+  	}
+  	
+	function refreshProductAndConfirm(prodData) {
+		if ((prodData.status !== undefined) && (prodData.status !== "OK")) {
+			alert(prodData.msg);
+			return;
+		}
+		alert(PROD_APPLIED[lang]);
+		refreshProduct(prodData);
+	}
+	
+        function updateProductGui(prod)
+        {
+                let productGui = new ProductGui();
+                var txt = productGui.createProdContentStructure(prod,menu.msg.proddef,false,lang);
+                initializeExtrasData();
+                $("#contprod_" + prod.id).html(txt);
+                productGui.insertValues(prod,menu.msg.proddef);
+        }   
+        
+  	function refreshProduct(serverAnswer) {
+            if (serverAnswer.status === "OK") {
+                var prodData = serverAnswer.msg;
+            
+                updateProductGui(prodData);                     
+                
+		$("#assextralist_" + prodData.id).html("");
+  		$("#assextralist_" + prodData.id).trigger("create");
+		$("#cont_" + prodData.id).trigger("create");
+                cmdBinding();
+            }
+  	}
+
+        function handleAnswerProdCreation(answer) {
+            alert(answer.msg);
+            location.reload();
+        }
+  	function prodnew(typeid) {
+                var prodid = "newprod_" + typeid;
+                var productGui = new ProductGui();
+                var data = productGui.getPropertiesOfProdFromGui(prodid,menu.msg.proddef);
+                data["category"] = menu.msg.category;
+                doAjax("POST","php/contenthandler.php?module=products&command=createProduct",data,handleAnswerProdCreation,"Neues Produkt nicht anlegbar");
+  	}
+  	
+  	function reloadCurrentType() {
+  	  	doAjax("GET","php/contenthandler.php?module=products&command=getMenu&ref=" + p_currenttypeid,null,saveMenu,"keine Info über Speisekarte bekommen");
+   	}
+  	function produp(prodid) {
+  		doAjax("POST","php/contenthandler.php?module=products&command=sortup",{prodid:prodid},reloadCurrentType,"Produktsort./entf.");
+  	}
+  	function proddown(prodid) {
+  		doAjax("POST","php/contenthandler.php?module=products&command=sortdown",{prodid:prodid},reloadCurrentType,"Produktsort./entf.");
+  	}
+  	function proddel(prodid) {
+  		doAjax("POST","php/contenthandler.php?module=products&command=delproduct",{prodid:prodid},reloadCurrentType,"Produktsort./entf.");
+  	}
+  	
+	function createNewTypeOnServer(refid,name,kind) {
+		if (name === "") {
+			alert(PROD_ENTER_CAT_NAME[lang]);
+		} else {
+			var data = {
+				refid: refid,
+				name: name,
+				kind: kind
+			};
+			doAjax("POST","php/contenthandler.php?module=products&command=createProdType",data,reloadPageWithTimeout,"Neue Kategorie nicht anlegbar");
+		}
+	}
+	
+	function newtoptype(kind) {
+		var name = $("#topleveltypefield").val().trim();
+		createNewTypeOnServer("top",name,(kind === "food" ? 0 : 1));
+	}
+	
+  	function typenew(typeid) {
+  		var name = $("#newtypename_" + typeid).val().trim();
+		createNewTypeOnServer(typeid,name,0);
+  	}
+  	
+  	function typeapply(typeid) {
+  		var name = $("#typename_input_" + typeid).val();
+  		if (name.trim() == "") {
+  			alert(PROD_ENTER_CAT_NAME[lang]);
+  		} else {
+  			var kind = $("#kind_" + typeid + " option:selected").val();
+  			var useKit = $("#usekitchen_" + typeid + " option:selected").val();
+  			var useSupply = $("#usesupply_" + typeid + " option:selected").val();
+  			var printer = parseInt($("#printer_" + typeid + " option:selected").val()) + 1;
+			var fixbind = parseInt($("#fixbind_" + typeid + " option:selected").val());
+  			
+  			var data = {
+  	  				id: typeid,
+  	  				name: name,
+  	  				kind: kind,
+  	  				usekitchen: useKit,
+  	  				usesupply: useSupply,
+  	  				printer: printer,
+					fixbind: fixbind
+  	  		};
+  	  		doAjax("POST","php/contenthandler.php?module=products&command=applyType",data,null,"Fehler Kategorieänderung");  			
+ 		}
+  	}
+  	
+  	function typecancel(typeid) {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getSingleTypeData&id=" + typeid,null,handleTypeCancelAnswer,"Fehler Kategorieänderung");  
+  	}
+  	function typedelete(typeid) {
+  		doAjax("POST","php/contenthandler.php?module=products&command=delType",{id:typeid},reloadPageWithTimeout,"Fehler Kategorieänderung");
+  	}
+  	
+  	function handleTypeCancelAnswer(answer) {
+  		if (answer.status === "OK") {
+  			var theType = answer.msg;
+  			var prodtype = createProdType(theType.id,theType.name,theType.kind,theType.usekitchen,theType.usesupplydesk,theType.printer,theType.fixbind);
+  			prodtype.insertValuesIntoMenuList();
+  			$("#menulist").trigger("create");
+  		} else {
+  			alert("Fehler " + answer.code + ": " + answer.msg);
+  		}
+  	}
+  	
+  	function reloadPageWithTimeout(result) {
+ 		if (result.status != "OK") {
+ 			alert("Fehler aufgetreten - bitte Aktion wiederholen!");
+ 		} else {
+			setTimeout(function(){document.location.href = "products.html";},250);
+ 		}
+  	}
+
+ 
+  	function cb_showPriceLevels(jsonContent) {
+	   	var selectedLevelName = jsonContent.currentName;
+	   	var levels = jsonContent.levels;
+	   	
+	   	var aText = '<div data-role="collapsible" id="pricelevelcollapsible" data-theme="c" data-collapsed="false"><h3>' + PROD_PRICELEVEL[lang] + selectedLevelName + '</h3><p>'; 	   
+	   	aText += '<fieldset data-role="controlgroup" id="pricelevelfieldset" >';
+	   	  		
+	   	var htmlTextA = getPriceLevelRadio("radio-pricelevel-a",levels[0]["name"] + ": " + levels[0]["info"],levels[0]["selected"]);
+	   	var htmlTextB = getPriceLevelRadio("radio-pricelevel-b",levels[1]["name"] + ": " + levels[1]["info"],levels[1]["selected"]);
+	   	var htmlTextC = getPriceLevelRadio("radio-pricelevel-c",levels[2]["name"] + ": " + levels[2]["info"],levels[2]["selected"]);
+	   	aText += htmlTextA + htmlTextB + htmlTextC;
+	   	aText += '</fieldset></p></div>';
+	   	$("#pricelevelswitch").html(aText);
+	   	$("#pricelevelcollapsible").trigger('create');
+	   	$("#pricelevelswitch").trigger('create');
+		binding();
+  	}
+  	function showPriceLevels() {		
+  		doAjax("POST","php/contenthandler.php?module=products&command=getPriceLevelInfo",null,cb_showPriceLevels,"Preislevel");
+  	}
+  	
+  	function setPriceLevel(priceLevelId) {
+  		$.ajax({ type: "POST",   
+			 dataType: "json",
+			 url: "php/contenthandler.php?module=products&command=setPriceLevelInfo",
+			 data : {
+				 priceLevelId: priceLevelId
+	         },
+	         async: false,
+	         success : function(jsonContent)
+	         {
+	        	 showPriceLevels();
+	         },
+				error: function( text ) {
+					alert( "Sorry, there was a problem setting price level: " + text);
+				}
+	});
+  	}
+  	
+  	function getPriceLevelRadio (idname, priceinfo, checked) {
+  		var aText = '<input type="radio" name="radio-pricelevel" id="' + idname + '" value="choice-level" data-theme="f" />';
+  		if (checked == "1") {
+  			aText = '<input type="radio" name="radio-pricelevel" id="' + idname + '" value="choice-level" checked="checked" data-theme="f"/>';
+  		}
+  		aText += '<label for="' + idname + '">' + priceinfo + '</label>';
+  		return aText;
+  	}
+  	
+  	function createCommentsAreaWithComments(comments) {
+  		if (comments.status != "OK") {
+                    if (comments.code == '2') {
+                            setTimeout(function(){document.location.href = "logout.php"},250);
+                            return;
+                    } else {
+                            return;
+                    }
+  		}
+  		
+  		var commentsAreaTop = ' \
+  		<div id="commentslist" data-role="collapsible" data-collapsed="false" data-theme="c" data-content-theme="e" class="noprint"> \
+		<h3><span id="comments_section">' + PROD_COMMENT[lang] + '</span></h3> \
+		<p><span id="comments_info">' + PROD_COMMENTS[lang] + '</span></p> \
+		<table width=100%>';
+		
+		var commentsList = "";
+		var genComments = comments.msg;
+		var i=0;
+  		for (i=0;i<genComments.length;i++) {
+  			var aComment = genComments[i].comment;
+  			aComment = toHtml(aComment);
+  			var commentId = genComments[i].id;
+  			var commentText = '<input type="text" value="'+ aComment + '" data-mini="true" id="genComComField_' + commentId + '"/>';
+  			var buttonChange = '<td><a href="#" data-role="button" class="changeGenComment" id="genComChangeBtn_' + commentId + '">&radic;</a>';
+  			var buttonUp = '<td><a href="#" data-role="button" class="upgencomment" id="genComUpBtn_' + commentId + '">&uarr;</a>';
+  			if (i==0) {
+  				buttonUp = '<td>&nbsp;';
+  			}
+  			var buttonDown = '<td><a href="#" data-role="button" class="downgencomment" id="genComDownBtn_' + commentId + '">&darr;</a>';
+  			if (i==(genComments.length-1)) {
+  				buttonDown = '<td>&nbsp;';
+  			}
+  			var buttonDelete = '<td><a href="#" data-role="button" class="delgencomment" id="genComDelField_' + commentId + '">&otimes;</a>';
+  			commentsList += "<tr><td>" + commentText + buttonChange + buttonUp + buttonDown + buttonDelete + "</tr>";
+  		}
+  		
+		var commentsBottom = ' \
+		<tr> \
+		<td><input type="text" id="newgencommentfield" value="" data-mini="true" placeholder="..." /> \
+		<td><a href="#" data-role="button" data-ajax="false" id="addgeneralcomment">+</a> \
+		</tr></table></div>';
+		
+		$("#commentsarea").html(commentsAreaTop + commentsList + commentsBottom);
+		$("#commentsarea").trigger("create");
+		addGeneralCommentListener();
+		addGenChangeListener();
+		addGenComDelListener();
+		addGenComUpListener();
+		addGenComDownListener();
+  	}
+  	
+  	function createCommentsArea() {
+  		doAjax("GET","php/contenthandler.php?module=products&command=getAllGeneralComments",null,createCommentsAreaWithComments,"Bemerkungen");
+  	}
+
+  	
+  	function addGeneralCommentListener() {
+  		$("#addgeneralcomment").off("click").on("click", function (e) {
+  			var comment = $("#newgencommentfield").val();
+  			doAjax("POST","php/contenthandler.php?module=products&command=addGeneralComment",{comment: comment},handleResultOfGenCommentsChange,"Bemerkungen");
+  		});
+  	}
+  	
+  	function handleResultOfGenCommentsChange(jsonText) {
+  		if (jsonText.status == "OK") {
+  			createCommentsArea();
+  		} else {
+  			alert("Fehler " + jsonText.code + ": " + jsonText.msg);
+  		}
+  	}
+
+  	function addGenChangeListener() {
+  		$(".changeGenComment").off("click").on("click", function (e) {
+			var commentId = (this.id.split("_"))[1];
+  			var changedComment = $("#genComComField_" + commentId).val();
+ 	  		doAjax("POST","php/contenthandler.php?module=products&command=changeGeneralComment",{id:commentId,comment: changedComment},handleResultOfGenCommentsChange,"Bemerkungen");
+  		});
+  	}
+  	
+  	function addGenComDelListener() {
+  		$(".delgencomment").off("click").on("click", function (e) {
+			var commentId = (this.id.split("_"))[1];
+ 	  		doAjax("POST","php/contenthandler.php?module=products&command=delGeneralComment",{id:commentId},handleResultOfGenCommentsChange,"Bemerkungen");
+  		});
+  	}
+  	
+  	function addGenComUpListener() {
+  		$(".upgencomment").off("click").on("click", function (e) {
+			var commentId = (this.id.split("_"))[1];
+ 	  		doAjax("POST","php/contenthandler.php?module=products&command=upGeneralComment",{id:commentId},handleResultOfGenCommentsChange,"Bemerkungen");
+  		});
+  	}
+  	
+  	function addGenComDownListener() {
+  		$(".downgencomment").off("click").on("click", function (e) {
+			var commentId = (this.id.split("_"))[1];
+ 	  		doAjax("POST","php/contenthandler.php?module=products&command=downGeneralComment",{id:commentId},handleResultOfGenCommentsChange,"Bemerkungen");
+  		});
+  	}
+  	
+  	function convertToDecimalPoint(aVal) {
+  		if (aVal != null) {
+  			var strVal = aVal.toString().replace(decpoint,".");
+  			if ($.isNumeric(strVal)) {
+  				return [true, strVal];
+  			}
+  		}
+  		return [false];
+  	}
+  	
+
+  	function createExtrasArea() {
+  		p_allextras = [];
+  		doAjax("GET","php/contenthandler.php?module=products&command=getAllExtrasAlphaSorted",null,createExtrasAreaNow,"Optionen erstellen");
+  	}
+  	
+  	function createExtrasAreaNow(query) {
+  		if (query.status === "OK") {
+  			var extras = query.msg;
+  			var txt = "<table>";
+			txt += "<tr><th>" + PROD_EXTRA_COL_NAME[lang] + "<th>" + PROD_EXTRA_COL_PRICE[lang] + "<th>" + PROD_EXTRA_COL_PURCHASING_PRICE[lang] + "<th>" + PROD_EXTRA_COL_MAXAMOUNT[lang] + "</tr>";
+  			var i=0;
+  			for (i=0;i<extras.length;i++) {
+  				var anExtraDb = extras[i];
+  				var anExtra = newExtra(anExtraDb.id, anExtraDb.name, anExtraDb.price, anExtraDb.purchasingprice, anExtraDb.maxamount);
+  				p_allextras[p_allextras.length] = anExtra;
+  				txt += anExtra.createTableStructureLine();
+  			}
+  			var anExtra = newExtra(null,"",null,null,1);
+                        txt += anExtra.createTableStructureLine();
+
+                        txt += "</table>";
+                        $("#extraslist").html(txt);
+
+                        for (i = 0; i < p_allextras.length; i++) {
+                                var anExtra = p_allextras[i];
+                                anExtra.insertValuesIntoMenuTable();
+                        }
+                }
+                extraBinding();
+        }
+
+  	function createNewExtra() {
+  		var name = $("#newextraname").val();
+  		var price = $("#newextraprice").val();
+                var extrapurchasingprice = $("#newextrapurchasingprice").val();
+		var maxamount = $("#newextramaxamount").val();
+  		createOrApplyExtra(name,price,extrapurchasingprice,maxamount,"createExtra",null);
+  	}
+  	
+  	function applyExtra(extraid) {
+  		var name = $("#extraname_" + extraid).val();
+  		var price = $("#extraprice_" + extraid).val();
+                var extrapurchasingprice = $("#extrapurchasingprice_" + extraid).val();
+		var maxamount = $("#extramaxamount_" + extraid).val();
+  		createOrApplyExtra(name,price,extrapurchasingprice,maxamount,"applyExtra",extraid);
+  	}
+  	
+	function upExtra(extraid) {
+		doAjax("POST","php/contenthandler.php?module=products&command=upExtra",{id:extraid},handleExtraCreation,"Extras");
+	}
+  	function createOrApplyExtra(name,price,purchasingprice,maxamount,fct,id) {
+		price = price.replace(",",".");
+                purchasingprice = purchasingprice.replace(",",".");
+  		
+  		if(isNaN(Number(price))) {
+  			alert(PROD_WRONG_FORMAT[lang]);
+  			return;
+  		}
+
+  		if ((name.trim() == "") || (price.trim() == "") ) {
+  			alert(PROD_ENTER_VALUES[lang]);
+  		} else {
+  			if (fct == "applyExtra") {
+  				doAjax("POST","php/contenthandler.php?module=products&command=" + fct,{name:name,price:price,purchasingprice:purchasingprice,maxamount:maxamount,id:id},handleExtraChange,"Extras");
+  			} else {
+  		  		doAjax("POST","php/contenthandler.php?module=products&command=" + fct,{name:name,price:price,purchasingprice:purchasingprice,maxamount:maxamount,id:id},handleExtraCreation,"Extras");
+  			}
+  		}
+  	}
+  	
+  	function delExtra(extraid) {
+  		doAjax("POST","php/contenthandler.php?module=products&command=delExtra",{id:extraid},handleExtraCreation,"Extras");
+  	}
+
+  	var lastRed = null;
+  	function handleExtraMalfunction(answer) {
+  		var extraid = answer.id;
+			if (extraid !== null) {
+				$("#extraname_" + extraid).css("color","red");
+				lastRed = "#extraname_" + extraid;
+			} else {
+				$("#newextraname").css("color","red");
+				lastRed = "#newextraname";
+			}
+			alert("Fehler: " + answer.msg);
+  	}
+  	function handleExtraCreation(answer) {
+  		$(lastRed).css("color","black");
+  		if (answer.status == "OK") {
+  			createExtrasArea();
+  		} else {
+  			handleExtraMalfunction(answer);
+  		}
+  	}
+  	function handleExtraChange(answer) {
+  		$(lastRed).css("color","black");
+  		if (answer.status !== "OK") {
+  			handleExtraMalfunction(answer);
+  		}
+  	}
+  	
+  	function binding() {
+  		$("#radio-pricelevel-a").off("click").on("click", function (e) {
+  			setPriceLevel(1);
+  		});
+  		$("#radio-pricelevel-b").off("click").on("click", function (e) {
+  			setPriceLevel(2);
+  		});
+  		$("#radio-pricelevel-c").off("click").on("click", function (e) {
+  			setPriceLevel(3);
+  		});
+		
+		$("#cleanprodimageindb").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			// cleanprodimagestable
+			doAjax("POST","php/contenthandler.php?module=products&command=cleanprodimagestable",null,handleCleanProcess,"Extras");
+		});
+		
+		$("#downloadprodimages").off("click").on("click", function (e) {
+  			e.stopImmediatePropagation();
+  			e.preventDefault();
+			window.location.href = "php/contenthandler.php?module=products&command=prodimghmlexport";
+		});
+  	}
+  	
+	function handleCleanProcess(answer) {
+		if (answer.status == "OK") {
+			alert("OK");
+			getProdsForProdsImageArea();
+		} else {
+			alert("Fehler: " + answer.msg);
+		}
+	}
+	
+  	function getGeneralConfigItems() {
+  		doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertDecPointStartRest, "Fehler Konfigurationsdaten");
+  	}
+  	
+  	function insertDecPointStartRest(configResult) {
+  		if (configResult.status == "OK") {
+  			var values = configResult.msg;
+  			decpoint = values.decpoint;
+                        austria = values.austria;
+                        prodlistname = values.prodlistname;
+                        cat1name = [values.cat1name,values.cat1name,values.cat1name];
+                        cat2name = [values.cat2name,values.cat2name,values.cat2name];
+  			$("#info-page").data("decpoint",values.decpoint);
+  			setLanguage(values.userlanguage);
+  			getAudioFiles();
+  			showPriceLevels();
+  			createCommentsArea();
+  			
+  			createExtrasArea();
+  			
+			initFullProdimageSetFileUpload();
+  		} else {
+  			setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+  		}
+  	}
+	$(document).on("pageinit", "#info-page", function () {
+		initializeMainMenu("#modulemenu");
+		getGeneralConfigItems();
+		hideMenu();
+	});
+	
+</script>
+
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext"></div>
+</div>
+
+<div data-role="page" id="info-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1><span id="prodtitletxt">Articles</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" />  <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="Content">
+    	<div id="pricelevelswitch"></div>
+    <br>
+    	
+    	<div id="commentsarea"></div>
+    	<br>
+	
+	<button id="gotoproductsdesktop" type="submit" data-theme="d">Desktopview</button>
+	
+    	<div id="menuarea" >
+    		<div data-role="collapsible" data-content-theme="f" data-theme="c" data-collapsed="false">
+    		
+				<h3><span id="menuheader">Speisekarte</span><img id="goupimg_0" src='php/3rdparty/images/round_reply_black_24dp.png' class='goup oscmd' /></h3>
+				<p>
+				<div id=menulist></div>
+				</p>
+			</div>
+    	</div>
+    	<br>
+		<div id="extrasarea">
+			<div data-role="collapsible" data-content-theme="f" data-theme="c">
+				<h3><span id="extrasheader">Extras/Optionen</span></h3>
+				<p><div id=extraslist></div>
+			</div>
+		</div>
+	
+		<div id="prodimagesarea">
+				<div data-role="collapsible" data-content-theme="f" data-theme="c">
+					<h3><span id="prodimagesheader">Bildzuweisung</span></h3>
+                                        
+					<p><div id="prodsetimageuploadarea">
+						<div class="roundedborderarea">
+							<h3><span id="headeroffullprodset" style="color:black;">Setmanipulation</span></h3>
+                                                        <div id="prodallimageshint">Hint</div><br />
+                                                        <div id="uploadprodsetfilearea">Bildset-Upload</div>
+                                                        <div id="uploadprodsetstatus"></div>
+							
+						
+							<p><button id="cleanprodimageindb" type="submit" data-theme="e"><span id="cleantxt">Bereinigen</span></button>
+							<p><button id="downloadprodimages" type="submit" data-theme="e"><span id="downloadprodimagestxt">Download</span></button>
+						</div>
+					</div>
+					
+                                        <p><div id="prodimageslist">
+                                            <p><img src="php/3rdparty/images/ajax-loader.gif" />
+                                        </div>
+				</div>
+		</div>
+		
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;" >
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+	
+</div> <!--  page -->
+	
+<!--  Dialog page assign products -->
+<div data-role="dialog" id="assigndialog" data-title="Zuweisung">
+  	<div data-role="content">
+    <h3 id="assignheader">?</h3>
+
+    <div id=assprodlist></div>
+
+	<button id="assignprodbtnaftersel" type="submit" data-theme="b" class="oscmd" data-icon="check">Ja</button>
+    <a href="#" data-role="button" data-theme="c" data-rel="back">Nein</a>
+  	</div>
+</div>
+
+
+</body>
+
+</html>

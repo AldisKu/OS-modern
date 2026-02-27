@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+    <title>Ansicht Feedback</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+ 
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+   <script src="kitchenbar.js"></script>
+<style>
+
+#tableWithEntriesToCook,#tableWithCookedEntries,#headertableToCook
+{
+	width:100%;
+}
+
+#declareready,#declarenotcooked {
+	text-align:center;
+	vertical-align:middle;
+}
+
+#readybutton,#notreadybutton {
+	width:90%;
+}
+
+#optiontext
+{
+	font-family:sans-serif;
+	font-size:10pt;
+	color:black;
+}
+
+#tableWithCookedEntries td {
+	background:#b4b4ec
+}
+
+.dividerline {
+	height: 10px;
+}
+</style>
+
+</head>
+
+<body>
+
+<script>
+
+var FEED_SENT_TXT = ["Feedback übermittelt.",
+                     "Feedback sent.",
+                     "Mensaje enviado."];
+
+var FEED_ERROR_TXT = ["Fehler beim Nachrichtenversand: ","Error during mail transmisión: ","Error durante envío del mail: "];
+
+var FEED_INFO_TXT = ["Diese Seite dient zur Übermittlung von Feedback an den Entwickler. Das funktioniert nur, wenn der OrderSprinter-Server eine Verbindung ins Internet hat.",
+	"This page can be used to transmit a message to the developer. It only works if the OrderSprinter server is connected to the internet.",
+	"Esta página sirve para enviar un mensaje al programador de este software. Un acceso al internet esta necesario."];
+
+var FEED_LABEL_ROLE = ["Rolle:","Role:","Posición:"];
+var FEED_LABEL_WAITER = ["Kellner","Waiter","Camarero"];
+var FEED_LABEL_KITSTAFF = ["Küchenpersonal","Kitchen staff","Cocincero"];
+var FEED_LABEL_HOST = ["Gastwirt","Owner","Hostelero"];
+var FEED_LABEL_ANALYZER = ["Betriebsprüfer","Controller","Examinador"];
+var FEED_LABEL_TESTER = ["Tester","Tester","Testador"];
+
+var FEED_TOPIC = ["Thema:","Topic:","Tema:"];
+var FEED_PROBLEM = ["Problem","Problem","Problema"];
+var FEED_QUESTION = ["Frage","Question","Pregunta"];
+var FEED_FEEDB = ["Allg. Rückmeldung","General feedback","Feedback básico"];
+
+var FEED_TRANSFER = ["Übermittlung:","Transfer:","Transmisión:"];
+var FEED_WITH_INFO = ["mit DB-Info und Benutzerrechten","With DB info and user rights","con info sobre db y usarios"];
+var FEED_ONLY_MAIL = ["nur Nachricht","only message","solo noticia"];
+var FEED_MSG = ["Nachricht:","Message:","Noticia:"];
+var FEED_PLEASE_TEL = ["Bitte <i>Telefonnummer</i> angeben, wenn eine <b>Antwort</b> per Telefon gewünscht wird.",
+                       "Please enter a phone number if you wish to receive an <b>answer</b> by phone.",
+                       "Por favor, inserte un número de telefono si quiere recibir una <b>respuesta</b> por telefono."];
+
+var FEED_EMPTY_MSG = ["Nachrichtenfeld ist leer.","Message box is empty.","No hay ningún noticia."];
+var FEED_MAYBE_ANSWER = ["Eine Antwort des Entwicklers kann nicht garantiert werden! Informationen über den verwendeten Internetbrowser wird an den Entwickler gesendet, damit mögliche Fragen oder Probleme leichter identifiziert werden können.",
+                         "An answer of the developer cannot be guaranteed. Information about the used browser will always be transmitted to the developer so that questions and problems can answered more easily.",
+                         "Una respuesta del programador no se puede ser garantizado. Informaciones sobre el browser usado siempre esta enviado al programador para que él pueda apoyar más facilmente en caso de problemas o preguntas."];
+var FEED_SEND = ["Senden","Send","Enviar"];
+var FEED_PHONE = ["Telefon:","Phone:","Telefono:"];
+
+var lang = 0;
+
+function getGeneralConfigItems() {
+	doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertGeneralConfigItems, "Fehler Konfigurationsdaten");
+}
+
+function insertGeneralConfigItems(configResult) {
+	if (configResult.status == "OK") {
+		var values = configResult.msg;
+		setLanguage(values.userlanguage);
+		binding();
+		isUserAlreadyLoggedIn();
+	} else {
+		$("#allpagecontent").hide();
+		setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+		//alert("Fehler beim Aufruf der Seite: " + configResult.msg);
+	}
+}
+
+function setLanguage(language) {
+	lang = language;
+	$("#feedbackinfotxt").html(FEED_INFO_TXT[lang]);
+	
+	var rolehtml = '<label for="role"><span id="roletxt">' + FEED_LABEL_ROLE[lang] + '</span></label>'
+		+ '<select name="role" id="role" data-theme="e" id="roleoptions">'
+		+ '<option value="1" selected id="waitertxt">' + FEED_LABEL_WAITER[lang] + '</option>'
+		+ '<option value="2"><span id="kitstafftxt">' + FEED_LABEL_KITSTAFF[lang] + '</span></option>'
+		+ '<option value="3"><span id="hosttxt">' + FEED_LABEL_HOST[lang] + '</span></option>'
+		+ '<option value="4"><span id="analyzertxt">' + FEED_LABEL_ANALYZER[lang] + '</span></option>'
+		+ '<option value="5"><span id="testertxt">' + FEED_LABEL_TESTER[lang] + '</span></option></select>';
+	$("#rolepart").html(rolehtml);
+	$("#rolepart").trigger("create");
+
+	var topichtml = '<label for="topic">' + FEED_TOPIC[lang] + '</label>'
+		+ '<select name="topic" id="topic" data-theme="e">'
+		+ '<option value="1" selected>' + FEED_PROBLEM[lang] + '</option>'
+		+ '<option value="2">' + FEED_QUESTION[lang] + '</option>'
+		+ '<option value="3">' + FEED_FEEDB[lang] + '</option></select>';
+	$("#topicpart").html(topichtml);
+	$("#topicpart").trigger("create");
+	
+	var transhtml = '<label for="rights">' + FEED_TRANSFER[lang] + '</label>'
+		+ '<select name="rights" id="rights" data-theme="e">'
+		+ '<option value="1" selected>' + FEED_WITH_INFO[lang] + '</option>'
+		+ '<option value="2">' + FEED_ONLY_MAIL[lang] + '</option></select>';
+	$("#transferpart").html(transhtml);
+	$("#transferpart").trigger("create");
+	
+	var msghtml = '<label for="content">' + FEED_MSG[lang] + '</label>'
+		+ '<textarea cols="40" rows="8" name="content" id="content" data-theme="c" style="background-color:white;"></textarea>';
+	
+	$("#msgpart").html(msghtml);
+	$("#msgpart").trigger("create");
+	
+	$("#pleasetel").html(FEED_PLEASE_TEL[lang]);
+	$("#maybe").html(FEED_MAYBE_ANSWER[lang]);
+	$("#sendtxt").html(FEED_SEND[lang]);
+	
+	var phonehtml = '<label for="tel">' + FEED_PHONE[lang] + '</label>'
+		+ '<input type="text" id="tel" value="" data-mini="true" placeholder="0123-456789" data-theme="e" style="background-color:white;"/>';
+	$("#phonepart").html(phonehtml);
+	$("#phonepart").trigger("create");
+}
+
+function binding() {
+	$("#sendMail").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		
+		var role = $('#role option:selected').text();
+		var topic = $('#topic option:selected').text();
+		var email = $("#emailaddr").val();
+		var tel = $("#tel").val();
+		var content = $("#content").val();
+		var rights = $("#rights").val();
+		
+		if (content == '') {
+			alert(FEED_EMPTY_MSG[lang]);
+			return;
+		}
+		
+		var data = {
+			role : role,
+			topic : topic,
+			email : email,
+			tel : tel,
+			allowSendRights : (rights == 1 ? 1 : 0),
+			content : content
+		};
+		
+		doAjax("POST","php/contenthandler.php?module=feedback&command=sendMail",data,mailWasSent,"Fehler Nachrichtenversand",true);
+	});
+	
+	$("#senderrorlog").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		
+		var errorLog = $("#errorlogtextarea").val();
+		var contactInfo = $("#contactinfo").val();
+		var remark = $("#remark").val();
+		
+		var data = {
+			errorlog: errorLog,
+			contactinfo: contactInfo,
+			remark: remark
+		};
+		
+		doAjax("POST","php/contenthandler.php?module=feedback&command=sendErrorLog",data,errorLogSent,"Fehler Versand des error.oog",true);
+	});
+}
+
+function errorLogSent(answer) {
+	if (answer.status != "OK") {
+		alert ("Versand ist fehlgeschlagen: " + answer.msg);
+	} else {
+		alert ("Fehlerreport wurde übermittelt.");
+		$("#errorlogtextarea").val("");
+		$("#contactinfo").val("");
+		$("#remark").val("");
+	}
+}
+
+function mailWasSent(jsonText) {
+	if (jsonText.status == "OK") {
+		alert (FEED_SENT_TXT[lang]);
+	} else {
+		alert (FEED_ERROR_TXT[lang] + jsonText.msg);
+	}
+
+	$("#emailaddr").val("");
+	$("#tel").val("");
+	$("#content").val("");
+	location.reload();
+}
+
+//pageinit event for first page
+//triggers only once
+//write all your on-load functions and event handlers pertaining to page1
+$(document).on("pageinit", "#feedback-page", function () {
+	initializeMainMenu("#modulemenu");
+	hideMenu();
+	getGeneralConfigItems();
+});
+
+function isUserAlreadyLoggedIn() {
+	doAjax("POST","php/contenthandler.php?module=admin&command=isUserAlreadyLoggedIn",null,showLoggedInView,"login status unclear");
+}
+
+function showLoggedInView(jsonContent) {
+	if (jsonContent == "YES") {
+		// no login mask!
+		$("#errorlogarea").show();
+		$("#infoarea").hide();
+		requestErrorlogData();
+	} else {
+		// user needs to log in!
+		$("#errorlogarea").hide();
+		$("#infoarea").show();
+	}
+}
+
+function requestErrorlogData() {
+	doAjax("GET", "php/contenthandler.php?module=feedback&command=getErrorLog", null, insertErrorlog, "Fehler Errorlog",true);
+}
+
+function insertErrorlog(answer) {
+	if (answer.status != "OK") {
+		$("#errorlogarea").hide();
+		$("#errormsgforerrorlog").html(answer.msg);
+		$("#errormsgforerrorlog").show();
+	}
+	
+	$("#errorlogtextarea").val(answer.msg.log);
+}
+
+</script>
+<!--first page -->
+<div data-role="page" id="feedback-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" style="background-color:black;">
+         <h1>Feedback</h1>
+		 <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="allpagecontent">    
+	    
+	    <p /><span id="feedbackinfotxt">Diese Seite dient zur Übermittlung von Feedback an den Entwickler. Die Email wird das Mailkonto
+    des Betreibers versendet.</span>
+    
+    
+    <p>
+    <div data-role="collapsible" data-content-theme="c" data-collapsed="false" data-theme="e" id="generalfeedbackmask">
+		<h2>Feedback</h2>
+		<form>
+			<div class="ui-field-contain" id="rolepart">
+			</div>  <!-- ui-field-contain -->
+
+			<div class="ui-field-contain" id="topicpart">
+			</div>  <!-- ui-field-contain -->
+
+			<div class="ui-field-contain" id="transferpart">
+			</div>  <!-- ui-field-contain -->
+
+			<div class="ui-field-contain">
+				<label for="emailaddr">Email:</label>
+				<input type="text" id="emailaddr" value="" data-mini="true" placeholder="Email-Adresse" data-theme="e" style="background-color:white;"/>
+			</div>  <!-- ui-field-contain -->
+
+			<div class="ui-field-contain" id="phonepart">
+			</div>  <!-- ui-field-contain -->
+
+			<div class="ui-field-contain" id="msgpart">
+			</div>  <!-- ui-field-contain -->
+
+			<p><span id="pleasetel">Bitte <i>Telefonnummer</i> angeben, wenn eine <b>Antwort</b> per Telefon gewünscht wird.</span>
+				<br><span id="maybe">Eine Antwort des Entwicklers
+					kann nicht garantiert werden! Informationen über den verwendeten Internetbrowser wird an den Entwickler gesendet, damit mögliche Fragen
+					oder Probleme leichter identifiziert werden können.</span></p>
+
+			<button type="submit" data-theme="f" data-icon="check" id="sendMail"><span id="sendtxt">Senden</span></button>
+		</form>
+    </div>  <!--generalfeedback -->
+    
+    <div data-role="collapsible" data-content-theme="c" data-collapsed="false" data-theme="e" id="errorlogmask">
+		<H2>Error-Log</H2>
+		<p><span id="errormsgforerrorlog" style="display:none;"></span>
+
+		<form id="errorlogarea" style="display:none;">
+			<textarea id="errorlogtextarea" style="background-color:#dddddd;" readonly>Content</textarea>
+			<input id="contactinfo" type="text" placeholder="Kontaktinformation, falls Rückmeldung gewünscht" style="background:white;"/>
+			<input id="remark" type="text" placeholder="Bemerkung" style="background:white;"/>
+			
+			<p><i>Wenn Sie auf den Senden-Button drücken, so wird das obige Error.log an den Webserver des Anbieters (www.ordersprinter.de) inklusive der in der Administrationsansicht eingetragenen Betriebsinformation und der verwendeten PHP- und OrderSprinter-Version übertragen. Diese Information wird zum Zwecke der Problemlösung bis zu 4 Wochen auf dem Server des Anbieters gespeichert!</i>
+				
+			<p><i>Wenn Sie eine Kontaktaufnahme seitens des Anbieters wünschen, geben Sie bitte oben eine entsprechende Kontaktinformation an.</i>
+				
+			
+			<p><input id="senderrorlog" type="submit" value="Senden" data-theme="f" />
+		</form>
+		<div id="infoarea" style="display:none;">
+			User not logged in...
+		</div>
+	</div>
+    
+	</div>
+	<div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+
+</body>
+</html>

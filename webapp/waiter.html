@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+    <title>Ansicht Kellner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <meta name="author" content="Stefan Pichel">
+	<link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+	<link rel="stylesheet" type="text/css" href="css/numfield.css?v=2.9.12">
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.5.min.js"></script>
+   <script src="elements/tablemap.js?v=2.9.12"></script>
+   <script src="elements/extra.js?v=2.9.12"></script>
+   <script src="elements/waiterutils.js?v=2.9.12"></script>
+   <script src="elements/phases.js?v=2.9.12"></script>
+   <script src="utilities.js"></script>
+   <script>
+var W_TABLES=["Tische","Tables","Mesas"],W_ATABLE=["Tisch","Table","Mesa"],W_ROOMS=["R\u00e4ume","Rooms","Espacios"],W_SELECTION=["Auswahl","Selection","Selecci\u00f3n"],W_LAST_SELECTED=["zuletzt","last","seleccionado"],W_FAVS=["Favoriten","Favorites","Favoritos"],W_NEW_ORDER=["Neue Order","New Orders","Ordenes nuevas"],W_KIT_BAR=["nicht serviert/unbezahlt","unserved/unpaid","no servido/impagado"],W_OTHER_PROD=["Auswahl Produktkategorie","Select product categroy","Categor\u00eda diferente"],W_WORK_TICKET=
+["Arbeitsbon","Work ticket","Tique de trabajar"],W_NOTE=["Bemerkung zum Artikel","Comment for the article","Comentario para articulo"],W_ORDER_NOTE=["Bemerkung zur Gesamtbestellung","Comment for the whole order","Comentario para todo"],W_NUMBER=["Anzahl","Number","N\u00famero"],W_SEND_ORDERS=["Bestellung senden","Send orders","Enviar Ordenes"],W_TO_PAYDESK=["-> Kasse","-> Paydesk","-> Caja"],W_TABLECHANGE=["Tischwechsel","Change table","Cambiar mesa"],W_ROOMTABLE=["Raum-Tisch","Room-Table","Espacio-Mesa"],
+W_TABLE_SEL=["Tischauswahl","Select table","Qu\u00e9 mesa?"],W_UNDELIV_INFO=["Liste enth\u00e4lt die Produkte die noch in der K\u00fcchen-/Baransicht sind, sowie unbezahlte Produkte, die die Bereitstellungsansicht nicht durchlaufen.","List contains the products which are still in kitchen or bar view, as well as unpaid products that do not pass the supplydesk view.","La lista contiene los productos que estan todav\u00eda en modulo de cocina/bar, tambi\u00e9n productos impagados que no pasan vista de productos preparados."],
+W_REMOVE_ERROR=["Ansicht nicht mehr aktuell - Liste wird neu geladen.","View is obsolete - List will be reloaded.","Vista no esta actual - vamos a actualisar la lista."],W_FOOD_FOR=["Speisen f\u00fcr","Food for","Comidas para"],W_DRINKS_FOR=["Getr\u00e4nke f\u00fcr","Beverage for","Bebidas para"],W_ACT_NEW_ORD_EL=["Aktion ausw\u00e4hlen","Select action","Que acci\u00f3n?"],W_ACT_CHANGE=["\u00c4ndern","Modify","Modificar"],W_ACT_CHANGE_ALL=["Alle \u00c4ndern","Modify all","Modificar todo"],W_ACT_CHANGE_ONE=
+["Einen Artikel \u00e4ndern","Modify one item","Modificar un art\u00edculo"],W_APPLY=["Anwenden","Apply","Aplicar"],W_CANCEL=["Abbrechen","Cancel","Cancelar"],W_STILL_UNSENT_ORDERS=["Es sind noch ungesendete Orders vorhanden!","There are unsent orders in the list","Hay elementos in la liste que no han enviados"],W_EXTRAS=["Extras/Optionen","Add-ons/Options","Opciones"],W_OPEN_PANEL=["Extras-Auswahl noch offen","Add-ons selection still open","Selecci\u00f3n de opciones todav\u00eda abierta"],W_DEL=
+["L\u00f6schen","Delete","Removar"],W_MSG=["Nachricht","Message","Mensaje"],W_CHANGE_PRICE=["Neuer Preis: ","New price: ","Cambiar precio: "],W_PRICE=["Preis","Price","Precio"],W_WRONG_FORMAT=["Falsches Zahlenformat","Wrong number format","Formato de precio incorecto"],W_TOGO=["Au\u00dfer-Haus-Verkauf","Sale with Tax No 2","Venta IVA 2"],W_YES=["Ja","Yes","Si"],W_NO=["Nein","No","No"],W_DISCARD_NO_ASK=["Es sind noch ungesendete Orders vorhanden! Sollen diese verworfen werden?","There are still unsent orders. Do you want to discard them?",
+"Hay todav\u00eda ordenes non-enviados. Removarlos?"],W_DISCARD_HEADER=["Neue Orders verwerfen?","Discard new orders?","Removar ordenes nuevos?"],W_SEARCH=["Produktsuche","Product search","Buscar producto"],W_MINCHAR=["ab","min","desde"],W_CHAR=["Zeichen","Characters","caracteres"],W_BARCODE=["Barcode","Barcode","C\u00f3digo de barras"],W_SEARCHRESULTS=["Suchergebnis","Search Result","Encontrado"],W_WRONG_PIN=["Falscher Stornocode","Wrong cancel code","Codigo falso"],W_NO_ORDERS=["Keine neuen Orders zum Versand vorhanden!",
+"No new orders available!","No hay ning\u00fan orden nuevo!"],W_TO_PAY=["offen","to pay","a pagar"],W_MOVE_PRODS=["Produkte verschieben","Move products","Productos a otra mesa"],W_NO_PRODS_SELECTED=["Es wurden keine Produkte ausgew\u00e4hlt!","You have not chosen any products!","No ha seleccionado ning\u00fan producto!"],W_MAX_PRICE_EXCEEDED=["Der Maximalwert f\u00fcr den Preis wurde \u00fcberschritten!","The max. value for the price is exceeded!","El valor del precio es m\u00e1s que el maximum!"],
+W_REORDER=["Nachbestellen","Reorder","Order una vez mas"],W_REMOVE=["Entfernen","Remove","Removar"],W_SELALL=["Alles ausw\u00e4hlen","Select all","Elegir todo"],W_UNSELALL=["Alles abw\u00e4hlen","Unselect all","No elegir nada"],W_ONLY=["noch","only","s\u00f3lo"],W_DEL_ALL_UNDELIVERED=["Entferne alles","Remove all","Borrar todo"],W_DEL_ALL_ASSIGNED_PRODS=["Alle Produkte l\u00f6schen?","Delete all products?","Removar todos los productos?"],W_NO_VALID_PRICE=["Keine g\u00fcltige Zahl","No valid value",
+"No es un n\u00famero valido"],W_NO_REORDER_VAR_PRICE=["Nur Produkte mit der Einheit 'St\u00fcck' k\u00f6nne auf diese Weise nachbestellt werden.","Only products of unit 'Piece' can be reordered this way.","Un producto de esta unidad no se puede reordenado asi."],W_INVALID_NO_ENTERING=["Fehler bei der Eingabe","Input contains errors","N\u00famero invalido"],w_INVALID_NO_RANGE=["Ung\u00fcltiger Zahlenbereich (1-1000)","Invalid number range (1-1000)","N\u00famero no es entre 1 y 1000"],W_DAYCODETXT=
+["Tageslosung","Day code","C\u00f3digo del d\u00eda"],W_RECORDS_HEADER=["Tischprotokoll","Records of table","Historia de la mesa"],W_RECORDS_INIT=["Tischprotokoll (Anklicken zum \u00d6ffnen)","Records of table (click to open)","Historia de la mesa (click para abrir)"],W_RECORD_ACTION=[["Bestellung","Ordering","Ordenar"],["Rechnung","Bill","Pagar"],["Artikelstorno","Discard product","Descartar producto"],["Rechnungsstorno","Discard bill","Descartar pago"],["Rechnungs- und Artikelstorno","Discard bill and product",
+"Descrtar pago y producto"],["Tischwechsel Produktentfernung","Move products to other table","Productos a otra mesa"],["Tischwechsel Produktbuchung","Received moved products","Recibo productos de otra mesa"],["Lieferbon","Delivery receipt","Recibo de entrega"],["Storno Lieferbon","Discard delivery receipt","Descartar recibo de entrega"],["Storno Lieferbon und Artikel","Discard delivery receipt and products","Descartar recibo de entrega y productos"]],W_NO_ENTRIES=["Keine Eintr\u00e4ge","No entries",
+"Ning\u00fan data"],W_NOT_SUPPORTED=["Nicht unterst\u00fctzt f\u00fcr dieses Produkt","Not supported for this product","No posible para este producto"],W_QUICKCASH_BTN=["Schnellkasse","Quick cash","Factura r\u00e1pida"],W_INVERTARTICLE=["Minusartikel","Invert article","Invertir art\u00edculo"],CHANGE_ALL=0,CHANGE_ONE=1,WORKFLOW_DIGI_WORK=0,WORKFLOW_DIGI=1,WORKFLOW_WORK=2,WORKFLOW_WORK_SEND=3,performanceMeasureTimerOrder=0,perfStartTimeOrder=0,PERFTIMER_ORDER=5,perfStartTimeShowAllRooms=0,phases=null,
+allextras=null,showcomments=0;
+function Grouping(a,b){this.set=a;this.sortedset=[];this.group=function(){this.sortedset=[];for(var c=0;c<this.set.length;c++){var e=this.set[c];if(0===this.sortedset.length)e.count=1,e.ids=[e.id],this.sortedset[this.sortedset.length]=e;else{var f=b(e),h=!1;for(j=0;j<this.sortedset.length;j++){var g=this.sortedset[j],k=b(g);if(f===k){g.count+=1;f=g.ids;f[f.length]=e.id;h=!0;break}}h||(e.count=1,e.ids=[e.id],this.sortedset[this.sortedset.length]=e)}}};this.outputList=function(c){for(var e="",f=0;f<
+this.sortedset.length;f++)e+=c(this.sortedset[f]);return e};this.outputListAdditionalParam=function(c,e){for(var f="",h=0;h<this.sortedset.length;h++)f+=c(this.sortedset[h],e);return f};this.getItemsOfRow=function(c){c=this.sortedset[c].ids;for(var e=[],f=0;f<c.length;f++)for(var h=c[f],g=0;g<this.set.length;g++){var k=this.set[g];if(k.id==h){e[e.length]=k;break}}return e};this.popSortedEntry=function(c){c=this.sortedset[c].ids.pop();c=this.popSetEntry(c);this.group();return c};this.popSetEntry=function(c){for(var e=
+0;e<this.set.length;e++){var f=this.set[e];if(f.id==c)return this.set.splice(e,1),f}};this.getSourceSet=function(){return this.set};this.getGroupedList=function(){return this.sortedset}}var priceTogoSum=0,prodCountTogo=0;
+function setLanguage(a){lang=a;phases.setLang(lang);$("#roomtableheader2").html(W_ROOMTABLE[lang]);$("#tableselection").html(W_TABLE_SEL[lang]);$("#actiontxt").html(W_ACT_NEW_ORD_EL[lang]);$("#actdeltxt").html(W_DEL[lang]);$("#discard_new_orders_yes").html(W_YES[lang]);$("#discard_new_orders_no").html(W_NO[lang]);$("#discardnewordersask").html(W_DISCARD_NO_ASK[lang]);$("#discardnoheader").html(W_DISCARD_HEADER[lang]);$("#moveprods").html(W_MOVE_PRODS[lang]);$(".daycodetxt").html(W_DAYCODETXT[lang]);
+a="";var b=W_SEARCH[lang]+" ("+W_MINCHAR[lang]+" "+startprodsearch+" "+W_CHAR[lang]+")";0==prominentsearch?(a+='<div id=searchResult></div><div><input type="text" id="searchField" class="genConfigEl" value="" data-mini="true" placeholder="'+b+'" />',1==usebarcode&&(a+='<input type="text" id="barcode" tabindex="-1" value="" data-mini="true" placeholder="'+W_BARCODE[lang]+'" autofocus />')):0==usebarcode?a+='<div><input type="text" id="searchField" class="genConfigEl" value="" data-mini="true" placeholder="'+
+b+'" autofocus /><div id=searchResult></div>':(a=a+('<div><input type="text" id="searchField" class="genConfigEl" value="" data-mini="true" placeholder="'+b+'" /><input type="text" id="barcode" tabindex="-1" value="" data-mini="true" placeholder="')+(W_BARCODE[lang]+'" autofocus />'),a+="<div id=searchResult></div>");a+="</div>";b="";1==showartcommentmobile&&(b='<div class="ui-grid-a commentsfieldarea" style="display:none;">                         <div class="ui-block-a" id="commentgridfield" style="width:80%"><input type="text" class="orderoptionfield" id="optionfield" value="" data-mini="true" placeholder="'+
+W_NOTE[lang]+'" /></div>                         <div class="ui-block-b predefcommentgridfield" id="predefcommentgridfield" style="width:20%"><select name="select-comment" id="select-comment"></select></div>                 </div>');var c="";1==showordercommentmob&&(c='<div class="ui-grid-a commentsfieldarea" style="display:none;">                         <div class="ui-block-a" id="commentgridfield" style="width:80%"><input type="text" class="orderoptionfield" id="orderoptionfield" value="" data-mini="true" placeholder="'+
+W_ORDER_NOTE[lang]+'" /></div>                         <div class="ui-block-b predefcommentgridfield" id="predefordercommentgridfield" style="width:20%"><select name="select-order-comment" id="select-order-comment"></select></div>                 </div>');0==prominentsearch?$("#searchposition-normal").html(a):$("#searchposition-prominent").html(a);1==usebarcode&&$("#barcode").focus();a=b+c;b="";workflowconfigfood!=workflowconfigdrinks&&(showtransferbtns=0);if(workflowconfigfood==WORKFLOW_DIGI_WORK||
+workflowconfigfood==WORKFLOW_DIGI||workflowconfigfood==WORKFLOW_WORK_SEND)if(b=" osbigbtn ",1==preferfixbtns&&(b=" ossmallbtn fixedsendorderbtn "),1==showtransferbtns){c="";if(1==cashenabled||quickcash==QUICKCASH_YES)c=" ("+W_QUICKCASH_BTN[lang]+")";a+='<a data-role="button" data-theme="e" class="'+b+'" id="sendorder_btn">'+W_SEND_ORDERS[lang]+c+"</a>"}if(workflowconfigfood==WORKFLOW_DIGI_WORK||workflowconfigfood==WORKFLOW_WORK||workflowconfigfood==WORKFLOW_WORK_SEND)if(b=" osbigbtn ",1==preferfixbtns&&
+(b=" ossmallbtn  fixedworkprintbtn "),1==showtransferbtns){c="";if(1==cashenabled||quickcash==QUICKCASH_YES)c=" ("+W_QUICKCASH_BTN[lang]+")";a+='<a data-role="button" data-theme="e" class="'+b+'" id="workprint_btn">'+W_WORK_TICKET[lang]+c+"</a>"}0==cashenabled&&quickcash==QUICKCASH_NO&&(b=" osbigbtn ",1==preferfixbtns&&(b=" ossmallbtn  fixedgopaydeskbtn "),a+='<a data-role="button" data-theme="e" class="'+b+'" id="gopaydesk_btn" >'+W_TO_PAYDESK[lang]+"</a>");a+='<input type="button" id="changetable_btn" value="'+
+W_TABLECHANGE[lang]+'" data-mini="true" data-theme="e" />';$("#commandbuttons").html(a);1==preferfixbtns&&$("#waiterui").addClass("fixedwaiterui");$("#waiterui").trigger("create");a="<div>"+W_NUMBER[lang]+': <input type="number" id="act-numberfield" value="" data-mini="true" /></div> ';b='<div class="ui-grid-a"> \t\t<div class="ui-block-a" id="actcommentgridfield" style="width:80%"><input type="text" id="act-optionfield" value="" data-mini="true" placeholder="'+W_NOTE[lang]+'" /></div> \t\t<div class="ui-block-b" id="actpredefcommentgridfield" style="width:20%"><select name="act-select-comment" id="act-select-comment"></select></div> \t</div>';
+$("#actremark").html(a+b);1==rightchangeprice&&(a='<input type="text" id="act-changepricefield" value="" data-mini="true" placeholder="'+W_CHANGE_PRICE[lang]+'" />',$("#actchangepricesection").html(a),a='<div class="ui-grid-c">'+getDiscountButton("discount1","a",discount1,discountname1),a+=getDiscountButton("discount2","b",discount2,discountname2),a+=getDiscountButton("discount3","c",discount3,discountname3),a+="</div>",$("#actdiscount").html(a));$("#actionneworderconfirm_all").html(W_ACT_CHANGE_ALL[lang]);
+$("#actionneworderconfirm_one").html(W_ACT_CHANGE_ONE[lang]);$("#actionnewordercancel").html(W_CANCEL[lang]);intervalFetchRoomTableInfoFromServer(10);setOrderLabels(lang);bindOpenDeliveryPanel();$("#select-comment").off("change").on("change",function(e){e=$("#select-comment").find(":selected").val();$("#optionfield").val(e)});$("#select-order-comment").off("change").on("change",function(e){e=$("#select-order-comment").find(":selected").val();$("#orderoptionfield").val(e)});$("#act-select-comment").off("change").on("change",
+function(e){e=$("#act-select-comment").find(":selected").val();$("#act-optionfield").val(e)});$("#discard_new_orders_no").off("click").on("click",function(e){e.stopImmediatePropagation();e.preventDefault();parent.history.back()});$(".discard_priceenter").off("click").on("click",function(e){e.stopImmediatePropagation();e.preventDefault();$("#enterpricedlg").dialog("close")});$("#discard_numberenter").off("click").on("click",function(e){e.stopImmediatePropagation();e.preventDefault();$("#enternumberdlg").dialog("close")});
+$("#discard_new_orders_yes").off("click").on("click",function(e){e.stopImmediatePropagation();e.preventDefault();neworders=[];1==restaurantmode?gotoOtherPage($("#discardnewordersdlg").data("link")):(fillTypeProdList(0),$("#discardnewordersdlg").dialog("close"),updateNewOrdersGui())});$("#prodbackbtn").off("click").on("click",function(e){0!==neworders.length?(e.stopImmediatePropagation(),e.preventDefault(),hideMenuProd(),$("#discardnewordersdlg").data("link","back_table"),$.mobile.changePage("#discardnewordersdlg")):
+1==restaurantmode?parent.history.back():fillTypeProdList(0)});$("#searchField").off("keyup").on("keyup",function(e){generateSearchResults()});1==usebarcode&&$("#barcode").focus();$("#barcode").off("keyup").on("keyup",function(e){handleBarcodeInput(e,!0)})}
+function getDiscountButton(a,b,c,e){c='<div class="ui-block-'+b+'" style="width:30%"><a href="#" data-role="button" data-theme="c" id="'+a+'">'+c+" %</a></div>";""!=e.trim()&&(c='<div class="ui-block-'+b+'" style="width:30%"><a href="#" data-role="button" data-theme="c" id="'+a+'">'+toHtml(e)+"</a></div>");return c}
+function generateProdInfo(a){a=getProdEntry(a);var b=a.unit,c=W_PRICE[lang]+": "+a.price+" "+currency;2<b&&(c+="/"+g_units_arr[b].text);""!==a.description&&(c+="\n\n"+a.description.replace("{newline}","\n"));return c}function findProdWithBarcode(a){for(var b=$("#typprodpage").data("types_prods").prods,c=0;c<b.length;c++){var e=b[c],f=e.barcode;f=f.split("-").join("");f=f.split(" ").join("");if(f==a)return e}return null}
+function fillGenCommentsList(a){if("OK"!==a.status)"2"==a.code&&setTimeout(function(){document.location.href="logout.php"},250);else{var b='<option value=""></option>';a=a.msg;var c=0;for(c=0;c<a.length;c++){var e=a[c].comment;e=toHtml(e);b+='<option value="'+e+'">'+e+"</option>"}predefinedComments=htmlComments=b;$("#select-comment").html(b);$("#select-comment").selectmenu("refresh");$("#select-order-comment").html(b);$("#select-order-comment").selectmenu("refresh")}}
+function showMessageToAllUsers(a,b){$(a).show();var c='<li data-role="list-divider" data-theme="b" data-role="heading">'+W_MSG[lang]+"</li>";b='<li data-theme="d">'+toHtml(b).replaceAll("\n","<br>")+"</li>";$(a).html(c+b);refreshList(a)}
+function initializeMainMenuWaiter(a,b,c,e,f){$("#"+c).html("&nbsp;"+a.user);$("#"+e).html(a.version+"&nbsp;");var h='<li data-role="list-divider" data-theme="b" data-role="heading">Module</li>';$.each(a.menu,function(g,k){g=k.name;k=k.link;h=f?h+('<li data-theme="e"><a class="modules" href="#" id="menu_'+k+'">'+g+"</a></li>"):h+('<li data-theme="e"><a class="modulebutton" href="'+k+'" target="_top">'+g+"</a></li>")});$(b).empty().append(h).promise().done(function(){refreshList(b)});"#modulemenu-room"==
+b&&(a=a.waitermessage,""!=a?(showMessageToAllUsers("#waitermessage",a),showMessageToAllUsers("#waitermessagetableview",a)):($("#waitermessage").hide(),$("#waitermessagetableview").hide()));$(".modulebutton").off("click").on("click",function(g){g=$(this).attr("href");doAjax("POST","php/contenthandler.php?module=admin&command=setLastModuleOfUser",{view:g},null,"Fehler bei setLastModule f\u00fcr View: "+g,!1)})}
+function intervalCheckConnection(a){checkConnection();setInterval(function(){checkConnection()},1E3*a)}function checkConnection(){var a=new Image;a.onerror=function(){$(".connectionstatus").show()};a.onload=function(){$(".connectionstatus").hide()};a.src="img/gray.png?t="+ +new Date}function refreshList(a){$(a).hasClass("ui-listview")?$(a).listview("refresh"):$(a).trigger("create")}
+function gotoOtherPage(a){var b=a.split("_");"menu"==b[0]?(doAjax("POST","php/contenthandler.php?module=admin&command=setLastModuleOfUser",{view:b[1]},null,null,ASYNC),setTimeout(function(){document.location.href=b[1]},250)):"back"==b[0]&&($("#discardnewordersdlg").dialog("close"),parent.history.back())}function moduleForward(a){0==neworders.length?gotoOtherPage(a):(hideMenuProd(),$("#discardnewordersdlg").data("link",a),$.mobile.changePage("#discardnewordersdlg"))}
+function getPayPrintType(){doAjax("GET","php/contenthandler.php?module=admin&command=getPayPrintType",null,insertPayPrintType,"Fehler Druckkonfiguration",ASYNC)}function insertPayPrintType(a){$("#workprintarea").data("payPrintType",a)}function getUserHasRightForPaydesk(){doAjax("GET","php/contenthandler.php?module=admin&command=hasUserPaydeskRight",null,hasUserPaydeskRight,"Fehler Kassenberechtigung",ASYNC)}function hasUserPaydeskRight(a){$("#gopaydesk_btn").data("allowed",a)}
+function hideMenuRoom(){$("#modulepanel-room").panel("close");$("#menuswitch").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();$("#modulepanel-room").panel("open")})}function hideMenuTable(){$("#modulepanel-table").panel("close");$("#menuswitchtable").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();$("#modulepanel-table").panel("open")})}
+function hideMenuProd(){$("#modulepanel-prod").panel("close");$("#menuswitchprod").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();$("#modulepanel-prod").panel("open")})}function calcTotalPriceOfProdAndExtras(a,b){a=parseFloat(a);b=extrasManagement.calcPriceOfAssignedExtras(b,allextras);return totalPrice=parseFloat(a+b).toFixed(2)}
+function addProductToQueueNoGuiUpdate(a,b,c,e,f,h,g,k){var l=getProdProperties(a),m=l.name;l=calcTotalPriceOfProdAndExtras(l.price,c);phases.getCurrentPhase();for(var p=0;p<selectedProdCount;p++)neworders[neworders.length]={name:m,option:b,extras:c,prodid:a,price:l,changedPrice:e,togo:f,isminusarticle:IS_NOT_MINUS_ARTICLE,unit:h,unitamount:g,phase:k};selectedProdCount=1}
+function addProductToQueue(a,b,c,e,f,h,g,k,l){"undefined"===typeof f&&(f=null);"undefined"===typeof g&&(g=1);"undefined"===typeof h&&(h=0);var m=$("#optionfield").val();void 0===m&&(m="");$("#optionfield").val("");$("#select-comment").html(htmlComments);$("#select-comment").selectmenu("refresh");var p=getProdProperties(a),q=p.name;null!==k&&"undefined"!==typeof k&&""!=k.trim()&&(q=k);lastSelectedProduct=q;$("#lastselectedprod").html(lastSelectedProdToStr());k=calcTotalPriceOfProdAndExtras(p.price,
+b);null!==f&&(c=k=f=parseFloat(f).toFixed(2).replace(",","."));f=q;q=k;k=phases.getCurrentPhase();for(p=0;p<selectedProdCount;p++)neworders[neworders.length]={name:f,option:m,extras:b,prodid:a,price:q,changedPrice:c,togo:e,isminusarticle:l,unit:h,unitamount:g,phase:k};selectedProdCount=1;updateNewOrdersGui()}
+function updateNewOrdersList(){var a=$("#gopaydesk_btn").data("tableid");0===neworders.length?($("#changetable_btn").closest(".ui-btn").show(),$("#sendorder_btn").closest(".ui-btn").hide(),$("#workprint_btn").closest(".ui-btn").hide()):($("#changetable_btn").closest(".ui-btn").hide(),$("#sendorder_btn").closest(".ui-btn").show(),$("#workprint_btn").closest(".ui-btn").show());var b=calcTotalPriceOfNewOrders();updateLiveOrders(neworders,a);void 0!=a&&0!=a||$("#changetable_btn").closest(".ui-btn").hide();
+b='<li data-role="list-divider" data-theme="b" data-role="heading">'+W_NEW_ORDER[lang]+" ("+b+")</li>";var c=groupedNewOrders.count.length;for(a=0;a<c;a++){var e=groupedNewOrders.units[a],f=groupedNewOrders.unitamounts[a],h=phases.getPhaseName(groupedNewOrders.phases[a]),g="";isUnitOfAmountTypeNotPieceNotVoucher(e)&&(g=f+g_units_arr[e].text+" ");f=toHtml(groupedNewOrders.name[a]);var k=groupedNewOrders.option[a],l=groupedNewOrders.count[a];f=1<l?"<span style='font-size: 23px;'>"+l.toString()+"x</span> "+
+g+f:g+f;""!==h&&(f+=" "+h);h=groupedNewOrders.prodids[a];""!==k&&(k="<p>"+toHtml(k)+"</p>");g=groupedNewOrders.changedPrices[a];l=groupedNewOrders.togos[a];var m="",p=groupedNewOrders.extras[a];null!==p&&""!==p&&(m="<span style='font-size: 14px;'><i>"+p+"</i></span>");f=f+k+m;"NO"!==g?(g=g.replace(".",decpoint)+" "+currency,isUnitOfAmountTypeNotPieceNotVoucher(e)&&(g+="/"+g_units_arr[e].text),b=0!=l?b+('<li data-theme="c" data-icon="arrow-d"><a href="#" id="new_'+h+'" class="neworder_el '+getProdSizeClass()+
+'">'+f+" ("+g+" - To-Go)</a></li>"):b+('<li data-theme="c" data-icon="arrow-d"><a href="#" id="new_'+h+'" class="neworder_el '+getProdSizeClass()+'">'+f+" ("+g+")</a></li>")):b=0!=l?b+('<li data-theme="c" data-icon="arrow-d"><a href="#" id="new_'+h+'" class="neworder_el '+getProdSizeClass()+'">'+f+" - To-Go</a></li>"):b+('<li data-theme="c" data-icon="arrow-d"><a href="#" id="new_'+h+'" class="neworder_el '+getProdSizeClass()+'">'+f+"</a></li>")}$("#neworders").html(b);refreshList("#neworders");binding_neworderelem()}
+function getProdSizeClass(){return 1==osprodbtnsize?"osprod-1":2==osprodbtnsize?"osprod-2":""}
+function binding_neworderelem(){$(".neworder_el").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=$("#neworders li").index($(this).closest("li"))-1;var b={count:groupedNewOrders.count[a],name:groupedNewOrders.name[a],price:groupedNewOrders.price[a],option:groupedNewOrders.option[a],extras:groupedNewOrders.extras[a],prodid:groupedNewOrders.prodids[a],origidxs:groupedNewOrders.origidxs[a],changedPrices:groupedNewOrders.changedPrices[a],togos:groupedNewOrders.togos[a],
+isminusarticles:groupedNewOrders.isminusarticles[a],unit:groupedNewOrders.units[a],unitamount:groupedNewOrders.unitamounts[a],phase:groupedNewOrders.phases[a]};$("#actiononneworderel").data("entry",b);$("#actiononneworderel").data("newcount",b.count);$("#actiononneworderel").data("groupedListIndex",a);$("#actiononneworderel").data("countatdialogstart",b.count);$("#act-optionfield").val(b.option);$("#act-numberfield").val(b.count);$("#togocheckbox").prop("checked",1==b.togos?!0:!1);actionSelOnNewOrderElem()})}
+function calcTotalPriceOfNewOrders(){var a=0;0!==neworders.length&&neworders.forEach(function(b,c){a="no"==b.changedPrice.toLowerCase()?a+parseFloat(b.price)*b.unitamount:a+parseFloat(b.changedPrice)*b.unitamount});a=a.toFixed(2).replace(".",decpoint);return a+" "+currency}
+function sendNewOrders(a,b,c){var e=$("#typprodpage").data("table-info")[1];if(0!==neworders.length){var f=$("#orderoptionfield").val();void 0===f&&(f="");$("#orderoptionfield").val("");a={tableid:e,prods:neworders,print:a?1:0,payprinttype:b,orderoption:f};a=waiter_addDeliveryData(a);0===performanceMeasureTimerOrder&&(perfStartTimeOrder=(new Date).getTime());"s"===b?doAjaxWithProgress("POST","php/contenthandler.php?module=queue&command=addProductListToQueue",a,c,null,"Kommunikationsproblem",!1,"json",
+handleErrorOnSendNewOrders,!0):doAjaxWithProgress("POST","php/contenthandler.php?module=queue&command=addProductListToQueue",a,fillPrintAreaAndPrint,null,"Kommunikationsproblem",!1,"json",handleErrorOnSendNewOrders,!0)}}function handleErrorOnSendNewOrders(a){void 0!==a&&a&&(allowPrintAndOrderBtn=!0)}function reloadPage(){tableListActive=!1;setTimeout(function(){document.location.href="waiter.html"},250)}
+function removeCurrentOrders(){groupedNewOrders={count:[],joinedvals:[],name:[],prodids:[],extras:[],origidxs:[],changedPrices:[],togos:[],isminusarticles:[],phases:[]};neworders=[]}
+function checkEndPerformanceMeaurementOrder(){if(0===performanceMeasureTimerOrder){performanceMeasureTimerOrder=PERFTIMER_ORDER;var a={task:"waitersendorder",elapsedtime:(new Date).getTime()-perfStartTimeOrder};doAjax("GET","php/contenthandler.php?module=admin&command=addperformancedata",a,null,null,SYNC)}else performanceMeasureTimerOrder--}
+function checkEndPerformanceMeaurementShowAllRooms(){var a={task:"waitershowallrooms",elapsedtime:(new Date).getTime()-perfStartTimeShowAllRooms};doAjax("GET","php/contenthandler.php?module=admin&command=addperformancedata",a,null,null,SYNC)}
+function gotoTablePage(a){checkEndPerformanceMeaurementOrder();"OK"!==a.status?(alert("Fehler: "+a.msg),0<neworders.length&&(allowPrintAndOrderBtn=!0)):(removeCurrentOrders(),waiter_clearDeliveryFields(),a=$("#tables-page").data("allroomtables").length,isTogoOrderSelected&&1!=a?reloadPage():1==tablesAfterSend?$.mobile.changePage("#tables-page"):reloadPage())}
+function removeProductFromQueue(a,b,c,e,f,h){"undefined"===typeof h&&(h=!0);f?$.ajax({type:"POST",dataType:"json",url:"php/contenthandler.php?module=queue&command=removeProductFromQueue",data:{queueid:a,isPaid:b,isCooking:c,isReady:e},async:!1,success:function(g){"OK"!=g.status&&alert(W_REMOVE_ERROR[lang]);g=$("#typprodpage").data("table-info")[1];h&&fillNotDeliveredProductsOfATable("php/contenthandler.php?module=queue&command=getJsonLongNamesOfProdsForTableNotDelivered&tableid="+g)},error:function(g){alert("Sorry, Fehler bei Produktentfernung!")}}):
+alert(W_WRONG_PIN[lang])}function reorderProduct(a,b,c,e){var f=getProdProperties(a);if(0!=f.unit&&"null"!=f.unit)alert(W_NO_REORDER_VAR_PRICE[lang]);else{for(var h=[],g=0;g<b.length;g++)h[h.length]={id:b[g],name:c[g],amount:e[g]};b=calcTotalPriceOfProdAndExtras(f.price,h);addProductToNewOrdersList(a,h,b,0,1,null,IS_NOT_MINUS_ARTICLE)}}
+function invertArticle(a,b,c,e){var f=getProdProperties(a);if(0!=f.unit&&"null"!=f.unit)alert(W_NO_REORDER_VAR_PRICE[lang]);else{for(var h=[],g=0;g<b.length;g++)h[h.length]={id:b[g],name:c[g],amount:e[g]};b=0-calcTotalPriceOfProdAndExtras(f.price,h);f=f.name;c=invertarticlename.replace("${article}",f);c=c.replace("${artikel}",f);c=c.replace("${Artikel}",f);addProductToNewOrdersList(a,h,b,0,1,c,IS_MINUS_ARTICLE)}}
+function getWaiterSettings(){doAjax("GET","php/contenthandler.php?module=admin&command=getWaiterSettings",null,insertWaiterSettings,"Fehler Konfigurationsdaten",ASYNC)}function bindShowCommentsBtn(){$("#showcommentsbtn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();1==showcomments?$(".commentsfieldarea").hide():$(".commentsfieldarea").show();showcomments=1-showcomments})}
+function insertWaiterSettings(a){if(1!=a.isUserLoggedIn)setTimeout(function(){document.location.href="index.html"},250);else{setGlobalVars(a);var b=a.config;1==restaurantmode&&$("#room-list").show();1==usebarcode&&$("#barcode").show();setLanguage(a.userlanguage);1==rightchangeprice?$("#changepricesection").show():$("#changepricesection").hide();cancelunpaidcode=null!=b.cancelunpaidcode&&""!=b.cancelunpaidcode?b.cancelunpaidcode:"";initializeMainMenuWaiter(a.jsonMenuItemsAndVersion,"#modulemenu-room",
+"loggedinuser1","versioninfo1",!1);initializeMainMenuWaiter(a.jsonMenuItemsAndVersion,"#modulemenu-table","loggedinuser2","versioninfo2",!1);initializeMainMenuWaiter(a.jsonMenuItemsAndVersion,"#modulemenu-prod","loggedinuser3","versioninfo3",!0);1==b.showdaycode?($(".daycodeareamobile").show(),$(".daycodefield").html(toHtml(dailycode))):$(".daycodeareamobile").hide();0==enableorders?$("#deliverydetails").hide():$("#deliverydetails").show();doAjax("GET","php/contenthandler.php?module=products&command=getAllGeneralComments",
+null,fillGenCommentsList,"Fehler Bemerkungsdatensatz",ASYNC);getTableMapPreferences();updateNewOrdersGui();initializeEverything()}}$(document).ready(function(){intervalGetPrinterStatus(5);intervalCheckConnection(2)});function documentStart(){phases=new Phases;fetchTypeProdsFromServer();getWaiterSettings();fetchMenuInInterval(60);intervalFetchDaycode(10);phases.bindPhaseBtns(!0);$.getJSON("php/contenthandler.php?module=roomtables&command=showAllRooms",function(a){currentRoomInfo=a})}
+$(document).on("pageinit","#info-page",function(){documentStart()});function intervalFetchRoomTableInfoFromServer(a){setInterval(function(){tableListActive&&doAjax("GET","php/contenthandler.php?module=products&command=getAllTypesAndAvailProds",null,updateTableViewIfListStillOpen,null,ASYNC)},1E3*a)}function intervalFetchDaycode(a){setInterval(function(){doAjax("GET","php/contenthandler.php?module=admin&command=getDailycode",null,updateDailycode,null,ASYNC)},1E3*a)}
+function updateDailycode(a){"OK"==a.status&&(dailycode=a.msg,$(".daycodefield").html(toHtml(dailycode)))}function intervalGetPrinterStatus(a){doAjax("GET","php/contenthandler.php?module=admin&command=isPrinterServerActive",null,setPrinterStatus,null,ASYNC);setInterval(function(){doAjax("GET","php/contenthandler.php?module=admin&command=isPrinterServerActive",null,setPrinterStatus,null,ASYNC)},1E3*a)}
+function setPrinterStatus(a){"OK"===a.status?(0===a.msg?$(".printerstatus").show():$(".printerstatus").hide(),1===a.tasksforme?$(".tasksstatus").show():$(".tasksstatus").hide(),1===a.tsestatus?$(".tsestatus").hide():$(".tsestatus").show()):$(".printerstatus").hide()}
+function updateTableViewIfListStillOpen(){perfStartTimeShowAllRooms=(new Date).getTime();$.getJSON("php/contenthandler.php?module=roomtables&command=showAllRooms",function(a){currentRoomInfo=a;checkEndPerformanceMeaurementShowAllRooms();tableListActive&&(showDirectInput||insertTableList(a))})}function fetchMenuInInterval(a){setInterval(function(){fetchTypeProdsFromServer()},1E3*a)}
+function getTableMapPreferences(){doAjax("GET","php/tablemap.php?command=getTableMapPreferences",null,insertTMInfo,"Keine TM-Information",ASYNC)}function showDirectTableEntry(){$("#directtable").show();$("#tables-list").hide();showTogoInDirectPanel()}
+function updateTableList(){showDirectInput?(showDirectTableEntry(),bindDirectTableInput()):($("#directtable").hide(),$("#tables-list").html(""),$("#tables-list").show(),perfStartTimeShowAllRooms=(new Date).getTime(),$.getJSON("php/contenthandler.php?module=roomtables&command=showAllRooms",function(a){currentRoomInfo=a;checkEndPerformanceMeaurementShowAllRooms();insertTableList(a)}))}
+function insertTableList(a){var b=a.roomstables;$("#tables-page").data("allroomtables",b);1==b.length?($("#info-page").data("type","t"),$("#tables-page").data("roomdetail",b[0]),nextPage="typprodpage"):($("#info-page").data("type","r"),$("#roomtableheader").html(W_ROOMS[lang]),b=b[currentRoomIndex],$("#tables-page").data("roomdetail",b));displayTablesListOrMap("#tables-list",a.takeawayprice.pricesum,a.takeawayprice.unpaidprodcount)}
+function initializeEverything(){lastSelectedProduct="";$(".modules").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();moduleForward(this.id)});hideMenuRoom();perfStartTimeShowAllRooms=(new Date).getTime();$.getJSON("php/contenthandler.php?module=roomtables&command=showAllRooms",function(a){checkEndPerformanceMeaurementShowAllRooms();queueIdsOfTakeAway=a.takeawayReadyQueueIds;var b=a.roomstables;$("#tables-page").data("allroomtables",b);var c=b.length;if(0==restaurantmode)isTogoOrderSelected=
+!0,forwardDisplayToProductView.call(this,0,0,W_TOGO[lang]);else if(1==c)$("#info-page").data("type","t"),$("#tables-page").data("roomdetail",b[0]),nextPage="tables-page",currentRoomIndex=0,$.mobile.changePage("#tables-page"),$("#tableselbackbtn").hide();else{$("#info-page").data("type","r");$("#roomtableheader").html(W_ROOMS[lang]);var e="",f="";1==osroombtnsize?f="osroom-1":2==osroombtnsize&&(f="osroom-2");$.each(b,function(k,l){e+='<li data-theme="f"><a href="#" id="'+k+'" class="info-go '+f+'"><span class="opentable">'+
+l.name+"</a></li>"});1==showtogo&&(e+='<li data-theme="e"><a href="#" class="togoorder '+f+'">'+W_TOGO[lang]);const h=a.takeawayprice.pricesum,g=a.takeawayunpaidprodcount;c=h.replace(".",decpoint)+" "+currency;if(0<g||"0.00"!=h)e+=" ("+W_TO_PAY[lang]+": "+c+")</span>";e+=createServeInfo(null,a.takeawayprodcount,a.takeawayprodready);e+="</a></li>";$("#room-list").append(e).promise().done(function(){bindTogoOrdering();bindServeClick();$(this).off("click").on("click","a",function(k){k.stopImmediatePropagation();
+k.preventDefault();k=b[this.id];currentRoomIndex=parseInt(this.id);isTogoOrderSelected=!1;$("#tables-page").data("roomdetail",k);nextPage="tables-page";$.mobile.changePage("#tables-page")});refreshList(this)})}})}function handleClickInTablemap(a){forwardDisplayToProductView.call(this,a.roomid,a.tableid,a.tablename)}function getCurrentRoomInfoInTMInfo(){return void 0!==tminfo&&null!==tminfo&&0<tminfo.length?tminfo[currentRoomIndex]:null}
+$(document).on("pagebeforeshow","#tables-page",function(){lastSelectedProduct="";tableListActive=!0;""==nextPage&&reloadPage();hideMenuTable();checkForLogIn();$("#searchField").val("");$("#barcode").val("");$("#directtableinputfield").val("");$("#directtableinputfield").focus();$("#tableselbackbtn").off("click").on("click",function(b){b.stopImmediatePropagation();b.preventDefault();tableListActive=!1;$.mobile.changePage("#info-page")});const a=getCurrentRoomInfoInTMInfo();null!==a&&(showDirectInput=
+3==a.displaymap?!0:!1);updateTableList()});$(document).on("pagebeforeshow","#changetablewhatdialog",function(){var a=$("#changetablewhatdialog").data("fromtableid");doAjax("GET","php/contenthandler.php?module=queue&command=getProdsForTableChange",{tableId:a},insertProductsToChangeTableDlg,"Tischartikel",ASYNC)});
+function insertProductsToChangeTableDlg(a){"OK"!==a.status?alert("Fehler bei Abfrage der Artikel des Tisches"):(prodsToMove=a.msg,allselected=1,updateProdToMoveList(),$("#selectallnothing").off("click").on("click",function(b){b.stopImmediatePropagation();b.preventDefault();allselected=1-allselected;for(b=0;b<prodsToMove.length;b++)prodsToMove[b]["class"]=1===allselected?"selecteditem":"unselecteditem";updateProdToMoveList()}))}
+function updateProdToMoveList(){1===allselected?$("#selectallnothing_txt").html(W_UNSELALL[lang]):$("#selectallnothing_txt").html(W_SELALL[lang]);for(var a="",b=0;b<prodsToMove.length;b++){var c=prodsToMove[b],e="prodToMove_"+b,f=c.kind,h=" (unbezahlt)",g="e";void 0===c["class"]&&(c["class"]="selecteditem");var k=c["class"];"unselecteditem"===k&&(g="a");"unpaid_undelivered"===c.status&&(h=" (unbezahlt, nicht serviert)");var l=workflowconfigfood;1==f&&(l=workflowconfigdrinks);if(l==WORKFLOW_WORK||
+l==WORKFLOW_WORK_SEND)h="";a+="<li data-theme='"+g+"' class='prodToMoveEl' id='"+e+"' ><span class='"+(k+"'>"+c.productname+h+"</span></li>")}$("#productsToMoveList").html(a);refreshList("#productsToMoveList");handleClickOnMoveableProd()}
+function handleClickOnMoveableProd(){$(".prodToMoveEl").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_")[1];a=prodsToMove[a];a["class"]="unselecteditem"==a["class"]?"selecteditem":"unselecteditem";updateProdToMoveList()});$("#moveprods").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=[];for(var b=0;b<prodsToMove.length;b++){var c=prodsToMove[b];"selecteditem"==c["class"]&&(a[a.length]=c.queueid)}0===a.length?
+alert(W_NO_PRODS_SELECTED[lang]):(a=a.join(),b=$("#changetablewhatdialog").data("fromtableid"),c=$("#changetablewhatdialog").data("totableid"),doAjax("POST","php/contenthandler.php?module=queue&command=changeTable",{fromTableId:b,toTableId:c,queueids:a},resultOfChangeTable,"Fehler Tischwechsel",ASYNC))})}function createTextAreaForChangeTable(a){for(var b="<textarea class='changetableprodlist'>",c=0;c<a.length;c++){var e=a[c];b+=e.mycount+"x "+e.productname+"\n"}return b+"</textarea>"}
+function displayTablesListOrMap(a,b,c){var e=$("#tables-page").data("roomdetail");"t"==$("#info-page").data("type")?$("#tableselbackbtn").hide():$("#tableselbackbtn").show();var f=e.id,h=e.tables,g=shallDisplayRoom(f);e=$("#info-page").data("type");if(1==g.show){if($(a).hide(),d=new Date,$("#mapimgpart").attr("src","php/tablemap.php?command=getTableMapImgAsPng&showBubbles=0&roomid="+f+"&"+d.getTime()),$("#tablemapcontent").show(),a=new Tablemap(f,null,""),g=a.createOverlay("#mapimgpart",g.pos,W_TO_PAY[lang],
+decpoint,currency,h,ostablebtnsize),$("#tableoverlay").html(g),a.bindingForOverlaySelection(handleClickInTablemap.bind(this),f,h,null),"t"==e){var k="";1==showtogo&&(0<c||"0.00"!=b?(b=b.replace(".",decpoint)+" "+currency,k+='<li data-theme="f" data-icon="false"><a href="#" class="togoorder '+l+'">'+W_TOGO[lang]+" ("+W_TO_PAY[lang]+": "+b+")</span>"):k+='<li data-theme="d"><a href="#" class="togoorder '+l+'">'+W_TOGO[lang]+"</a></li>");k+="</ul>";$("#tables-list-togo").html(k);$("#togoarea").show();
+refreshList("#tables-list-togo");bindTogoOrdering();bindServeClick()}}else{$(a).show();$("#togoarea").hide();$("#tablemapcontent").hide();k='<li data-role="list-divider" data-theme="b" data-role="heading">'+W_TABLES[lang]+"</li>";var l="";1==ostablebtnsize?l="ostable-1":2==ostablebtnsize&&(l="ostable-2");$.each(h,function(m,p){var q=p.pricesum,v=q.replace(".",decpoint)+" "+currency;const w=p.unpaidprodcount,r=p.prodcount,n=p.prodready,t=p.reservations;var u=p.name;""!=t&&(u+=" (Res.: "+t+")");0<w||
+0!=q?k+='<li data-theme="e" data-icon="false"><a href="#" id="'+m+'" class="info-go tbusy '+l+'"><span class="opentable">'+u+" ("+W_TO_PAY[lang]+": "+v+")</span>"+createServeInfo(p.id,r,n)+"</a></li>":(q=" tempty ",3==mobiletheme&&(q=" temptydark "),k+='<li data-theme="e" data-icon="false"><a href="#" id="'+m+'" class="info-go '+q+l+'">'+u+createServeInfo(p.id,r,n)+"</a></li>")});"t"===e&&1==showtogo&&(0<c||0!=b?(b=b.replace(".",decpoint)+" "+currency,k+='<li data-theme="f" data-icon="false"><a href="#" class="togoorder '+
+l+'">'+W_TOGO[lang]+" ("+W_TO_PAY[lang]+": "+b+")</span>"):k+='<li data-theme="f" data-icon="false"><a href="#" class="togoorder '+l+'">'+W_TOGO[lang]+"</a></li>");$(a).empty().append(k).promise().done(function(){bindTogoOrdering();bindServeClick();$(this).off("click").on("click",".info-go",function(m){m.stopImmediatePropagation();m.preventDefault();forwardDisplayToProductView.call(this,f,h[this.id].id,h[this.id].name)});refreshList(this)})}}
+function bindServeClick(){$(".prodreadyicon").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_")[1];var b=queueIdsOfTakeAway;if(null!=a&&"n"!=a)for(var c=$("#tables-page").data("roomdetail").tables,e=0;e<c.length;e++){var f=c[e];f.id==a&&(b=f.readyQueueIds)}0<b.length&&(a=b.join(),doAjax("POST","php/contenthandler.php?module=queue&command=declareMultipleProductsDelivered",{queueids:a},updateAfterDelivery,"Bereitstellung",ASYNC))})}
+function updateAfterDelivery(a){tableListActive?updateTableList():reloadPage()}function bindTogoOrdering(){$(".togoorder").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();isTogoOrderSelected=!0;forwardDisplayToProductView.call(this,0,0,W_TOGO[lang])})}
+function clearAndShowOrHidePhases(){1==showphases?($("#phasebuttons").show(),phases.clearCurrentPhase(),1==showphases&&phases.setCurrentPhase(defaultphase,!0),phases.showPhaseInMobile()):$("#phasebuttons").hide()}function forwardDisplayToProductView(a,b,c){neworders=[];updateNewOrdersGui();a=[a,b,c];$("#typprodpage").data("table-info",a);nextPage="typprodpage";$.mobile.changePage("#typprodpage");clearAndShowOrHidePhases()}
+function attachAndDisplayFirstRefTypes(a){$("#typprodpage").data("types_prods",a);for(var b=a.prods,c=[],e=0;e<b.length;e++){var f=b[e];c[c.length]={id:f.id,name:f.name,longname:f.longname,audio:f.audio,ref:f.ref,favorite:f.favorite,price:f.price,barcode:f.barcode,tax:f.tax,unit:f.unit,prodimageid:f.prodimageid,extras:f.extras,phase:f.phase,amount:f.amount}}c.sort(prodcompare);$("#typprodpage").data("types_prods_sorted",c);allextras={};for(b=0;b<a.extras.length;b++)c=a.extras[b],allextras[c.id]=c.price}
+function prodcompare(a,b){return(a.longname+"-"+a.unit).localeCompare(b.longname+"-"+b.unit)}
+function listOfExtras(a){var b=e,c="";1==preferfixbtns&&(b=e+" fixedextrasatopbottom ",c=" data-icon='false' ");var e=getProdSizeClass(),f='<li data-role="list-divider" data-theme="b" data-role="heading">'+W_EXTRAS[lang]+"</li>";1!=applyExtraBtnPos&&(f+='<li data-theme="c" '+c+'><a href="#" id="extra_atop_'+a+'" class="extrasel '+b+'">'+W_APPLY[lang]+"</a></li>");f+=extrasManagement.renderExtras(a,e,!0,priceinlist);0!=requestPriceInExtras&&(f+='<li data-theme="e"><input id="enterpriceextrasfield" type="text" placeholder="Preis" value="'+
+toHtml(presetPriceInExtras)+'" />&nbsp;'+currency+"</li>");2!=applyExtraBtnPos&&(f+='<li data-theme="c" '+c+'><a href="#" id="extra_abottom_'+a+'" class="extrasel '+b+'">'+W_APPLY[lang]+"</a></li>");return f+=createHigherLine(e)}
+function bindExtrasSel(){$(".extrasel").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_");var b=a[1];a=a[2];if("abottom"==b||"atop"==b)if(getProdEntry(a),b=extrasManagement.getAssignedExtras(),requestPriceInExtras){var c=$("#enterpriceextrasfield").val();c=c.trim();c=c.replace(decpoint,".");""!=c&&$.isNumeric(c)?(requestPriceInExtras=!1,presetPriceInExtras="",addProductToNewOrdersList(a,b,c,0,1,null,IS_NOT_MINUS_ARTICLE)):alert(W_NO_VALID_PRICE[lang])}else addProductToNewOrdersList(a,
+b,null,0,1,null,IS_NOT_MINUS_ARTICLE);else extrasManagement.extraClicked(b),!1!==requestPriceInExtras&&(presetPriceInExtras=$("#enterpriceextrasfield").val()),a=listOfExtras(a),$("#typeproducts-list").html(a),refreshList("#typeproducts-list"),bindExtrasSel(),bindHigherButtons()})}function lastSelectedProdToStr(){return" ("+W_LAST_SELECTED[lang]+": "+lastSelectedProduct+")"}
+function getLowerCaseFilterText(){return $("#searchField").val().trim().toLowerCase().length>=startprodsearch?$("#searchField").val().trim().toLowerCase():""}
+function listOfTypesProds(a){const b=getLowerCaseFilterText();var c='<li data-role="list-divider" data-theme="b" data-role="heading" >'+W_SELECTION[lang]+"<span id=lastselectedprod>";""!=lastSelectedProduct&&(c+=lastSelectedProdToStr());c+="</span>";if(1==showartcommentmobile||1==showordercommentmob)c+="<div id='showcommentsbtn' class='showcommentsbtn'><img class='showcommentsbtnsmall' src='img/showcomments.png' /></div>";c+="</li>";var e=$("#typprodpage").data("types_prods"),f=getProdSizeClass();
+""===b?$.each(e.types,function(l,m){parseInt(m.ref)==a&&(c+='<li data-theme="e"><a href="#" id="t_'+m.id+'" class="'+f+'">'+toHtml(m.name)+"</a></li>")}):e.types.forEach(function(l){0<=l.name.toLowerCase().indexOf(b)&&(c+='<li data-theme="e"><a href="#" id="t_'+l.id+'" class="'+f+'">'+toHtml(l.name)+"</a></li>")});var h=!1;if(1==preferimgmobile)for(var g=null,k=0;k<e.prods.length;k++)if(g=e.prods[k],parseInt(g.ref)==a&&(g=g.prodimageid,0!=g)){h=!0;break}c+=renderProductsOfCat(a,e.prods,h,f);0!=a&&
+(c+=createHigherLine(f));return c}function createHigherLine(a){var b="f";1==preferfixbtns&&(b="a");var c="";a="";1==preferfixbtns&&(c="fixedtypetopimg",a="fixedtypehigherimg");b='<li data-theme="'+b+'" data-icon="false"><div class="ui-grid-a"><div class="ui-block-a typetop"><img src="img/top.png" class="'+(c+'" /></div>');b+='<div class="ui-block-b typehigher"><img src="img/higher.png" class="'+a+'" /></div>';b+="</div>";return b+="</li>"}
+function createProdEntryWithTextPrice(a,b,c){var e=getProdEntry(a),f=e.unit;return null!=e?(e=e.price.replace(".",decpoint),1<f&&(e+="<br>/"+g_units_arr[f].text),"<div class='"+b+"' id="+c+"_"+a+">"+e+"</div>"):""}
+function createProdInfoTxt(a,b){b="";1==showplusminus&&(b+="<span class='prodcount' id=prodcount_"+a+" style='text-align:center;'>1</span>");b=0==priceinlist?b+("<div class='prodinfo' id=pinfo_"+a+"><img src='img/i.png' /></div>"):b+createProdEntryWithTextPrice(a,"prodtextinfo","pinfo");1==showplusminus&&(b=b+("<div class='prodplus' id=pplus_"+a+"><img src='img/plus.png' /></div><div class='prodminus' id=pminus_")+(a+"><img src='img/minus.png' /></div>"));return b}
+function createSearchProdInfoTxt(a,b){b="";1==showplusminus&&(b+="<span class='srprodcount' id=srprodcount_"+a+" style='text-align:center;'>1</span>");b=0==priceinlist?b+("<div class='srinfo' id=srinfo_"+a+"><img src='img/i.png' /></div>"):b+createProdEntryWithTextPrice(a,"srtextinfo","srinfo");1==showplusminus&&(b=b+("<div class='srplus' id=srplus_"+a+"><img src='img/plus.png' /></div><div class='srminus' id=srminus_")+(a+"><img src='img/minus.png' /></div>"));return b}
+function createServeInfo(a,b,c){if(0==supplyright)return"";null===a&&(a="n");if(0<c){var e="<span class='prodreadycount' style='text-align:center;'>"+c+"("+b+")</span>";return c>=b?e+("<div class='prodreadyicon' id='prodreadyicon_"+a+"'><img src='img/servecheck.png' /></div>"):e+("<div class='prodreadyicon' id='prodreadyicon_"+a+"'><img src='img/serve.png' /></div>")}return""}
+function getProdEntry(a){var b=null;$("#typprodpage").data("types_prods").prods.forEach(function(c){c.id==a&&(b=c)});return b}function getProdAudio(a){a=getProdEntry(a);return null!=a?a.audio:""}function getProdProperties(a){a=getProdEntry(a);return null!=a?{name:a.longname,price:a.price,unit:a.unit,unitamount:a.unitamount}:"FEHLER!"}
+function fillFavArea(){var a='<ul data-role="listview" id="favorites-list" data-divider-theme="a" data-inset="true">';a+='<li data-role="list-divider" data-theme="b" data-role="heading">'+W_FAVS[lang]+"</li>";var b=$("#typprodpage").data("types_prods"),c=getProdSizeClass(),e=!1,f=[];$.each(b.prods,function(h,g){1==parseInt(g.favorite)&&(e=!0,f[f.length]={id:g.id,longname:g.longname,unit:g.unit,amount:g.amount})});f.sort(prodcompare);$.each(f,function(h,g){a+=_renderProdEntry(null,g,c,"p_","longname",
+"fav");a+=createProdInfoTxt(g.id,g.unit);a+="</a></li>"});a+="</ul>";e?$("#favarea").html(a):$("#favarea").html("");$("#favarea").trigger("create")}function bindFavEvent(){$(".fav").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();favOrSearchWasClicked=!0;levelOneType=0;a=this.id.split("_")[1];selectedProdCount=1==showplusminus?getProdCount(a):1;handleClickOnProd(a)})}
+function bindProdTypeClicks(){$(".prodinfo").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_")[1];alert(generateProdInfo(a))});$(".prodplus").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_")[1];var b=getProdCount(a);$("#prodcount_"+a).html(b+1)});$(".prodminus").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=this.id.split("_")[1];var b=getProdCount(a);
+2===b?($("#prodcount_"+a).html(1),selectedProdCount=1):2<b&&$("#prodcount_"+a).html(b-1)});$(".prodcount").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();var b=this.id.split("_")[1];a=getProdEntry(b);1<a.unit?alert(W_NOT_SUPPORTED[lang]):($("#enternumberdlg").data("prodid",b),enternumberdlgshown=!0,$("#enternumberfield").val(""),$.mobile.changePage("#enternumberdlg"),b=$(this).parent().attr("id"),bindEnterNumberNumbers(b,a.ref))})}
+function displayTypesProds(a,b){1!=preferfixbtns&&window.scrollTo(0,0);const c=getLowerCaseFilterText();0==a&&""===c?(fillFavArea(),bindFavEvent()):$("#favarea").html("");var e=null;null===b?(""===c?(idOfHigherType=parseInt(a),e=listOfTypesProds(a)):e=listOfTypesProds(0),extrasMenuOpen=!1):(e=listOfExtras(parseInt(a)),extrasMenuOpen=!0);$("#typeproducts-list").empty().append(e).promise().done(function(){refreshList("#typeproducts-list");$(this).off("click").on("click","a",function(f){f.stopImmediatePropagation();
+f.preventDefault();productInListClicked(this.id,a)});bindHigherButtons();bindShowCommentsBtn()});bindProdTypeClicks()}function productInListClicked(a,b){favOrSearchWasClicked=!1;const c=getLowerCaseFilterText();$("#searchField").val("");$("#barcode").val("");a=a.split("_");"t"===a[0]?(0==b&&(levelOneType=a[1]),displayTypesProds(a[1],null)):(b=a[1],selectedProdCount=1==showplusminus?getProdCount(b):1,$("#prodcount_"+b).html(1),""!==c&&displayTypesProds(0,null),handleClickOnProd(b))}
+function getHigherType(){var a=$("#typprodpage").data("types_prods").types,b=0;if(extrasMenuOpen)b=idOfHigherType;else for(var c=0;c<a.length;c++){var e=a[c];if(e.id==idOfHigherType){b=e.ref;break}}return b}function clearSearchAndGoToHigherTypeIfExtrasOpen(){$("#searchField").val("");$("#barcode").val("");var a=getHigherType();displayTypesProds(a,null)}
+function bindHigherButtons(){$(".typehigher").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();favOrSearchWasClicked&&extrasMenuOpen?displayTypesProds(levelOneType,null):clearSearchAndGoToHigherTypeIfExtrasOpen()});$(".typetop").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();favOrSearchWasClicked&&extrasMenuOpen?displayTypesProds(levelOneType,null):($("#searchField").val(""),$("#barcode").val(""),displayTypesProds(0,null))})}
+function getProdCount(a){var b=1;a=$("#prodcount_"+a).html();""!==a&&(b=parseInt(a));return b}function getSearchProdCount(a){var b=1;a=$("#srprodcount_"+a).html();""!=a&&(b=parseInt(a));return b}
+function handleClickOnProd(a){var b=getProdEntry(a);if(canProdBeOrdered(b)){var c=b.extras,e=b.unit;extrasManagement.setAllExtras(c);null!=c&&0<c.length&&2>e?(idOfHigherType=b.ref,1==b.unit?(requestPriceInExtras=!0,presetPriceInExtras=""):requestPriceInExtras=!1,displayTypesProds(a,c),bindExtrasSel()):8==b.unit?addProductToNewOrdersList(a,null,null,0,1,null,IS_NOT_MINUS_ARTICLE):9==b.unit?(hideMenuProd(),enterpricedlgshown=!0,$("#enterpricedlg").data("prodid",a),$("#enterpricefield").val(""),$("#decpointkey").html(decpoint),
+$.mobile.changePage("#enterpricedlg"),$("#dlgvoucherarea").show(),$("#dlgpricearea").hide(),$("#entervoucherid").val(""),bindEnterPriceOrVoucherNumbers()):0!=b.unit?(c=g_units_arr[b.unit].longtext,$("#enterpriceheader").html(c),$("#enterpricedlg").data("unit",b.unit),hideMenuProd(),enterpricedlgshown=!0,$("#enterpricedlg").data("prodid",a),$("#enterpricefield").val(""),$("#decpointkey").html(decpoint),$.mobile.changePage("#enterpricedlg"),$("#dlgvoucherarea").hide(),$("#dlgpricearea").show(),bindEnterPriceOrVoucherNumbers()):
+addProductToNewOrdersList(a,null,null,0,1,null,IS_NOT_MINUS_ARTICLE)}}
+function bindEnterPriceOrVoucherNumbers(){$(".numfield td").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=$(this).html();if("keyboardapply"!=$(this).attr("class")){var b=String($("#enterpricefield").val());$("#enterpricefield").val(b+a)}});$("#apply_priceenter").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=$("#enterpricedlg").data("prodid");var b=$("#enterpricefield").val();b=b.trim();b=b.replace(decpoint,".");var c=
+$("#enterpricedlg").data("unit");""!=b&&$.isNumeric(b)?($("#enterpricedlg").dialog("close"),1==c?addProductToNewOrdersList(a,null,b,0,1,null,IS_NOT_MINUS_ARTICLE):addProductToNewOrdersList(a,null,null,c,b,null,IS_NOT_MINUS_ARTICLE)):alert(W_NO_VALID_PRICE[lang])});$("#applyvoucherid").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=$("#entervoucherid").val().trim();if(""==a)alert("Keine Gutscheinnummer eingegeben!");else{var b=$("#enterpricedlg").data("prodid");
+$("#enterpricedlg").dialog("close");$("#optionfield").val(a);addProductToNewOrdersList(b,null,0,9,1,null,IS_NOT_MINUS_ARTICLE)}})}function bindPartNumberEntry(){$(".numfield td").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();var b=$(this).html(),c=$(this).attr("class");"keyboardapply"!=c&&(a=String($("#enternumberfield").val()),"dellastkey"===c?(b=a.length,0<b&&(a=a.substring(0,b-1),$("#enternumberfield").val(a))):$("#enternumberfield").val(a+b))})}
+function bindEnterNumberNumbers(a,b){bindPartNumberEntry();$("#apply_numberenter").off("click").on("click",function(c){c.stopImmediatePropagation();c.preventDefault();c=$("#enternumberdlg").data("prodid");var e=$("#enternumberfield").val().trim();""===e&&(e=1);$.isNumeric(e)?1>e||1E3<e?alert(w_INVALID_NO_RANGE[lang]):(1<e?($("#enternumberdlg").dialog("close"),$("#prodcount_"+c).html(e)):($("#enternumberdlg").dialog("close"),$("#prodcount_"+c).html("")),productInListClicked(a,b)):alert(W_INVALID_NO_ENTERING[lang])})}
+function addProductToNewOrdersList(a,b,c,e,f,h,g){void 0==c&&(c=null);void 0==e&&(e=0);void 0==f&&(f=1);var k=$("#typprodpage").data("table-info")[1];addProductToQueue(a,b,"NO",0,c,e,f,h,g);a=getProdAudio(parseInt(a));b=parseInt($("#typprodpage").data("ordervolume"))/10;""!=a?(c="customer/"+a,a.match(/mp3$/)?$("#audiofile").html('<source src="'+c+'" type="audio/mpeg" />'):a.match(/ogg$/)?$("#audiofile").html('<source src="'+c+'" type="audio/ogg" />'):a.match(/wav$/)&&$("#audiofile").html('<source src="'+
+c+'" type="audio/wav" />'),document.getElementById("audiofile").load(),document.getElementById("audiofile").volume=b,document.getElementById("audiofile").play()):.5<b&&beep();fillNotDeliveredProductsOfATable("php/contenthandler.php?module=queue&command=getJsonLongNamesOfProdsForTableNotDelivered&tableid="+k);0==keeptypelevel||favOrSearchWasClicked?displayTypesProds(levelOneType,null):extrasMenuOpen&&displayTypesProds(idOfHigherType,null);allowPrintAndOrderBtn=!0;refreshList("#typeproducts-list")}
+function fetchTypeProdsFromServer(){doAjax("GET","php/contenthandler.php?module=products&command=getAllTypesAndAvailProds",null,attachAndDisplayFirstRefTypes,null,ASYNC)}var waitProdTimer=null;function fillTypeProdList(a){void 0!=$("#typprodpage").data("types_prods")?displayTypesProds(a,null):waitProdTimer=setInterval(function(){void 0!=$("#typprodpage").data("types_prods")&&(clearInterval(waitProdTimer),displayTypesProds(a,null))},200)}function fillTypeProdList_(a){displayTypesProds(a,null)}
+function createTxtAssignedProd(a){var b="";""!==a.option&&(b="&nbsp;("+toHtml(a.option)+")");var c=a.longname;1==a.togo&&(c="To-Go: "+c);1==a.pricechanged&&(c+=" - "+a.price.replace(".",decpoint)+" "+currency);if(1<a.unit){var e=g_units_arr[a.unit].text,f=a.unitamount.replace(".",decpoint);c+=" ("+f+" "+e+")"}e="";"1"==a.isready&&(e+=" &#9758");"1"==a.isCooking&&(e+=" &#9832");"1"==a.isPaid&&(e+=" &#9745");return toHtml(c)+b+e+"<br>"+createExtraParagraph(a.extras,a.extrasamounts)}
+function createHashProd(a){var b="";""!==a.option&&(b="&nbsp;("+toHtml(a.option)+")");var c=a.longname;1==a.togo&&(c="To-Go: "+c);1==a.pricechanged&&(c+=" - "+a.price.replace(".",decpoint)+" "+currency);if(1<a.unit){var e=g_units_arr[a.unit].text,f=a.unitamount.replace(".",decpoint);c+=" ("+f+" "+e+")"}e="";"1"==a.isready&&(e+=" &#9758");"1"==a.isCooking&&(e+=" &#9832");"1"==a.isPaid&&(e+=" &#9745");return a.prodid+"_"+toHtml(c)+b+e+"<br>"+createExtraParagraph(a.extras,a.extrasamounts)}
+function createListElOfAssignedProd(a){var b="";const c=createPriceOfAssignedArticle(a,decpoint,currency);"count"in a&&1<a.count&&(b=a.count+"x ");let e="c";"1"==a.isready&&(e="f");let f="";1==priceassignedmobile&&(f="<div class='priceinfoassignedarticles'>"+c+"</div>");return`
+        <li data-theme="${e}" data-icon="delete" class="notdelprod">
+            <a href="#" style="display: flex; align-items: center; justify-content: space-between;">
+                <span>${b}${createTxtAssignedProd(a)}</span>
+                ${f}
+            </a>
+        </li>
+    `}
+function fillAssignedProdList(a){notDeliveredProdsAvailable=0<a.length?!0:!1;$("#cancelcodefield").val("");""!==cancelunpaidcode?0<a.length?$("#cancelcodearea").show():$("#cancelcodearea").hide():$("#cancelcodearea").hide();var b=new Grouping(a,createHashProd);b.group();var c='<li data-role="list-divider" data-theme="b" data-role="heading" id=\'undeliveredheader\'>'+W_KIT_BAR[lang]+"</li>";c+=b.outputList(createListElOfAssignedProd);notDeliveredProdsAvailable&&(c+='<li data-theme="d" data-icon="delete" id="delallundelivered"><a href="#"><i>'+W_DEL_ALL_UNDELIVERED[lang]+
+"</i></a></li>");$("#orderedprod-list-0").html(c);refreshList("#orderedprod-list-0");$("#undeliveredheader").off("click").on("click",function(e){e.stopImmediatePropagation();e.preventDefault();alert(W_UNDELIV_INFO[lang])});bindingOfAssignedProds(b);bindDelAllUndeliveredProds(a);$("#cancelcodeform").off("submit").on("submit",function(e){e.stopImmediatePropagation();e.preventDefault()})}
+function bindDelAllUndeliveredProds(a){$("#delallundelivered").off("click").on("click",function(b){b.stopImmediatePropagation();b.preventDefault();areYouSure("Produkte l\u00f6schen.",W_DEL_ALL_ASSIGNED_PRODS[lang],W_REMOVE[lang],function(){removeAllAssignedProds(a)})})}
+function removeAllAssignedProds(a){if(""!=cancelunpaidcode&&$("#cancelcodefield").val()!=cancelunpaidcode)alert(W_WRONG_PIN[lang]);else{for(var b=0;b<a.length;b++)removeProductFromQueue(a[b].id,a[b].isPaid,a[b].isCooking,a[b].isready,!0,!1);a=$("#typprodpage").data("table-info")[1];fillNotDeliveredProductsOfATable("php/contenthandler.php?module=queue&command=getJsonLongNamesOfProdsForTableNotDelivered&tableid="+a)}}
+function bindingOfAssignedProds(a){$(".notdelprod").off("click").on("click","a",function(b){b.stopImmediatePropagation();b.preventDefault();var c=!0;""!=cancelunpaidcode&&$("#cancelcodefield").val()!=cancelunpaidcode&&(c=!1);b=$(this).closest("li");b=$("#orderedprod-list-0 li").index(b)-1;var e=a.getItemsOfRow(b)[0],f=e.id,h=e.isready,g=e.isPaid,k=e.isCooking;"1"==g&&"1"==h?doYouWantDelOrReorder("Produkt wurde schon zubereitet und bezahlt","Entfernen oder nachbestellen?",e.isminusarticle,W_REMOVE[lang],
+function(){removeProductFromQueue(f,g,k,h,c,!0)},function(){reorderProduct(e.prodid,e.extrasids,e.extras,e.extrasamounts)},function(){invertArticle(e.prodid,e.extrasids,e.extras,e.extrasamounts)}):"1"==h?doYouWantDelOrReorder("Produkt wurde schon zubereitet.","Entfernen oder nachbestellen?",e.isminusarticle,W_REMOVE[lang],function(){removeProductFromQueue(f,g,k,h,c,!0)},function(){reorderProduct(e.prodid,e.extrasids,e.extras,e.extrasamounts)},function(){invertArticle(e.prodid,e.extrasids,e.extras,
+e.extrasamounts)}):"1"==g?doYouWantDelOrReorder("Produkt wurde schon bezahlt.","Entfernen oder nachbestellen?",e.isminusarticle,W_REMOVE[lang],function(){removeProductFromQueue(f,g,k,h,c,!0)},function(){reorderProduct(e.prodid,e.extrasids,e.extras,e.extrasamounts)},function(){invertArticle(e.prodid,e.extrasids,e.extras,e.extrasamounts)}):"1"==k?doYouWantDelOrReorder("Produkt wird soeben zubereitet.","Entfernen oder nachbestellen?",e.isminusarticle,W_REMOVE[lang],function(){removeProductFromQueue(f,
+g,k,h,c,!0)},function(){reorderProduct(e.prodid,e.extrasids,e.extras,e.extrasamounts)},function(){invertArticle(e.prodid,e.extrasids,e.extras,e.extrasamounts)}):doYouWantDelOrReorder("","Entfernen oder nachbestellen?",e.isminusarticle,W_REMOVE[lang],function(){removeProductFromQueue(f,g,k,h,c,!0)},function(){reorderProduct(e.prodid,e.extrasids,e.extras,e.extrasamounts)},function(){invertArticle(e.prodid,e.extrasids,e.extras,e.extrasamounts)})})}
+function fillNotDeliveredProductsOfATable(a){doAjax("GET",a,null,fillAssignedProdList,null,ASYNC)}function fillOrderVolume(a){$("#typprodpage").data("ordervolume",a)}function checkForLogIn(){doAjax("GET","php/contenthandler.php?module=admin&command=isUserAlreadyLoggedIn",null,handleTestForLoggedIn,null,ASYNC)}function handleTestForLoggedIn(a){"YES"!=a&&setTimeout(function(){document.location.href="index.html"},250)}
+function getPrinterStatusStr(){return' <img src="img/printerstatus.png" class="printerstatus" style="display:none;" />'}
+$(document).on("pagebeforeshow","#typprodpage",function(){allowPrintAndOrderBtn=!0;lastSelectedProduct="";tableListActive=!1;""==nextPage&&reloadPage();$("#tablemapcontent").hide();$.ajaxSetup({cache:!1});hideMenuProd();getPayPrintType();checkForLogIn();fillOrderVolume(0);doAjax("GET","php/contenthandler.php?module=admin&command=getOrderVolume",null,fillOrderVolume,null,ASYNC);$("#workprintarea").html("");var a=$(this).data("table-info");let b=-1,c="";void 0!==a&&(b=a[1],0==b?0==enableorders?$("#deliverydetails").hide():
+$("#deliverydetails").show():$("#deliverydetails").hide(),$("#changetablewhatdialog").data("fromtableid",b),c=a[2]);$("#typprodpage h1").html(W_ATABLE[lang]+": "+c+getPrinterStatusStr());$("#optionfield").val("");enterpricedlgshown||enternumberdlgshown?enternumberdlgshown=enterpricedlgshown=!1:fillTypeProdList(0);fillNotDeliveredProductsOfATable("php/contenthandler.php?module=queue&command=getJsonLongNamesOfProdsForTableNotDelivered&tableid="+b);$("#workprint_btn").data("tableid",b);$("#gopaydesk_btn").data("tableid",
+b);$("#workprint_btn").data("tablename",c);bindPrintButton();bindGoPayDeskButton();bindChangetableButton();bindSendNewOrdersButton();bindRecordsHeader();getUserHasRightForPaydesk();updateNewOrdersList()});
+function bindRecordsHeader(){$("#recordslistheader").html("<b>"+W_RECORDS_INIT[lang]+"</b>");$("#recordslistheader").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=$("#typprodpage").data("table-info")[1];doAjax("GET","php/contenthandler.php?module=queue&command=getRecords&tableid="+a,null,fillRecordsArea,null,ASYNC)})}
+function fillRecordsArea(a){if("OK"===a.status){a=a.msg;var b="<h2>"+W_RECORDS_HEADER[lang]+"</h2>";0===a.length?b+=W_NO_ENTRIES[lang]:(b+="<ul>",a.forEach(function(c,e){e=toHtml(c.time);var f=toHtml(c.username),h=toHtml(c.action);b+="<li>"+e+" "+f+" - <b>"+W_RECORD_ACTION[h][lang]+"</b>:<br>";c=c.prods;b+="<ul>";c.forEach(function(g,k){k=toHtml(g.name);var l=toHtml(g.comment);g=toHtml(g.extras);b+="<li>"+k;""!==l&&(b+=" ["+l+"]");""!==g&&(b+=" ("+g+")")});b+="</ul>"}),b+="</ul>");$("#recordslistheader").html(b)}}
+function sendNewOrdersToServer(a,b){if(allowPrintAndOrderBtn)if(allowPrintAndOrderBtn=!1,lastSelectedProduct="",extrasMenuOpen)alert(W_OPEN_PANEL[lang]);else if(0<neworders.length){clearLiveOrders();const c=$("#workprintarea").data("payPrintType");sendNewOrders(b,c,a)}else alert(W_NO_ORDERS[lang])}function bindSendNewOrdersButton(){$("#sendorder_btn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();sendNewOrdersToServer(gotoTablePage,!1)})}
+function bindPrintButton(){$("#workprint_btn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();sendNewOrdersToServer(gotoTablePage,!0)})}function bindGoPayDeskButton(){$("#gopaydesk_btn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();a=!1;1==waitergopayprint&&(a=!0);0<neworders.length?sendNewOrdersToServer(goToPayDesk,a):notDeliveredProdsAvailable?goToPayDesk({status:"OK"}):alert(W_NO_ORDERS[lang])})}
+function goToPayDesk(a){checkEndPerformanceMeaurementOrder();"OK"!==a.status?(alert("Fehler: "+a.msg),0<neworders.length&&(allowPrintAndOrderBtn=!0)):(clearLiveOrders(),removeCurrentOrders(),waiter_clearDeliveryFields(),"yes"===$("#gopaydesk_btn").data("allowed").toLowerCase()?window.location.href="paydesk.html?t="+$("#gopaydesk_btn").data("tableid")+"&v=2.9.12":alert("Fehlendes Benutzerrecht f\u00fcr Kasse"))}
+function createRoomOrTableList(a,b){var c='<li data-role="list-divider" data-theme="b" data-role="heading">'+b+"</li>";$.each(a,function(e,f){c+='<li data-theme="f"><a href="#" id="r_'+e+'" class="info-go">'+f.name+"</a></li>"});return c}function handleClickInChangeTablemap(a){$("#changetablewhatdialog").data("totableid",a.tableid);$.mobile.changePage("#changetablewhatdialog")}
+function displayTableDialog(a,b,c){$("#header_tchange").html("Tischauswahl");var e=shallDisplayRoom(a);1==e.show?($("#roomOrTableList").hide(),$("#tablemapcontentchangetable").show(),d=new Date,$("#mapimgpartchangetable").attr("src","php/tablemap.php?command=getTableMapImgAsPng&roomid="+a+"&"+d.getTime()),(new Tablemap(a,null,"")).bindingForSelection("#mapimgpartchangetable",handleClickInChangeTablemap.bind(this),e.pos,a),c&&$.mobile.changePage("#tablechangedialog"),$("#changetablebackbtn").off("click").on("click",
+function(f){$("#tablemapcontentchangetable").hide();$("#roomOrTableList").show()})):($("#roomOrTableList").show(),a=createRoomOrTableList(b,"Tische"),$("#roomOrTableList").empty().append(a).promise().done(function(){c&&$.mobile.changePage("#tablechangedialog");refreshList("#roomOrTableList");$(this).off("click").on("click",".info-go",function(f){f.stopImmediatePropagation();f.preventDefault();f=$(this).attr("id").split("_")[1];$("#changetablewhatdialog").data("totableid",b[f].id);$.mobile.changePage("#changetablewhatdialog")})}))}
+function resultOfChangeTable(a){"OK"!==a.status?alert("Fehler "+a.code+": "+a.msg+"\n\nM\u00f6glicherweise hat ein Kollege\nin der Zwischenzeit Produkte zugestellt."):alert("Tischwechsel durchgef\u00fchrt!");window.location.href="waiter.html"}
+function bindChangetableButton(){$("#changetable_btn").off("click").on("click",function(a){a.stopImmediatePropagation();a.preventDefault();var b=$("#tables-page").data("allroomtables");1==b.length?displayTableDialog(b[0].id,b[0].tables,!0):($("#header_tchange").html("Raumauswahl"),a=createRoomOrTableList(b,W_ROOMS[lang]),$("#roomOrTableList").empty().append(a).promise().done(function(){$.mobile.changePage("#tablechangedialog");refreshList("#roomOrTableList");$(this).off("click").on("click",".info-go",
+function(c){c.stopImmediatePropagation();c.preventDefault();c=$(this).attr("id").split("_")[1];displayTableDialog(b[c].id,b[c].tables,!1)})}))})}function createHtmlOfKind(a,b,c){for(var e="",f=0;f<a.length;f++){var h=a[f],g=h.longname,k=h.anoption,l=createExtraParagraph(h.extras);b==h.kind&&c==h.printer&&(e+=g+"<br><i>"+k+"</i><br>"+l+"<br><br>")}return e}
+function createExtraParagraph(a,b){if(null===a||""===a)return"";for(var c="",e=0;e<a.length;e++)c+="+ "+b[e]+"x "+toHtml(a[e])+"<br>";return c}function arrayContainsKind(a,b,c){for(var e=!1,f=0;f<a.length;f++){var h=a[f];b==h.kind&&c==h.printer&&(e=!0)}return e}
+function fillPrintAreaAndPrint(a){waiter_clearDeliveryFields();updateNotDeliveredList();var b=new Date,c="0"+b.getHours();b="0"+b.getMinutes();c=c.substr(-2);b=b.substr(-2);c="<i>Erstellung: "+c+":"+b+"</i>";if("OK"===a.status){a=a.msg;$("#workprintarea").data("payPrintType");b="";var e=$("#workprint_btn").data("tablename");if(arrayContainsKind(a,0,1)){var f="<h1>Speisen f\u00fcr "+e+" (Printer 1)</h1><br><br>"+c+"<br><br>"+createHtmlOfKind(a,0,1)+"<br><br>";b+=f+"<br>"}arrayContainsKind(a,0,2)&&
+(f="<h1>Speisen f\u00fcr "+e+" (Printer 2)</h1><br><br>"+c+"<br><br>"+createHtmlOfKind(a,0,2)+"<br><br>",b+=f+"<br>");arrayContainsKind(a,1,1)&&(f="<h1>Getr\u00e4nke f\u00fcr "+e+" (Printer 1)</h1><br><br>"+c+"<br><br>"+createHtmlOfKind(a,1,1)+"<br><br>",b+=f+"<br>");arrayContainsKind(a,1,2)&&(f="<h1>Getr\u00e4nke f\u00fcr "+e+" (Printer 2)</h1><br><br>"+c+"<br><br>"+createHtmlOfKind(a,1,2)+"<br><br>",b+=f+"<br>");$("#workprintarea").html(b);window.print();setTimeout(function(){document.location.href=
+"waiter.html"},250)}else alert("Druckdaten konnten nicht angefordert werden")}function updateNotDeliveredList(){var a=$("#typprodpage").data("table-info")[1];fillNotDeliveredProductsOfATable("php/contenthandler.php?module=queue&command=getJsonLongNamesOfProdsForTableNotDelivered&tableid="+a)}function consoleAjaxErrorOutput(a,b,c,e){console.error("AJAX Error Details:"+a);console.error("Status:",c);console.error("Error Message:",e);console.error("XHR Object:",b)}
+function doYouWantDelOrReorder(a,b,c,e,f,h,g){$("#delOrReorderDlg .sure-1").text(b);$("#delOrReorderDlg .sure-2").text(a);$("#delOrReorderDlg .sure-cancel").text(W_CANCEL[lang]);void 0===invertarticlename||""===invertarticlename?$("#delOrReorderDlg .invertarticle").hide():1==c?($("#delOrReorderDlg .invertarticle").hide(),$("#delOrReorderDlg .reorder").hide()):($("#delOrReorderDlg .invertarticle").show(),$("#delOrReorderDlg .reorder").show());$("#delOrReorderDlg .sure-do").text(e).off("click.delOrReorderDlg").on("click.delOrReorderDlg",
+function(){f()});$("#delOrReorderDlg .reorder").text(W_REORDER[lang]).off("click.delOrReorderDlg").on("click.delOrReorderDlg",function(){h()});$("#delOrReorderDlg .invertarticle").text(W_INVERTARTICLE[lang]).off("click.delOrReorderDlg").on("click.delOrReorderDlg",function(){g()});$(this).off("click.delOrReorderDlg");$.mobile.changePage("#delOrReorderDlg")}
+function areYouSure(a,b,c,e){$("#sure .sure-1").text(a);$("#sure .sure-2").text(b);$("#sure .sure-do").text(c).off("click.sure").on("click.sure",function(){e()});$(this).off("click.sure");$.mobile.changePage("#sure")}function changePriceInActPanel(a){rightchangeprice&&$("#act-changepricefield").val(a.toFixed(2).replace(".",decpoint))}
+function actionSelOnNewOrderElem(){var a=$("#actiononneworderel").data("entry"),b=$("#actiononneworderel").data("newcount"),c=a.unit;$("#act_count").html(b);var e=a.price.replace(".",decpoint)+" "+currency;isUnitOfAmountTypeNotPieceNotVoucher(c)&&(e+="/"+g_units_arr[c].text);var f=a.name;1<a.unitamount&&(f=a.unitamount+g_units_arr[c].text+" "+a.name);$("#act_name").html(f+" ("+e+")");""!=a.option&&$("#act_option").html(" ("+a.option+")");rightchangeprice&&"NO"!=a.changedPrices&&$("#act-changepricefield").val(a.changedPrices);
+$("#act-select-comment").html(predefinedComments);$.mobile.changePage("#actiononneworderel");1==b?($("#actionneworderconfirm_all").html(W_ACT_CHANGE[lang]),$("#actionneworderconfirm_one").hide()):($("#actionneworderconfirm_all").html(W_ACT_CHANGE_ALL[lang]),$("#actionneworderconfirm_one").html(W_ACT_CHANGE_ONE[lang]),$("#actionneworderconfirm_one").show());$("#act-select-comment").selectmenu("refresh");$("#togocheckbox").checkboxradio("refresh");$("#act-numberfield").off("keyup").on("keyup",function(h){h=
+$("#actiononneworderel").data("newcount");var g=$("#act-numberfield").val().trim();""!=g&&$.isNumeric(g)?0<=g&&1E3>=g?$("#actiononneworderel").data("newcount",g):$("#act-numberfield").val(h):(h=$("#actiononneworderel").data("countatdialogstart"),$("#actiononneworderel").data("newcount",h));actionSelOnNewOrderElem($("#actiononneworderel").data("entry"),$("#actiononneworderel").data("groupedListIndex"))});$("#actminusone").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();
+reduceOneNewOrderItem();actionSelOnNewOrderElem($("#actiononneworderel").data("entry"),$("#actiononneworderel").data("groupedListIndex"))});$("#actplusone").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();increaseOneNewOrderItem();actionSelOnNewOrderElem($("#actiononneworderel").data("entry"),$("#actiononneworderel").data("groupedListIndex"))});$("#actdel").off("click").on("click",function(h){delOneNewOrderItem();actionSelOnNewOrderElem($("#actiononneworderel").data("entry"),
+$("#actiononneworderel").data("groupedListIndex"));actionNewOrderConfirm(CHANGE_ONE)});$("#actionneworderconfirm_all").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();$("#actiononneworderel").dialog("close");actionNewOrderConfirm(CHANGE_ALL)});$("#actionneworderconfirm_one").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();$("#actiononneworderel").dialog("close");actionNewOrderConfirm(CHANGE_ONE)});$("#actionnewordercancel").off("click").on("click",
+function(h){binding_neworderelem()});$("#discount1").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();h=a.price;changePriceInActPanel(h-h*discount1/100)});$("#discount2").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();h=a.price;changePriceInActPanel(h-h*discount2/100)});$("#discount3").off("click").on("click",function(h){h.stopImmediatePropagation();h.preventDefault();h=a.price;changePriceInActPanel(h-h*discount3/100)})}
+function waiterroundtodigits(a,b){a=parseFloat(a);if(!a)return 0;b=Math.pow(10,b);return Math.round(a*b)/b}
+function actionNewOrderConfirm(a){var b=$("#actiononneworderel").data("entry"),c=b.unit,e=b.unitamount,f=b.phase,h=$("#act-optionfield").val();void 0===h&&(h="");if(1==rightchangeprice){var g=$("#act-changepricefield").val().trim();g=g.replace(",",".");if(9999.99<g){alert(W_MAX_PRICE_EXCEEDED[lang]);return}if(""==g)g="NO";else if($.isNumeric(g))g=waiterroundtodigits(g,2).toString(),$("#act-changepricefield").val("");else{alert(W_WRONG_FORMAT[lang]);return}}else c=getProdProperties(b.prodid).unit,
+g=b.changedPrices,g=g.replace(",",".");var k=$("#togocheckbox").prop("checked");k=k?1:0;if(a==CHANGE_ONE){var l=b.origidxs;neworders[l[0]].option=h;neworders[l[0]].changedPrice=g;neworders[l[0]].togo=k;neworders[l[0]].isminusarticle=IS_NOT_MINUS_ARTICLE;neworders[l[0]].unit=c;neworders[l[0]].unitamount=e;neworders[l[0]].phase=f}else for(l=b.origidxs,m=0;m<l.length;m++)a=l[m],neworders[a].option=h,neworders[a].changedPrice=g,neworders[a].togo=k,neworders[a].isminusarticle=IS_NOT_MINUS_ARTICLE,neworders[a].unit=
+c,neworders[a].unitamount=e,neworders[a].phase=f;$("#act-optionfield").val("");$("#act-numberfield").val("");c=b.count;a=$("#actiononneworderel").data("newcount")-c;if(0>a){c=0-a;l=b.origidxs;var m;for(m=0;m<c;m++)e=l.pop(),neworders.splice(e,1)}if(0<a)for(l=b.origidxs,m=l[0],b=neworders[m].prodid,g=neworders[m].changedPrice,k=neworders[m].togo,h=neworders[m].option,c=neworders[m].unit,e=neworders[m].unitamount,f=neworders[m].phase,l=neworders[m].extras,m=0;m<a;m++)addProductToQueueNoGuiUpdate(b,
+h,l,g,k,c,e,f);updateNewOrdersGui()}function updateNewOrdersGui(){groupedNewOrders=group(neworders);updateNewOrdersList()}function reduceOneNewOrderItem(){var a=$("#actiononneworderel").data("newcount");0<a&&($("#actiononneworderel").data("newcount",a-1),$("#act-numberfield").val(a-1))}function delOneNewOrderItem(){$("#actiononneworderel").data("newcount",0)}
+function increaseOneNewOrderItem(){$("#actiononneworderel").data("entry");var a=$("#actiononneworderel").data("newcount");$("#actiononneworderel").data("newcount",a+1);$("#act-numberfield").val(a+1)}
+function group(a){var b=[],c=[],e=[],f={count:[],joinedvals:[],name:b,price:c,option:e,extras:[],prodids:[],origidxs:[],changedPrices:[],togos:[],isminusarticles:[],units:[],unitamounts:[],phases:[]},h;for(h=0;h<a.length;h++){var g=a[h];b=g.name;c=g.price;e=g.option;var k=g.prodid,l=g.changedPrice,m=g.togo,p=g.isminusarticle,q=g.unit,v=g.unitamount,w=g.phase,r="G"+w,n=g.extras;g="";if(null!==n)for(var t=0;t<n.length;t++){var u="";0<n[t].amount&&(u=n[t].amount+"x ");g+="<p>+ "+u+toHtml(n[t].name)+
+"</p>"}r=k+"_"+b+"-"+e+"-"+g+"-"+q+"-"+v+r;"NO"!==l&&(r=k+"_"+b+"-"+e+"-"+g+l);1==m&&(r+=" - To-Go");n=f.joinedvals.indexOf(r);0<=n?(f.count[n]+=1,idxarr=f.origidxs[n],idxarr[idxarr.length]=h,f.origidxs[n]=idxarr):(n=f.count.length,f.count[n]=1,f.joinedvals[n]=r,f.name[n]=b,f.price[n]=c,f.option[n]=e,f.extras[n]=g,f.prodids[n]=k,f.changedPrices[n]=l,f.togos[n]=m,f.isminusarticles[n]=p,f.units[n]=q,f.unitamounts[n]=v,f.phases[n]=w,f.origidxs[n]=[h])}return f}
+function _renderProdEntry(a,b,c,e,f,h){var g="";null!==h&&(g=h+" ");c='<li data-theme="c" data-icon="false"><a href="#" id="'+e+b.id+'" class="'+g+c+'">';null!==a&&a&&1==preferimgmobile&&(c+='<img src="php/contenthandler.php?module=products&command=getprodimage&prodid='+(b.id+'&size=l" class="centermobileimg" />'));c+=toHtml(b[f]);"null"!==b.amount&&11>b.amount&&(c+="<br /><span class='warning'> ("+W_ONLY[lang]+" "+b.amount+")</span>");return c}
+function renderProductsOfCat(a,b,c,e,f){const h=getLowerCaseFilterText();var g="";""===h?b.forEach(function(k){parseInt(k.ref)==a&&(g+=_renderProdEntry(c,k,e,"p_","name",null),g+=createProdInfoTxt(k.id,k.unit),g+="</a></li>")}):b.forEach(function(k){if(0<=k.name.toLowerCase().indexOf(h)||0<=k.longname.toLowerCase().indexOf(h))g+=_renderProdEntry(c,k,e,"p_","name",null),g+=createProdInfoTxt(k.id,k.unit),g+="</a></li>"});return g}function generateSearchResults(){displayTypesProds(0,null)};
+</script>
+</head>
+
+<body>
+	
+<style>	
+	@media screen
+	{
+		#workprintarea {display: none;}
+	}
+	@media print
+	{
+		#waiterui,#thefooter3,#header3,#info-page,#tables-page,#modulemenu-room,#modulemenu-table,#modulemenu-prod,#discard_new_orders_no,#discard_priceenter,#discard_new_orders_yes,#enterpricefield,#enterpriceheader,#enterpricedlg,#searchField,#barcode,#searchResult {display: none;}
+	}
+	@media print
+	{
+		#workprintarea {width: 100%;};
+	}
+</style>
+
+
+<!--first page -->
+<div data-role="page" id="info-page" data-theme="c">
+	<div data-role="panel" id="modulepanel-room" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu-room" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" style="background-color:black;">
+        <h1><span id="roomtableheader2">Raum-Tisch</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" /> <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content">
+        <ul data-role="listview" id="room-list" data-divider-theme="a" data-inset="true" style="display:none;">
+            <li data-role="list-divider" data-theme="b" data-role="heading" id=roomtableheader>Räume <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" /> <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></li>
+        </ul>
+        <ul data-role="listview" id="waitermessage" data-divider-theme="a" data-inset="true">
+        </ul>
+    </div>
+    
+    <div class="daycodeareamobile" style="display:none;"><span class="daycodetxt">Tageslosung</span>: <span class="daycodefield"></span></div>
+    
+    <div data-role="footer" data-theme="b" id="thefooter1" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser1"></div>
+			<div class="ui-block-b grid_right" id="versioninfo1"></div>
+		</div><!-- /grid-a -->
+	</div> 
+</div>
+<!--second page -->
+<div data-role="page" id="tables-page" data-theme="c">
+	<div data-role="panel" id="modulepanel-table" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu-table" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" style="background-color:black;"><a id="tableselbackbtn" href="#" data-rel="back" data-role="button" data-icon="arrow-l">&nbsp;</a>
+        <h1><span id="tableselection">Tischauswahl</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" /> <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitchtable">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content">
+    	<ul data-role="listview" id="tables-list" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Tische</li>
+        </ul>
+            <div id="directtable" style="display:none;">
+                    <input id="directtableinputfield" type="text" class="genConfigEl"autofocus  />
+                    <table class=numfield id="numfield_num">
+		   	<tr><td>1<td>2<td>3</tr>
+		   	<tr><td>4<td>5<td>6</tr>
+		   	<tr><td>7<td>8<td>9</tr>
+                        <tr><td>0<td><i>&lt;</i><td class=numnav>a</tr>
+                        <tr><td colspan="3" class="numnav directtogobtn"><b>To-go</b></tr>
+                        <tr><td colspan="3" class=numnav><b>ENTER</b></tr>
+                    </table>
+		   
+		   <table class=numfield id="numfield_char_upper" style="display:none;">
+		   	<tr><td>A<td>B<td>C<td>D</tr>
+		   	<tr><td>E<td>F<td>G<td>H</tr>
+		   	<tr><td>I<td>J<td>K<td>L</tr>
+		   	<tr><td>M<td>N<td>O<td>P</tr>
+		   	<tr><td>Q<td>R<td>S<td>T</tr>
+		   	<tr><td>U<td>V<td>W<td>X</tr>
+                        <tr><td>Y<td>Z<td><i>&lt;</i><td class=numnav>1</tr>
+                        <tr><td colspan="3" class="numnav directtogobtn"><b>To-go</b></tr>
+		   	<tr><td colspan="4" class=numnav><b>ENTER</b></tr>
+		   </table>
+		   
+            </div>
+        <div id=tablemapcontent style="position: relative;width:100%;display:none;">
+        	<img id="mapimgpart" style="width:100%;position: relative;left: 0;top: 0;" src=img/empty-room.png />
+        	<div id=tableoverlay></div>
+        </div>
+        <div id=togoarea>
+        	<ul data-role="listview" id="tables-list-togo" data-divider-theme="a" data-inset="true">
+        	</ul>
+        </div>
+	    
+	   
+        <ul data-role="listview" id="waitermessagetableview" data-divider-theme="a" data-inset="true">
+        </ul>
+
+	 <div class="daycodeareamobile" style="display:none;"><span class="daycodetxt">Tageslosung</span>: <span class="daycodefield"></span></div>
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooter2" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser2"></div>
+			<div class="ui-block-b grid_right" id="versioninfo2"></div>
+		</div><!-- /grid-a -->
+	</div> 
+</div>
+<!--third page (types and products)-->
+<div data-role="page" id="typprodpage" data-theme="c">
+	<audio id=audiofile>
+		<source src="customer/ping.mp3" type="audio/mpeg" />
+	</audio>
+	<div data-role="panel" id="modulepanel-prod" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu-prod" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div id='header3' data-role="header" data-theme="b" data-position="fixed" style="background-color:black;"><a id="prodbackbtn" href="#" data-role="button" data-icon="arrow-l">&nbsp;</a>
+         <h1>Produktauswahl</h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitchprod">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="waiterui">
+    	<div id="searchposition-prominent"></div>
+    
+    	<ul data-role="listview" id="typeproducts-list" class="print" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading" >Auswahl <span  class='waitinfo'><img id="prodsellist" src="php/3rdparty/images/ajax-loader.gif" /></span></li>
+        </ul>
+        
+        <div id="favarea"></div>
+        
+        <div id="phasebuttons" data-role="collapsible" data-content-theme="c">
+                <h3><span id="phaseheadertxt">Gänge</span> <span class="currentphase"></span></h3>
+                <p />
+                <div class="ui-grid-b noprint">
+                        <div class="ui-block-a"><button type="submit" data-theme="f" class="phasebtns" data-icon="check" id="phasebtn_pre">Vorspeise</button></div>
+                        <div class="ui-block-b"><button type="submit" data-theme="f" class="phasebtns" data-icon="check" id="phasebtn_main">Hauptgang</button></div>
+                        <div class="ui-block-b"><button type="submit" data-theme="f" class="phasebtns" data-icon="check" id="phasebtn_post">Nachspeise</button></div>
+		</div><!-- /grid-a -->    
+        </div>
+        
+        <div id="searchposition-normal"></div>
+        
+        <div id="deliverydetails" class="mobiledeliverydetails">
+                <h3><span id="deliverydetailstxt">Lieferdetails</span> <i>(<span id="deliveryopenhint"></span>)</i></h3>
+                <div id="mobiledeliveryfields" class="ui-field-contain" style="display:none;">
+                        <label for="ordername"><span id="ordernametxt">Name</span></label><input id="ordername" class="genConfigEl" type="text" placeholder="Name"/>
+                        <label for="orderstreet"><span id="orderstreettxt">Straße</span></label><input id="orderstreet" class="genConfigEl" type="text" placeholder="Straße" />
+                        <label for="orderhousenumber"><span id="orderhousenumbertxt">Nr</span></label><input id="orderhousenumber" class="genConfigEl" type="text" placeholder="Hausnummer"/>
+                        <label for="orderpostalcode"><span id="orderpostalcodetxt">PLZ</span></label><input id="orderpostalcode" class="genConfigEl" type="text" placeholder="PLZ"/>
+                        <label for="ordercity"><span id="ordercitytxt">Stadt</span></label><input id="ordercity" class="genConfigEl" type="text" placeholder="Stadt"/>
+                        <label for="orderphone"><span id="orderphonetxt">Tel</span></label><input id="orderphone" class="genConfigEl" type="text" placeholder="01234-567890" />
+                        <label for="orderremark"><span id="orderremarktxt">Bemerkung</span></label><input id="orderremark" class="genConfigEl" type="text" placeholder="Kommentar"/>
+                        <label for="orderemail"><span id="orderemailtxt">E-Mail</span></label><input id="orderemail" class="genConfigEl" type="text" placeholder="E-Mail Adresse"/>
+                </div>
+                <div id="ordersendemaildiv" style="display:none;">
+                        <img id="ordersendemailyes" src="img/ok.png"/><img id="ordersendemailno" src="img/notavailable.png" style="display:none;">&nbsp;E-Mail bei Fertigstellung
+                </div>
+        </div>
+        
+        <div id="commandbuttons"></div>
+    	
+    	
+    	<ul data-role="listview" id="neworders" data-divider-theme="b" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Neue Produkte</li>
+        </ul>
+        
+        <ul data-role="listview" id="orderedprod-list-0" data-divider-theme="e" data-inset="true">
+            <!-- <li data-role="list-divider" data-theme="d" data-role="heading">Küche/Bar</li> -->
+        </ul>
+        
+        <div id=cancelcodearea>
+        <form id="cancelcodeform"><input id=cancelcodefield type="password" placeholder="Storno-Code" /></form>
+		</div>
+	
+	<p><br>
+	<div id="recordslistheader" class="records">
+		<b>Tischprotokoll (Anklicken zum Öffnen)</b><br>
+	</div>
+	
+    </div>
+    <div id=workprintarea class="print"></div>
+    <div data-role="footer" data-theme="b" id="thefooter3" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser3"></div>
+			<div class="ui-block-b grid_right" id="versioninfo3"></div>
+		</div><!-- /grid-a -->
+	</div> 
+</div>
+
+<!--  Dialog page -->
+<div data-role="dialog" id="sure" data-title="Entfernen?">
+  	<div data-role="content">
+    <h3 class="sure-1">?</h3>
+    <p class="sure-2">?</p>
+    <a href="#" class="sure-do" data-role="button" data-theme="b" data-rel="back">Ja</a>
+    <a href="#" data-role="button" data-theme="c" data-rel="back">Nein</a>
+  	</div>
+</div>
+
+<div data-role="dialog" id="delOrReorderDlg" data-title="Entfernen?">
+  	<div data-role="content">
+	    <h3 class="sure-1">?</h3>
+	    <p class="sure-2">?</p>
+	    <a href="#" class="sure-do" data-role="button" data-theme="b" data-rel="back">Ja</a>
+	    <a href="#" class="reorder" data-role="button" data-theme="e" data-rel="back">Nachbestellung</a>
+		<a href="#" class="invertarticle" data-role="button" data-theme="e" data-rel="back">Minusartikel</a>
+		<a href="#" class="sure-cancel" data-role="button" data-theme="c" data-rel="back">Nein</a>
+  	</div>
+</div>
+
+<!--  Dialog page -->
+<div data-role="dialog" id="actiononneworderel" data-title="Aktion?">
+  	<div data-role="content">
+    <h3><span id="actiontxt">Aktion vornehmen</span></h3>
+    <p class="sure-2">
+    	<div style="text-align: center;font-weight: bold;">
+    	<span id="act_count"></span>x <span id="act_name"></span> <span id="act_option"></span><br>
+    	</div>
+    	<a href="#" data-role="button" data-theme="c" data-rel="back" id="actminusone">-1</a>
+    	<a href="#" data-role="button" data-theme="c" data-rel="back" id="actplusone">+1</a>
+    	
+    	<div data-role="fieldcontain">
+ 			<fieldset data-role="controlgroup">
+				<input type="checkbox" name="togocheckbox" id="togocheckbox" class="custom" data-theme="c" />
+				<label for="togocheckbox">To-Go</label>
+    		</fieldset>
+		</div>
+
+    	<a href="#" data-role="button" data-theme="d" data-rel="back" id="actdel"><span id=actdeltxt>x</span></a>
+    	
+    	<div id="actremark"></div>
+
+		<div id="actdiscount"></div>
+	
+		<div id=actchangepricesection></div>
+
+    </p>
+    <a href="#" class="sure-do" data-role="button" data-theme="f" data-rel="back" id="actionneworderconfirm_all">Ja</a>
+    <a href="#" class="sure-do" data-role="button" data-theme="f" data-rel="back" id="actionneworderconfirm_one">Ja</a>
+    <a href="#" data-role="button" data-theme="b" data-rel="back" id="actionnewordercancel">Nein</a>
+  	</div>
+</div>
+
+<!--  Dialog page -->
+<div data-role="dialog" id="tablechangedialog" data-title="Tischwechsel">
+  	<div data-role="content">
+    <h3 class="sure-1" id="header_tchange">?</h3>
+    <p class="roomtabletitel">
+	    <div data-role="content">
+	        <ul data-role="listview" id="roomOrTableList" data-divider-theme="a" data-inset="true"></ul>
+	        
+	        <div id=tablemapcontentchangetable style="display:none;">
+        		<img id="mapimgpartchangetable" style="width:100%;" src=img/empty-room.png />
+        	</div>
+        
+	    </div>    
+    </p>
+    <a id="changetablebackbtn" href="#" data-role="button" data-theme="c" data-rel="back">Abbrechen</a>
+  	</div>
+</div>  <!-- tablechangedialog -->
+
+<div data-role="dialog" id="changetablewhatdialog" data-title="Tischwechsel">
+  	<div data-role="content">
+    <h3 class="sure-1">Auswahl der Orderelemente</h3>
+    <p class="roomtabletitel">Welche Orderelemente sollen dem neuen Tisch zugewiesen werden?</p>
+    <div data-role="controlgroup" data-type="horizontal" id="paybuttongroup">
+        <a href="#" data-role="button" data-theme="b" data-icon="check" id="selectallnothing"><span id="selectallnothing_txt">Alles/nichts auswählen</span></a>
+    </div>
+    
+        <ul id="productsToMoveList" data-role="listview" class="scrolllistview" data-inset="true">
+            
+        </ul>
+    
+    <p id=changetablecontent>
+    	
+    </p>
+    	<div data-role="content">
+            <a href="#" data-role="button" data-theme="f" data-rel="back" id="moveprods">Anwenden</a>
+            <a href="#" data-role="button" data-theme="c" data-rel="back">Zurück</a>
+	    </div> 
+    
+  	</div>
+</div>  <!-- changetablewhatdialog -->
+
+<div data-role="dialog" id="discardnewordersdlg" data-title="Behandlung neue Orders">
+  	<div data-role="content">
+    <h3 class="sure-1" id=discardnoheader>Neue Orders verwerfen</h3>
+    <p class="roomtabletitel" id=discardnewordersask>Es sind noch ungesendete Orders vorhanden! Sollen diese verworfen werden?
+	    <div data-role="content">
+	    	<div class="ui-grid-a">
+	            <div class="ui-block-a"><a href="#" data-role="button" data-theme="f" id="discard_new_orders_no">Nein</a></div>
+	            <div class="ui-block-b"><a href="#" data-role="button" data-theme="d" id="discard_new_orders_yes">Ja</a></div>
+            </div><!-- /grid-a -->
+	    </div>
+    </p>
+  	</div>
+</div>  <!-- discardnewordersdlg -->
+
+<div data-role="dialog" id="enterpricedlg" data-title="Preiseingabe">
+  	<div data-role="content">
+		<div id="dlgpricearea">
+			<h3 class="sure-1" id=enterpriceheader>Preis</h3>
+			<p>
+				<input id="enterpricefield" type="text" autofocus /></p>
+
+				<table class=numfield id="numfield_num">
+					<tr><td>7<td>8<td>9</tr>
+					<tr><td>4<td>5<td>6</tr>
+					<tr><td>1<td>2<td>3</tr>
+					<tr><td>0<td id="decpointkey" colspan="2">,</tr>
+					<tr><td colspan="3" class="keyboardapply" id="apply_priceenter">Anwenden</tr>
+				   </table>
+
+				<div class="ui-grid-a">
+					<div class="ui-block-a discard_priceenter"><a href="#" data-role="button" data-theme="d">Abbrechen</a></div>
+				</div><!-- /grid-a -->
+		</div>
+		<div id="dlgvoucherarea">
+			<h3 class="sure-1" id=entervoucherheader>Gutschein einlösen</h3>
+			<p />
+				<input id="entervoucherid" type="text" placeholder="Gutscheinnummer" /></p>
+				<fieldset class="ui-grid-b">
+						<div class="ui-block-a" id="applyvoucherid"><a href="#" data-role="button" data-theme="c" >Anwenden</a></div>
+						<div class="ui-block-b discard_priceenter"><a href="#" data-role="button" data-theme="d">Abbrechen</a></div>
+				</fieldset><!-- /grid-a -->
+		</div>
+  	</div>
+</div>  <!-- enterpricedlg -->
+
+<div data-role="dialog" id="enternumberdlg" data-title="Direkte Eingabe der Anzahl" data-theme="c">
+  	<div data-role="content">
+		<h3 class="sure-1" id=enternumberheader>Anzahl</h3>
+		<p>
+			<input id="enternumberfield" type="text" class="whiteinput" autofocus /></p>
+			
+			<table class=numfield id="numfield_num_number">
+				<tr><td>7<td>8<td>9</tr>
+				<tr><td>4<td>5<td>6</tr>
+				<tr><td>1<td>2<td>3</tr>
+				<tr><td>0<td colspan="2" class="dellastkey">&larr;</tr>
+				<tr><td colspan="3" class="keyboardapply" id="apply_numberenter">Ordern</tr>
+			   </table>
+		
+			<div class="ui-grid-a">
+				<div class="ui-block-a"><a href="#" data-role="button" data-theme="d" id="discard_numberenter">Abbrechen</a></div>
+			</div><!-- /grid-a -->
+  	</div>
+</div>  <!-- enternumberdlg -->
+
+</body>
+</html>

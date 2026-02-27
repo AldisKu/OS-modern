@@ -1,0 +1,37 @@
+
+<h1>Impressum</H1>
+
+<b>Angaben gemäß § 5 TMG:</b><br><br>
+
+<i>
+{Betriebsinfo}
+</i>
+
+<br>
+
+<h1>Haftungsausschluss (Disclaimer)</h1>
+
+<h2>Haftung für Inhalte</h2>
+
+Als Diensteanbieter sind wir gemäß § 7 Abs.1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.
+Sollten wir davon Kenntnis bekommen, dass Inhalte dieser Webseite rechtswidriger Matur sind, werden wir diese unverzüglich entfernen. 
+Eine Haftung für derlei Inhalte ist jedoch erst ab Kenntnis der Rechtsverletzung möglich.
+
+
+<h2>Haftung für Links</h2>
+
+Unser Angebot enthält Links zu externen Webseiten Dritter. Auf die Inhalte der verlinkten Seiten haben wir jedoch keinen
+redaktionellen Einfluss. Der Inhalt der verlinkten Seiten kann sich ändern, ohne dass wir davon Kenntnis erhalten.
+
+Sobald wir auf rechtswidrige Inhalte aufmerksam werden, auf die wir verlinkt haben, werden wir diese Links unverzüglich entfernen. Es
+ist uns jedoch nicht möglich, alle verlinkten Seiten permanent auf rechtswidrige Inhalte hin zu überwachen.
+
+
+<h2>Urheberrecht</h2>
+
+Die durch uns erstellten Inhalte auf diesen Seiten unterliegen dem deutschen Urheberrecht. 
+Die kommerzielle Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen 
+unserer schriftlichen Zustimmung.
+
+Sollten Sie Urheberrechtsverletzungen auf unseren Seiten feststellen, bitten wir um eine Nachricht, damit wir die rechtswidrige
+Nutzung unterbinden können.

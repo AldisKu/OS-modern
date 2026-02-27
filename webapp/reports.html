@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+
+    <title>Ansicht Statistik</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+     <meta name="author" content="Stefan Pichel">
+
+	<link rel="stylesheet" type="text/css" href="css/bestformat.css?v=2.9.12">
+	<link rel="stylesheet" href="php/contenthandler.php?module=admin&command=getmobilecss&v=2.9.12" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js?v=2.9.12"></script>
+   <script src="elements/rating.js?v=2.9.12"></script>
+</head>
+
+<body>
+
+<script> 
+
+var REP_USERSUM = ["Umsätze ","Sales", "Ventas" ];
+var REP_TIPS = ["Trinkgelder","Tips","Consejos"];
+var REP_PROFIT = ["Marge","Profit","Beneficio"];
+var REP_PROFIT_SUM = ["Summierte Marge","Summed Profit","Beneficio total"];
+var REP_PROCESSINGTIMES = ["Durchlaufzeiten","Processing Times","Tiempos de procesamiento"];
+var REP_PROCTIME_TO_PREPARE = ["Zubereitungsdauer","Duration for preparation","Duración de la preparación"];
+var REP_PROCTIME_TO_SERVE = ["Zeit bis Artikel serviert","Time till served","Tiempo hasta que se sirvió el artículo"];
+var REP_PROCTIME_TO_PAY = ["Gesamtdurchlaufzeit","Total processing time","Tiempo total de entrega"];
+
+var REP_PROC_REMARK_PREPARE = ["Die Zubereitungsdauer errechnet sich aus der durchschnittlichen Zeitdifferenz zwischen Bestellzeitpunkt und Deklaration der Zubereitung in der digitalen Küchen-/Baransicht. Werte liegen nur für Bestellungen vor, die digital und nicht über Arbeitsbons durchgeführt wurden.",
+        "The preparation time is calculated from the average time difference between the time of ordering and the declaration of preparation in the digital kitchen/bar view. Values are only available for orders that were placed digitally and not via work receipts.",
+        "El tiempo de preparación se calcula a partir de la diferencia media de tiempo entre el momento del pedido y la declaración de preparación en la vista digital de cocina/bar. Los valores solo están disponibles para los pedidos que se realizaron digitalmente y no mediante recibos de trabajo."];
+var REP_PROC_REMARK_SERVE = ["Die durchschnittliche Zeit bis zum Servieren eines Artikel errechnet sich aus der Zeitdifferenz zwischen Bestellzeitpunkt und Deklaration der Bereitstellung, entweder in der digitalen Bereitstellungsansicht oder der Bestellansicht. Werte liegen nur für Bestellungen vor, die digital und nicht über Arbeitsbons durchgeführt wurden.",
+        "The average time until an item is served is calculated from the time difference between the order time and the declaration of provision, either in the digital provision view or the order view. Values are only available for orders that were placed digitally and not via work slips.",
+        "El tiempo medio hasta que se sirve un artículo se calcula a partir de la diferencia de tiempo entre la hora del pedido y la declaración de provisión, ya sea en la vista de provisión digital o en la vista de pedido. Los valores sólo están disponibles para los pedidos que se realizaron digitalmente y no mediante albaranes de trabajo."];
+var REP_PROC_REMARK_PAID = ["Die Gesamtdurchlaufzeit eines Artikel errechnet sich aus der Zeitdifferenz zwischen der Bezahlung und Bestellaufnahme.",
+        "The total throughput time of an item is calculated from the time difference between payment and order entry.",
+        "El tiempo total de procesamiento de un artículo se calcula a partir de la diferencia de tiempo entre el pago y la aceptación del pedido."];
+var REP_TIPS_TXT = ["Im mobilen Zahlungsdialog kann man bei entsprechender Einstellung die Trinkgelder im Wechselgeldrechner eintragen. Diese Übersicht zeigt die Trinkgelder für die Angestellten, die diese Eingabemöglichkeit nutzen.",
+        "In the mobile payment dialog, you can enter the tips in the change calculator if the appropriate settings are made. This overview shows the tips for the employees who use this input option.",
+        "En el diálogo de pago por móvil se pueden introducir las propinas en la calculadora de cambios si se realizan los ajustes correspondientes. Este resumen muestra los consejos para los empleados que utilizan esta opción de entrada."];
+var REP_TABLE_REPORTS = ["Tischprotokolle","Table reports","Records of tables","Historia de las mesas"];
+var REP_TABLE_REPORTS_INFO = ["In diesem Bereich werden alle Buchungen, Umbuchungen und Stornierungen für alle Tische seit der letzten Tageserfassung angezeigt.",
+	"This area displays all postings, transfers, and cancellations for all tables since the last closing.",
+	"Esta área visualiza todas las contabilizaciones, traslados y anulaciones de todas las tablas desde la última cerra de día."];
+var REP_ORDER_REPORTS = ["Aktuelle Bestellungen","Current orders","Ordenes de momento"];
+var REP_ORDER_REPORTS_INFO = ["In diesem Bereich werden alle Bestellungen seit der letzten Tageserfassung aufgeführt. Unbezahlte auf Gäste ausgestellt Lieferbons werden als unbezahlt betrachtet.","In this area yu can see all orders since the last closing.","En esta area puede ver todas las ordenes desde la última cerrada"];
+var REP_USER = ["Benutzer","User","Usario"];
+var REP_USER_TXT = ["Diese Übersicht zeigt die Umsätze inkl. aller Zahlungswege und Ein-/Auslagen pro Kellner seit dem letzten Kassenabschluss an. Unbezahlte auf Gäste ausgestellt Lieferbons werden nicht als Umsatz betrachtet..",
+	"This overview shows the turnover including all payment methods and deposits/disbursements per waiter since the last cash balance. Invoices issued to guests are included only of they have been paid.",
+	"Este resumen muestra el volumen de negocios, incluidos todos los métodos de pago y los depósitos/desembolsos por camarero desde el último saldo de caja. Las facturas emitidas a los invitados se incluyen solo si estan pagados."];
+var REP_TODAY = ["Heute","Today","Hoy"];
+var REP_YESTERDAY = ["Gestern","Yesterday","Ayer"];
+var REP_HOUR = ["Uhrzeit","Time","Hora"];
+var REP_DAY = ["Tag","Day","Día"];
+var REP_PROD = ["Artikel","Article","Artículo"];
+var REP_PROD_PROFIT = ["Artikel (Marge)","Article (Profit)","Artículo (Beneficio)"];
+var REP_PRODTYPE = ["Artikeltyp","Type of article","Tipo de artículo"];
+var REP_SUM = ["Summe","Sum","Total"];
+var REP_TODAY_TXT = ["Diese Übersicht umfasst alle Kassenbons, die bisher heute gedruckt wurden.",
+                     "This overview shows all receipts that have been printed today.",
+                     "Este parte contiene todos los tiques de este día."];
+var REP_YEST_TXT = ["Diese Übersicht umfasst die gestrigen Einnahmen, die in Tagesabschlüssen erfasst wurden.",
+                    "This overview shows all revenues of yesterday that are part of a closing.",
+                    "Este parte muestra todo el cobro de tiques cerrados de ayer."];
+var REP_THIS_MONTH_TXT = ["Diese Übersicht umfasst alle Einnahmen dieses Monats, die in Tagesabschlüssen erfasst sind.",
+                          "This overview shows all revenues of this month that are part of a closing.",
+                          "Este parte muestra todo el cobro de tiques cerrados de este mes."];
+var REP_LAST_MONTH_TXT = ["Diese Übersicht umfasst Einnahmen des letzten Monats.",
+                          "This overview shows all revenues of the last month.",
+                          "Este parte muestra todo el cobro del mes pasado."];
+var REP_PROD_LAST30_TXT = ["Diese Übersicht zeigt die Einnahmen, die mit den in den letzten Tagen verkauften Produkten erzielt wurden.",
+                           "This overview displays the revenue that could be achieved with all sold products in the last days.",
+                           "Este parte muestra el cobro con el productos vendido en los últimos días."];
+var REP_NO_DATA = ["Es liegen keine Daten vor.", "There is no data.", "No hay ningún datos."];                  
+var REP_PRODREP = ["Produktstatistik","Product report","Estadistica de productos"];
+var REP_TITLE = ["Statistik","Statistics","Estadisticas"];
+var REP_RATINGS = ["Bewertungen","Ratings","Valoraciones"];
+var REP_RATINFO = ["Übersicht der Bewertung der letzten 30 Tage","Overview of all ratings in the last 30 days","Valoraciones de los últimos 30 dias"];
+var REP_SERVICE = ["Bedienung und Service","Service","Servicio"];
+var REP_KITCHEN = ["Küche","Kitchen","Cocina"];
+var REP_GOOD = ["Zufriedener Kunde","Customer is happy","Cliente esta contento"];
+var REP_OK = ["Passabel","ok","Pues..."];
+var REP_BAD = ["Kunde ist unzufrieden","Customer is not satisfied","Cliente no esta contento"];
+var REP_COUNT = ["Anzahl","Number","Número"];
+var REP_REMARKS = ["Kundenmeinungen","Customer remarks","Notas de los clientes"];
+var REP_RECORD_ACTION = [
+	["Bestellung","Ordering","Ordenar"],
+	["Rechnung","Bill","Pagar"],
+	["Artikelstorno","Discard product","Descartar producto"],
+	["Rechnungsstorno","Discard bill","Descartar pago"],
+	["Rechnungs- und Artikelstorno","Discard bill and product","Descrtar pago y producto"],
+	["Tischwechsel Produktentfernung","Move products to other table","Productos a otra mesa"],
+	["Tischwechsel Produktbuchung","Received moved products","Recibo productos de otra mesa"],
+        ["Lieferbon","Delivery receipt","Recibo de entrega"],
+        ["Storno Lieferbon","Discard delivery receipt","Descartar recibo de entrega"],
+        ["Storno Lieferbon und Artikel","Discard delivery receipt and products","Descartar recibo de entrega y productos"]
+];
+var REP_NO_ENTRIES = ["Keine Einträge","No entries","Ningún data"];
+var REP_PRODSLIDER_LABEL = ["Gemittelt über wie viele letzte Tage","Since how many days","Desce hace cuantos dias"];
+var REP_PROCTIMESLIDER_LABEL = ["Gemittelt über wie viele letzte Tage","Since how many days","Desce hace cuantos dias"];
+var REP_PROFITSLIDER_LABEL = ["Gemittelt über wie viele letzte Tage","Since how many days","Desce hace cuantos dias"];
+var REP_PERFORMANCE = ["Performance","Performance","Performance"];
+var REP_PERFINFO = ["Dauer einzelner Aktionen","Duration of activities","Cuando tiempo necesitan acciones"];
+var REP_DURATION = ["Dauer (ms)","Duration (ms)","Tiempo (ms)"];
+var REP_DURATION_MIN = ["Dauer (min)","Duration (min)","Tiempo (min)"];
+var REP_PROFIT_REMARK = ["Eine Marge pro Artikel ist in diesem Zusammenhang die Differenz vom Netto-Verkaufswert und dem Einkaufswert, der sich aus dem Basisartikel und den Extras zusammensetzt. Je mehr von diesem Artikel in dem betrachteten Zeitabschnitt verkauft wurden, desto höher fällt die Gesamtmarge des Artikels aus.",
+        "In this context, a margin for an article is the difference between the net sales value and the purchase value, which is made up of the basic item and the extras. The more of this item was sold in the period under consideration, the higher the total margin of the item.",
+        "En este contexto, un margen de un producto es la diferencia entre el valor neto de venta y el valor de compra, que se compone del artículo básico y los extras."];
+
+var lang = 0;
+var allorders = [];
+var filterOnlyUnpaidOrdersSelection = 0;
+var filterCancelledOrders = 0;
+var currency = "";
+var perfOptionalAreaSet = false;
+
+let defaultProcessingTimeSpan = 30;
+
+function setLanguage(language) {
+	lang = language;
+	$("#reportttitletxt").html(REP_TITLE[lang]);
+}
+  	
+  	function fillPageWithStats() {				
+		var htmlTableReports = createStub("table_reports_section",REP_TABLE_REPORTS[lang],REP_TABLE_REPORTS_INFO[lang],"","");
+		
+		var search = '<p><input id="searchfieldorders" style="background-color:white;color:black;" placeholder="Suche" />';
+		var selBoxForOrdersPaid = "<div id='selBoxForOrdersFilter'>" + createSelBoxForOrderFilter() + "</div>";
+		var selBoxForOrdersCancelled = "<div id='selBoxForOrdersCancelled'>" + createSelBoxForCancelledFilter() + "</div>";
+		var updateBtn = "<button id='updateordersbtn' data-theme='f'>Aktualisieren</button>";
+		var htmlTodaySums = createStub("today_section",REP_TODAY[lang],REP_TODAY_TXT[lang],"","");
+		var htmlYesterdaySums = createStub("yesterday_section",REP_YESTERDAY[lang],REP_YEST_TXT[lang],"","");
+		var htmlThismonthSums = createStub("thismonth_section",'',REP_THIS_MONTH_TXT[lang],"","");
+		var htmlLastmonthSums = createStub("lastmonth_section",'',REP_LAST_MONTH_TXT[lang],"","");
+		var htmlProdSums = createStub("prods_section",REP_PRODREP[lang],REP_PROD_LAST30_TXT[lang],"","");
+		var htmlRatingSums = createStub("ratings_section",REP_RATINGS[lang],REP_RATINFO[lang],"","");
+		var htmlUsersums = createStub("usersums_section",REP_USERSUM[lang],REP_USER_TXT[lang],"","");
+		var htmlOrderReports = createStub("order_reports_section",REP_ORDER_REPORTS[lang],REP_ORDER_REPORTS_INFO[lang],search + selBoxForOrdersPaid + selBoxForOrdersCancelled,updateBtn);
+  		var htmlTips = createStub("tips_section",REP_TIPS[lang],REP_TIPS_TXT[lang],"","");
+                
+                var procTimeSlider = getProcessingTimeSlider(defaultProcessingTimeSpan);
+                var htmlProcessingTimesTimes = createStub("processingtimes_section",REP_PROCESSINGTIMES[lang],REP_PROCESSINGTIMES[lang],procTimeSlider,"");
+                $("#proctimesliderarea").trigger("create");
+                
+                var profitSlider = getProfitSlider(defaultProcessingTimeSpan);
+                var profitRemark = "<p><i>" + REP_PROFIT_REMARK[lang] + "</i>";
+                var htmlProfitTimes = createStub("profit_section",REP_PROFIT[lang],REP_PROFIT[lang],profitSlider + profitRemark,"");
+                $("#profitsliderarea").trigger("create");
+                
+                var htmlPerformance = createStub("performance_section",REP_PERFORMANCE[lang],REP_PERFINFO[lang],"","");
+                
+		$("#content").html(htmlTodaySums + htmlYesterdaySums + htmlThismonthSums + htmlLastmonthSums + htmlProdSums + htmlRatingSums + htmlUsersums + htmlTableReports + htmlOrderReports + htmlProcessingTimesTimes + htmlProfitTimes + htmlTips + htmlPerformance);
+		$("#content").trigger("create");
+		bindExpandAreas();
+		bindUpdateBtns();
+		bindSelBoxChange();
+		requestMonthNamesAndInsert();
+  	}
+	
+	function createSelBoxForOrderFilter() {
+		var sel = "<select data-theme='f' id='showOnlyUnpaidOrders'>";
+		if (filterOnlyUnpaidOrdersSelection == 0) {
+			sel += "<option value='0' selected>Nur unbezahlte Bestellungen</option>";
+		} else {
+			sel += "<option value='0'>Nur unbezahlte Bestellungen</option>";
+		}
+		if (filterOnlyUnpaidOrdersSelection == 1) {
+			sel += "<option value='1' selected>Alle Bestellungen</option>";
+		} else {
+			sel += "<option value='1'>Alle Bestellungen</option>";
+		}
+		
+		sel += "</select>";
+		return sel;
+	}
+	
+	function createSelBoxForCancelledFilter() {
+		var sel = "<select data-theme='f' id='filterForCancelledOrders'>";
+		if (filterCancelledOrders == 0) {
+			sel += "<option value='0' selected>Stornostatus ignorieren</option>";
+		} else {
+			sel += "<option value='0'>Stornostatus ignorieren</option>";
+		}
+		if (filterCancelledOrders == 1) {
+			sel += "<option value='1' selected>Nur unstornierte Produkte</option>";
+		} else {
+			sel += "<option value='1'>Nur unstornierte Produkte</option>";
+		}
+		if (filterCancelledOrders == 2) {
+			sel += "<option value='2' selected>Nur stornierte Produkte</option>";
+		} else {
+			sel += "<option value='2'>Nur stornierte Produkte</option>";
+		}
+		
+		sel += "</select>";
+		return sel;
+	}
+	
+	function requestMonthNamesAndInsert() {
+		doAjax("GET", "php/contenthandler.php?module=reports&command=getMonthNames", null, insertMonthNames, "Fehler keine Monatsnamen");
+	}
+	function insertMonthNames(answer) {
+		if (answer.status === "OK") {
+			$("#header_thismonth_section").html(answer.thismonth);
+			$("#header_lastmonth_section").html(answer.lastmonth);
+		};
+	}
+	function bindExpandAreas() {
+		$("#today_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getToday", null, fillToday, "Fehler keine Heute-Verkäufe",true);
+		});
+		$("#yesterday_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getYesterday", null, fillYesterday, "Fehler keine Gestern-Verkäufe",true);
+		});
+		$("#thismonth_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getThismonth", null, fillThismonth, "Fehler keine Daten für diesen Monat",true);
+		});
+		$("#lastmonth_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getLastmonth", null, fillLastmonth, "Fehler keine Daten für letzten Monat",true);
+		});
+		$("#prods_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getProds", null, fillProds, "Fehler keine Daten für Produktverkäufe",true);
+		});
+		$("#ratings_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getRatings", null, fillRatings, "Fehler keine Bewertungsdaten",true);
+		});
+		$("#usersums_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getUsersums", null, fillUsersums, "Fehler keine Kassenbestände",true);
+		});
+                $("#tips_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=reports&command=getTips", null, fillTips, "Fehler keine Trinkgeldinfo",true);
+		});
+                $("#processingtimes_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+                        requestProcessingTimes(defaultProcessingTimeSpan);
+			bindProcTimeSlider();
+		});
+                $("#profit_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+                        requestProfit(defaultProcessingTimeSpan);
+			bindProfitSlider();
+		});
+		$("#table_reports_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			doAjax("GET", "php/contenthandler.php?module=queue&command=getAllTableRecords", null, fillTableRecords, "Fehler keine Tischprotokolle",true);
+		});
+		$("#order_reports_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+			requestAllOrders();
+		});
+		$("#searchfieldorders").off("keyup").on("keyup", function (e) {
+			displayAllOrdersDueToFilter();
+		});
+                $("#performance_section").off("collapsibleexpand").on("collapsibleexpand", function (e) {
+                        requestPerfData();
+		});
+	}
+	
+	function getProdsSlider() {
+		var txt = '<div id="prodsliderarea">';
+		txt += '<label for="prodsslider" id="prodssliderlabel"><span id="prodssliderlabeltxt">' + REP_PRODSLIDER_LABEL[lang] + '</span>:</label>';
+		txt += '<input type="range" name="prodsslider" id="prodsslider" value="30" min="1" max="731" data-theme="b" data-track-theme="e" /><br>';
+		txt += '</div><p />';
+		return txt;
+	}
+        
+        function getProcessingTimeSlider(presetValue) {
+                let txt = '<div id="proctimesliderarea">';
+		txt += '<label for="proctimeslider" id="proctimesliderlabel"><span id="proctimesliderlabeltxt">' + REP_PROCTIMESLIDER_LABEL[lang] + '</span>:</label>';
+		txt += '<input type="range" name="proctimeslider" id="proctimeslider" value="' + presetValue + '" min="1" max="731" data-theme="b" data-track-theme="e" /><br>';
+		txt += '</div><p />';
+		return txt;
+        }
+        function getProfitSlider(presetValue) {
+                let txt = '<div id="profitsliderarea">';
+		txt += '<label for="profitslider" id="profitsliderlabel"><span id="profitsliderlabeltxt">' + REP_PROFITSLIDER_LABEL[lang] + '</span>:</label>';
+		txt += '<input type="range" name="profitslider" id="profitslider" value="' + presetValue + '" min="1" max="731" data-theme="b" data-track-theme="e" /><br>';
+		txt += '</div><p />';
+		return txt;
+        }
+	
+	function bindProdsSlider() {
+                $("#prodsslider").off("change").on("change", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			requestNewProdStat();
+		});
+	}
+
+        function bindProcTimeSlider() {
+                $("#proctimeslider").off("change").on("change", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+                        var days = $("#proctimeslider").val();
+			requestProcessingTimes(days);
+		});
+        }
+        function bindProfitSlider() {
+                $("#profitslider").off("change").on("change", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+                        var days = $("#profitslider").val();
+			requestProfit(days);
+		});
+        }
+
+	function requestNewProdStat() {
+		var days = $("#prodsslider").val();
+		$("#content_prods_section .divaroundtable").html('<img id="progressimginprodsstattable" src="php/3rdparty/images/ajax-loader.gif" />');
+		doAjax("GET", "php/contenthandler.php?module=reports&command=getProds&days=" + days, null, updateProdsStat, "Fehler keine Daten für Produktverkäufe",true);
+	}
+        function requestNewProcTimeStat() {
+                var days = $("#prodsslider").val();
+		$("#content_prods_section .divaroundtable").html('<img id="progressimginprodsstattable" src="php/3rdparty/images/ajax-loader.gif" />');
+		doAjax("GET", "php/contenthandler.php?module=reports&command=getProds&days=" + days, null, updateProdsStat, "Fehler keine Daten für Produktverkäufe",true);
+        }
+	function fillUsersums(answer) {
+		if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_USER[lang],"center",15,10,75);
+			$("#content_usersums_section").html(htmlTable);
+		}
+	}
+        function fillTips(answer) {
+                if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_TIPS[lang],"center",15,10,75);
+			$("#content_tips_section").html(htmlTable);
+		}
+        }
+        
+        function createContainerForProcTime(procTypeName,procRemark,htmlValues) {
+                let html = "<div class='proctime'>"
+                html += "<p class='proctimeheader'>" + procTypeName;
+                html += "<p class='proctimeremark'>" + procRemark;
+                html += "<p>" + htmlValues;
+                
+                html += "</div>";
+                return html;
+        }
+        
+        function fillProcessingTimes(answer) {
+                if (answer.status === "OK") {
+                        let prepareDuration = answer.msg.prepareduration.msg;
+                        let serveDuration = answer.msg.serveduration.msg;
+                        let paidDuration = answer.msg.paidduration.msg;
+                        
+                        let htmlTablePrepareDuration = createTableWithData(prepareDuration,REP_DURATION_MIN[lang],REP_PROD[lang],"center",15,10,75);
+                        let htmlTableServeDuration = createTableWithData(serveDuration,REP_DURATION_MIN[lang],REP_PROD[lang],"center",15,10,75);
+                        let htmlTablePaidDuration = createTableWithData(paidDuration,REP_DURATION_MIN[lang],REP_PROD[lang],"center",15,10,75);
+                        
+                        let htmlPrepContainer = createContainerForProcTime(REP_PROCTIME_TO_PREPARE[lang],REP_PROC_REMARK_PREPARE[lang],htmlTablePrepareDuration);
+                        let htmlServeContainer = createContainerForProcTime(REP_PROCTIME_TO_SERVE[lang],REP_PROC_REMARK_SERVE[lang],htmlTableServeDuration);
+                        let htmlPaidContainer = createContainerForProcTime(REP_PROCTIME_TO_PAY[lang],REP_PROC_REMARK_PAID[lang],htmlTablePaidDuration);
+                        
+			$("#content_processingtimes_section").html(htmlPrepContainer + htmlServeContainer + htmlPaidContainer);
+		}
+        }
+	function fillProfit(answer) {
+                if (answer.status === "OK") {
+                        let htmlTableProfit = createTableWithData(answer.msg,REP_PROFIT_SUM[lang],REP_PROD_PROFIT[lang],"center",15,10,75);
+			$("#content_profit_section").html(htmlTableProfit);
+		}
+        }
+	function fillToday(answer) {
+		if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_HOUR[lang],"center",10,10,80);
+			$("#content_today_section").html(htmlTable);
+		}
+	}
+	
+	function fillYesterday(answer) {
+		if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_HOUR[lang],"center",10,10,80);
+			$("#content_yesterday_section").html(htmlTable);
+		}
+	}
+	
+	function fillThismonth(answer) {
+		if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_DAY[lang],"center",10,10,80);
+			$("#content_thismonth_section").html(htmlTable);
+		}
+	}
+	function fillLastmonth(answer) {
+		if (answer.status === "OK") {
+			var htmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_DAY[lang],"center",10,10,80);
+			$("#content_lastmonth_section").html(htmlTable);
+		}
+	}
+        
+	function fillProds(answer) {
+		if (answer.status === "OK") {
+                        var salesHtmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_PROD[lang],"left",30,10,60);
+
+                        var foodDrinksSalesHtmlTable = createFoodDrinksTableWithData(answer.msg,REP_SUM[lang],REP_PRODTYPE[lang],"left",30,10,60);
+
+			var prodsSlider = getProdsSlider();
+			$("#content_prods_section").html(prodsSlider + salesHtmlTable + "<p />" + foodDrinksSalesHtmlTable);
+			$("#prodsliderarea").trigger("create");
+			bindProdsSlider();
+		}
+	}
+	function updateProdsStat(answer) {
+		if (answer.status === "OK") {
+                        var salesHtmlTable = createTableWithData(answer.msg,REP_SUM[lang],REP_PROD[lang],"left",30,10,60);
+
+                        var foodDrinksSalesHtmlTable = createFoodDrinksTableWithData(answer.msg,REP_SUM[lang],REP_PRODTYPE[lang],"left",30,10,60);
+			
+			$("#content_prods_section .divaroundtable").html(salesHtmlTable);
+                        $("#content_prods_section .divaroundfooddrinkstable").html(foodDrinksSalesHtmlTable);
+		}
+	}
+	function fillRatings(answer) {
+		if (answer.status === "OK") {
+			var htmlPart = createRatingsPartCore(answer.msg,REP_DAY[lang],10,10,40,40);
+			$("#content_ratings_section").html(htmlPart);
+		}
+	}
+        
+        function fillPerformance(answer) {
+                if (answer.status === "OK") {
+                        var htmlTable = createTableWithData(answer.msg,REP_DURATION[lang],REP_DAY[lang],"center",10,10,80);
+                        $("#content_performance_section").html(htmlTable);
+                        
+                        if (!perfOptionalAreaSet) {
+                                addPerformanceOptions(answer.msg.tasks);
+                                perfOptionalAreaSet = true;
+                        }
+                }
+        }
+	
+	function bindUpdateBtns() {
+		$("#updateordersbtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			requestAllOrders();
+		});
+	}
+	
+	function requestAllOrders() {
+		doAjax("GET", "php/contenthandler.php?module=queue&command=getAllOrders", null, fillOrdersArea, "Fehler keine Bestellprotokolle",true);
+	}
+	
+	function bindSelBoxChange() {
+		$("#showOnlyUnpaidOrders").off("change").on("change", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			filterOnlyUnpaidOrdersSelection = $("#showOnlyUnpaidOrders").val();
+			
+			$("#selBoxForOrdersFilter").html(createSelBoxForOrderFilter());
+			$("#selBoxForOrdersFilter").trigger("create");
+			displayAllOrdersDueToFilter();
+			bindSelBoxChange();
+		});
+		// filterCancelledOrders
+		$("#filterForCancelledOrders").off("change").on("change", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+			filterCancelledOrders = $("#filterForCancelledOrders").val();
+			
+			$("#selBoxForOrdersCancelled").html(createSelBoxForCancelledFilter());
+			$("#selBoxForOrdersCancelled").trigger("create");
+			displayAllOrdersDueToFilter();
+			bindSelBoxChange();
+		});
+	}
+	
+	function fillOrdersArea(answer) {
+		if (answer.status == "OK") {
+			allorders = answer.msg;
+			displayAllOrdersDueToFilter();
+		}
+	}
+	
+	function displayAllOrdersDueToFilter() {
+		var decpoint = $("#info-page").data("decpoint");
+		var filterText = $("#searchfieldorders").val().trim().toLowerCase();
+		var txt = "<table class='reporttable'>";
+		txt += "<tr><th>Anzahl<th>Produkt<th>Information</tr>";
+		allorders.list.forEach(function(entry) {
+			var countid = toHtml(entry.countid);
+			var productname = toHtml(entry.productname);
+			var ordertime = toHtml(entry.ordertime);
+			var username = toHtml(entry.username);
+			var ispaid = entry.ispaid;
+			var tablename = toHtml(entry.tablename);
+			var toremove = entry.toremove;
+			var price = toHtml(entry.price);
+			var priceStr = price.replace(".",decpoint) + " " + currency;
+
+			var show = true;
+			if (filterText != "") {
+				if ((productname.toLowerCase().indexOf(filterText) == -1) &&
+					(username.toLowerCase().indexOf(filterText) == -1) &&
+					(tablename.toLowerCase().indexOf(filterText) == -1)) {
+					show = false;
+				}
+			}
+			if ((filterOnlyUnpaidOrdersSelection == 0) && (ispaid == 1)) {
+				show = false;
+			}
+			if ((filterCancelledOrders == 1) && (toremove == 1)) {
+				show = false;
+			}
+			if ((filterCancelledOrders == 2) && (toremove == 0)) {
+				show = false;
+			}
+			if (show) {
+				txt += '<tr><td>' + countid + "<td>" + productname + "<td>";
+				txt += ordertime + "<br>";
+				txt += username + "<br>";
+				txt += priceStr + "<br>";
+				txt += (ispaid == 1 ? "bezahlt<br>" : "noch unbezahlt<br>");
+				txt += tablename;
+				if (toremove == 1) {
+					txt += "<br>(storniert)";
+				}
+				txt += "</tr>";
+			}
+		});
+		txt += "</table>";
+		
+		var sumall = allorders.sumall.replace(".",decpoint) + " " + currency;
+		var sumunpaid = allorders.sumunpaid.replace(".",decpoint) + " " + currency;
+		var sumpaid = allorders.sumpaid.replace(".",decpoint) + " " + currency;
+		var sumcancelled = allorders.sumcancelled.replace(".",decpoint) + " " + currency;
+		txt += "<p><table class='reporttable'>";
+		txt += "<tr><th>Summe<th>Betrag</tr>";
+		txt += "<tr><td>Unbezahlt<td>" + sumunpaid + "</tr>";
+		txt += "<tr><td>Bezahlt<td>" + sumpaid + "</tr>";
+		txt += "<tr><td>Bezahlt und unbezahlt<td>" + sumall + "</tr>";
+		txt += "<tr><td>Stornierungen<td>" + sumcancelled + "</tr>";
+		txt += "</table>";
+		
+		$("#content_order_reports_section").html(txt);
+	}
+	
+	function fillTableRecords(answer) {
+		if (answer.status == "OK") {
+			var txt = "";
+			var rooms = answer.msg;
+			$.each(rooms, function (i, aRoom) {
+				var roomname = toHtml(aRoom["roomname"]);
+				var tables = aRoom["tables"];
+				
+				var tablesTxt = "";
+				$.each(tables, function (j, aTable) {
+					var tablename = toHtml(aTable["tablename"]);
+					var tablesRecordTxt = recordsOfTableAsTxt(aTable["records"]);
+					tablesTxt += "<h2>" + tablename + "</h2>" + tablesRecordTxt;
+				});
+				
+				txt += "<h1>" + roomname + "<h1>";
+				txt += tablesTxt;
+				txt += "<hr>";
+			});
+
+			$("#content_table_reports_section").html(txt);
+		}
+	}
+  	
+	function recordsOfTableAsTxt(answer) {
+		var txt = "";
+		if (answer.status == "OK") {
+			var entries = answer.msg;
+
+			if (entries.length == 0) {
+				txt += REP_NO_ENTRIES[lang];
+				return txt;
+			}
+			txt += "<ul>";
+			entries.forEach(function(entry, index) {
+				var time = toHtml(entry.time);
+				var username = toHtml(entry.username);
+				var action = toHtml(entry.action);
+
+				var actionStr = REP_RECORD_ACTION[action][lang];
+				txt += "<li>" + time + " " + username + " - <b>" + actionStr + "</b>:<br>";
+
+				var prods = entry.prods;
+				txt += "<ul>";
+				prods.forEach(function(prod,i) {
+					var name = toHtml(prod.name);
+					var extras = toHtml(prod.extras);
+					txt += "<li>" + name;
+					if (extras != "") {
+						txt += " (" + extras + ")";
+					}
+				});
+				txt += "</ul>";
+			});
+			txt += "</ul>";
+		}
+		return txt;
+	}
+
+  	function getLegend (good,ok,bad) {
+  		var goodTxt = "<img src=img/green.png style='height:20px;width:40px;' />: " + good + "<br>";
+  		var okTxt = "<img src=img/yellow.png style='height:20px;width:40px;' />: " + ok + "<br>";
+  		var badTxt = "<img src=img/red.png style='height:20px;width:40px;' />: " + bad + "<br>";
+  		return goodTxt + okTxt + badTxt;
+  	}
+  	
+	function createRatingsPartCore(ratingReport,iterObjName,width1,width2,width3,width4) {
+		var ratings = ratingReport.statistics;
+		var legend = getLegend(REP_GOOD[lang],REP_OK[lang],REP_BAD[lang]) + "</p><p>";
+		
+		var content = "<table width=100% class='reporttable'>";
+		content += aTableRatingHeader(iterObjName,REP_COUNT[lang],REP_SERVICE[lang],REP_KITCHEN[lang],width1,width2,width3,width4);
+		var i=0;
+		for (i=0;i<ratings.length;i++) {
+			var aRating = ratings[i];
+
+			var aRatingEl = new Rating(aRating.day,aRating.service,aRating.kitchen,aRating.total);
+			content += "<tr><td style='text-align:center;'>" + aRating.day 
+				+ "<td style='text-align:center;'>" + aRatingEl.getTotal()
+				+ "<td>" + aRatingEl.getServiceInfo() + "<td>" + aRatingEl.getKitchenInfo() + "</tr>";
+		}
+		content += "</table>";
+		
+		var remarks = ratingReport.remarks;
+		if (remarks.length > 0) {
+			content += "</p><p><b>" + REP_REMARKS[lang] + "</b><br>";
+			
+			var i=0;
+			for (i=0;i<remarks.length;i++) {
+				var aRemark = remarks[i];
+				content += "<i>" + aRemark.date + "</i>: " + aRemark.remark + "<br>";
+			}
+		}
+		var html = legend + content + "</p></div>";
+		
+		return html;
+	}
+
+
+	function createStub(id,aName,infoText,additionalFirstElement,additionalLastEl) {
+		var collapse_elem = '<div id="' + id + '" data-role="collapsible" data-content-theme="e" data-collapsed="true" data-theme="c">';
+		var header = '<h3><span id="header_' + id + '">'+aName + '</span></h3><p><i>' + infoText + '</i></p><p>';
+
+		var content = additionalFirstElement + '<p /><div id="optionalarea_' + id + '"></div><div id="content_' + id + '">';
+		content += '<p /><img id="progressimginpopup" src="php/3rdparty/images/ajax-loader.gif" /></div>';
+		
+		var html = collapse_elem + header + content + additionalLastEl + "</p></div>";
+		
+		return html;
+	}
+        
+        function createFoodDrinksTableWithData(values,colNameForSum,iterObjName,iterAlignment,width1,width2,width3) {
+                var maxValue = values.maxfooddrinksvalue;
+                var contentValues = values.foodanddrinkssales;
+                
+		return createTableWithDataCore(maxValue,contentValues,"divaroundfooddrinkstable",colNameForSum,iterObjName,iterAlignment,width1,width2,width3);
+        }
+	
+        function createTableWithData(values,colNameForSum,iterObjName,iterAlignment,width1,width2,width3) {
+                var maxValue = values.max;
+                var contentValues = values.content;
+                
+		return createTableWithDataCore(maxValue,contentValues,"divaroundtable",colNameForSum,iterObjName,iterAlignment,width1,width2,width3);
+	}
+        
+	function createTableWithDataCore(maxValue,contentValues,divaroundtable,colNameForSum,iterObjName,iterAlignment,width1,width2,width3) {
+		var content = "<div class='" + divaroundtable + "'>" + REP_NO_DATA[lang] + "</div>";
+		if (maxValue != 0.0) {
+			
+			var content = "<div class='" + divaroundtable + "'>";
+			content += "<table width=100% class='reporttable'>";
+			content += aTableHeaderGeneric([iterObjName,colNameForSum,"Graph"],[width1,width2,width3]);
+			
+			var decpoint = $("#info-page").data("decpoint");
+			$.each(contentValues, function (i, aStatValue) {  
+				var hourOrDay = aStatValue.iter;
+				
+				var sum = aStatValue.sum;
+				content += aTableLine(hourOrDay,sum.toString().replace(".",decpoint),sum/maxValue*98.0,iterAlignment,
+						width1,width2,width3);
+			});
+			
+			content += "</table></div>";
+		}
+		return content;
+	}
+  	
+        function aTableHeaderGeneric(vals,widths) {
+                let text = "<tr>";
+                for (let i=0;i<vals.length;i++) {
+                        text += "<th width='" + widths[i] + "%'>" + vals[i] + "</th>";
+                }
+                text += "</tr>";
+                return text;
+        }
+        
+  	function aTableRatingHeader(val1,val2,val3,val4,width1,width2,width3,width4) {
+  		var text = "<tr><th width=" + width1 + "%>" + val1 + "<th width=" + width2 + "%>" + val2 + "<th width=" + width3 + "%>" + val3 + "<th width=" + width4 + "%>" + val4;
+  		return text;
+  	}
+  	function aTableLine(val1,val2,porcent,iterAlignment,width1,width2,width3) {
+  		var text = "<tr><td width=" + width1 + "% style='text-align:" + iterAlignment + ";'>" + toHtml(val1) + "<td width=" + width2 + "% style='text-align:right;'>" + val2;
+  		text += "<td width=" + width3 + "%><img src=img/green.png width=" + porcent + "% height=20px />";
+  		return text;
+  	}
+  	
+  	function getGeneralConfigItems() {
+  		doAjax("GET", "php/contenthandler.php?module=admin&command=getGeneralConfigItems", null, insertDecPointStartRest, "Fehler Konfigurationsdaten");
+  	}
+  	
+  	function insertDecPointStartRest(configResult) {
+  		if (configResult.status === "OK") {
+  			var values = configResult.msg;
+  			var decpoint = values.decpoint;
+			currency = values.currency;
+  			$("#info-page").data("decpoint",values.decpoint);
+  			setLanguage(values.userlanguage);
+  			fillPageWithStats();
+  		} else {
+  			setTimeout(function(){document.location.href = "index.html"},250); // not logged in
+  		}
+  	}
+        
+        function addPerformanceOptions(tasks) {
+                var id = "performance_section";
+                var options = "";
+                tasks.forEach(function(aTask) {
+                        options += "<option value='" + aTask.id + "'>" + aTask.name + "</option>";
+                });
+                
+                var isLocalHostCheckbox = '<label><input id="perflocalhostcheckbox" type="checkbox" name="checkbox_localhost" checked>Localhost</label>';
+                var tseCheckbox = '<label><input id="perftsecheckbox" type="checkbox" name="checkbox_tse">TSE</label>';
+                
+                var updateBtn = '<input id="perfupdatebtn" type="submit" value="Update" data-theme="c" />';
+                var csvDownloadBtn = '<input id="perfcsvbtn" type="submit" value="Download csv" data-theme="f" />';
+                
+                var html = '<select id="perftaskselector" data-theme="f">' + options + '</select>' + isLocalHostCheckbox + tseCheckbox + updateBtn + csvDownloadBtn;
+    
+                $("#optionalarea_" + id).html(html);
+                $("#optionalarea_" + id).trigger("create");
+                bindPerformanceButtons();
+        }
+        
+        function bindPerformanceButtons() {
+                $("#perfupdatebtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+                        
+                        requestPerfData();
+                });
+                $("#perfcsvbtn").off("click").on("click", function (e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+                        window.location.href = "php/contenthandler.php?module=reports&command=downloadPerfCsvData";
+                });
+        }
+  	
+        function requestProcessingTimes(lastDays) {
+                let data = { timespan: lastDays };
+                doAjax("GET", "php/contenthandler.php?module=reports&command=getProcessingTimes", data, fillProcessingTimes, "Fehler keine Durchlaufzeitenabruf",true);
+        }
+        function requestProfit(lastDays) {
+                let data = { timespan: lastDays };
+                doAjax("GET", "php/contenthandler.php?module=reports&command=getProfit", data, fillProfit, "Fehler keine Margenabruf",true);
+        }
+        
+        function requestPerfData() {
+                var isLocalHost = 1;
+                var perftse = 0;
+                var task = 1;
+                if (perfOptionalAreaSet) {  
+                        if($("#perflocalhostcheckbox").is(':checked')) {
+                               isLocalHost = 1; 
+                        } else {
+                                isLocalHost = 0;
+                        }
+                        
+                        if($("#perftsecheckbox").is(':checked')) {
+                               perftse = 1; 
+                        }
+                        task = $("#perftaskselector").val();
+                }
+                var data = {
+                        module: 'reports',
+                        command: 'getPerformance',
+                        task: task,
+                        forlocalhost: isLocalHost,
+                        fortse: perftse
+                }
+                doAjax("GET", "php/contenthandler.php", data, fillPerformance, "Fehler keine Performancedaten", true);
+        }
+        
+	$(document).on("pageinit", "#info-page", function () {
+		initializeMainMenu("#modulemenu");
+		hideMenu();
+		getGeneralConfigItems();
+	});
+	
+</script>
+
+<div id="alertoverlay" onclick="alertoff();" >
+  <div id="alerttext"></div>
+</div>
+<div data-role="page" id="info-page" data-theme="c">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        <ul data-role="listview" id="modulemenu" data-divider-theme="a" data-inset="true">
+            <li data-role="list-divider" data-theme="b" data-role="heading">Hauptmenü</li>
+        </ul>
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader" style="background-color:black;">
+         <h1><span id="reportttitletxt">Statistik</span> <img src="img/connection.png" class="connectionstatus" style="display:none;" /> <img src="img/printerstatus.png" class="printerstatus" style="display:none;" /> <img src="img/tsestatus.png" class="tsestatus" style="display:none;" />  <img src="img/tasksstatus.png" class="tasksstatus" style="display:none;" /></h1>
+         <div data-type="horizontal" style="top:0px;position:absolute;float:right;z-index:10;display:inline;" align="right" class="ui-btn-right"> 
+			<a href="#" data-role="button" data-icon="arrow-d" data-ajax="false" id="menuswitch">Hauptmenü</a> 
+		 </div>
+    </div>
+    <div data-role="content" id="content">
+	    		<h3>Kein Inhalt</h3>
+    </div>
+    <div data-role="footer" data-theme="b" id="thefooterr" style="background-color:black;"> 
+		<div class="ui-grid-a">
+			<div class="ui-block-a userinfo" id="loggedinuser"></div>
+			<div class="ui-block-b grid_right" id="versioninfo"></div>
+		</div><!-- /grid-a -->
+	</div> <!--  footer  -->
+</div>
+</body>
+
+</html>

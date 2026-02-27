@@ -1,0 +1,86 @@
+<html>
+
+<head>
+   <head>
+    <title>Information</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"> 
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+ <link rel="stylesheet" type="text/css" href="css/bestformat.css">
+ 
+	<link rel="stylesheet" href="php/3rdparty/orderstyle/orderstyle.min.css" />
+ 	<link rel="stylesheet" href="php/3rdparty/orderstyle/jquery.mobile.icons.min.css" />
+  
+   <link rel="stylesheet" href="php/3rdparty/jquery.mobile-1.4.0.min.css" type="text/css" />
+   <script src="php/3rdparty/jquery-2.2.4.min.js"></script>
+   <script src="php/3rdparty/jquery.mobile-1.4.0.min.js"></script>
+   <script src="utilities.js"></script>
+</head>
+
+<body>
+<script>
+
+var nexturl = "";
+
+$(document).on("pageinit", "#index-page", function () {
+	$("#infotextarea").attr('readonly','readonly');
+	var urlsuffix = location.search;
+	if (urlsuffix.length!=0) {
+		var urlstr=urlsuffix.slice(1);
+		var parts = urlstr.split("=");
+		var infotype = parts[0];
+		nexturl = parts[1];
+		var msg = parts[2].replace(/_/g," ");
+		//$("#infotextarea").val(patrts[1]);
+		//alert("urlstr : " + parts[0]);
+		
+		if (infotype == "e") {
+			$("#head").html("Fehler/Error");
+		} else {
+			$("#head").html("Information");
+		}
+		$("#infotextarea").val(msg);
+	}
+	
+	$("#confirmbutton").off("click").on("click", function (e) {
+		e.stopImmediatePropagation();
+		e.preventDefault();
+		setTimeout(function(){document.location.href = nexturl},500);
+	});
+	
+});
+
+</script>
+
+<div data-role="page" id="index-page">
+	<div data-role="panel" id="modulepanel" data-position="right" data-display="overlay">
+        
+    </div><!-- /panel -->
+    <div data-role="header" data-theme="b" data-position="fixed" id="theheader">
+         <h1>Info</h1>
+    </div>
+    
+    <div data-role="content">    
+
+		<h2 id=head>Information</h2>
+			<form action="index.html" method="GET">
+			    <label for="infotextarea">Mitteilung/Message:</label>
+			    <textarea name="infotextarea" id="infotextarea"></textarea>
+			    
+			    <input type="submit" value="Bestätigen" id="confirmbutton" data-theme="c"/>
+			</form>
+	    
+	    <div data-role="footer" data-theme="b" id="thefooterr"> 
+			<div class="ui-grid-a">
+				<div class="ui-block-a userinfo" id="loggedinuser"></div>
+				<div class="ui-block-b grid_right" id="versioninfo"></div>
+			</div><!-- /grid-a -->
+		</div> <!--  footer  -->
+		
+	</div> <!-- content -->
+	
+</div>
+</body>
+
+</html>
+
