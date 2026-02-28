@@ -8,6 +8,7 @@ require_once ('queuecontent.php');
 require_once ('utilities/userrights.php');
 require_once ('utilities/permissions.php');
 require_once ('utilities/orders.php');
+require_once ('ordersmanagement.php');
 
 header("Content-Type: application/json; charset=utf-8");
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
