@@ -3,7 +3,7 @@ namespace Plugin;
 
 class OSEventBroker {
 	private static function config() {
-		$path = __DIR__ . "/config.json";
+		$path = __DIR__ . "/broker.json";
 		if (!file_exists($path)) {
 			return null;
 		}

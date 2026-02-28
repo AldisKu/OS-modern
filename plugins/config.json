@@ -1,6 +1,4 @@
 {
-  "broker_url": "http://localhost:3077/event",
-  "broker_token": "",
   "afterOrderSaved": {
     "PluginClass": "OSEventBroker",
     "PluginFct": "afterOrderSaved",
