@@ -34,8 +34,6 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-loadPlugins();
-
 $cmd = "";
 if (isset($_GET["cmd"])) {
 	$cmd = $_GET["cmd"];
@@ -242,32 +240,4 @@ function sessionUserInfo() {
 	);
 }
 
-function loadPlugins() {
-	$pluginDir = dirname(__DIR__) . "/plugins";
-	$configPath = $pluginDir . "/config.json";
-	if (!file_exists($configPath)) {
-		return;
-	}
-	$content = file_get_contents($configPath);
-	$pluginconfig = json_decode($content);
-	if (is_null($pluginconfig)) {
-		return;
-	}
-	$props = get_object_vars($pluginconfig);
-	$keys = array_keys($props);
-	foreach ($keys as $aKey) {
-		$aPluginConfig = $pluginconfig->$aKey;
-		if (!is_object($aPluginConfig)) {
-			continue;
-		}
-		if (!property_exists($aPluginConfig, "PluginClass")) {
-			continue;
-		}
-		$className = $aPluginConfig->PluginClass;
-		$pluginFile = $pluginDir . "/" . $className . ".php";
-		if (file_exists($pluginFile)) {
-			require_once $pluginFile;
-		}
-	}
-	CommonUtils::setPluginConfig($pluginconfig);
-}
+// Plugin loading intentionally disabled here to avoid core plugin dispatch errors.
