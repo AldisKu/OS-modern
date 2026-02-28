@@ -292,7 +292,13 @@ function renderMenuItems() {
   els.menuItems.querySelectorAll(".menu-item").forEach(el => {
     const prodid = Number(el.dataset.prodid);
     const prod = state.menu.prods.find(p => p.id === prodid);
-    el.addEventListener("click", () => openProductModal(prod));
+    el.addEventListener("click", () => {
+      if (!prod) {
+        setBadge(els.badgeSync, "Produkt nicht gefunden", false);
+        return;
+      }
+      openProductModal(prod);
+    });
   });
 }
 
@@ -335,6 +341,10 @@ function persistCart() {
 }
 
 function openProductModal(prod) {
+  if (!prod) {
+    setBadge(els.badgeSync, "Produkt nicht gefunden", false);
+    return;
+  }
   if (!state.selectedTable) {
     setBadge(els.badgeSync, "Bitte Tisch wählen", false);
     return;
