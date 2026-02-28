@@ -69,6 +69,7 @@ async function init() {
   await checkSession();
   setupHandlers();
   initBroker();
+  startPolling();
 }
 
 function setupHandlers() {
@@ -138,6 +139,19 @@ async function checkSession() {
     els.loginPanel.classList.remove("hidden");
     els.appPanel.classList.add("hidden");
   }
+}
+
+function startPolling() {
+  setInterval(async () => {
+    if (els.appPanel.classList.contains("hidden")) {
+      return;
+    }
+    await refreshTables();
+    if (state.selectedTable) {
+      await refreshOpenItems();
+      await refreshRecords();
+    }
+  }, 5000);
 }
 
 async function bootstrap() {
