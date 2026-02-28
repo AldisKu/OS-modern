@@ -3,6 +3,7 @@ set -euo pipefail
 
 BROKER_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVICE_NAME="ordersprinter-broker"
+NODE_BIN="/usr/bin/node"
 
 if ! command -v node >/dev/null 2>&1; then
   echo "Node.js is required." >&2
@@ -13,15 +14,15 @@ cd "$BROKER_DIR"
 
 npm install
 
-cat > /tmp/${SERVICE_NAME}.service <<'SERVICE'
+cat > /tmp/${SERVICE_NAME}.service <<SERVICE
 [Unit]
 Description=OrderSprinter WebSocket Broker
 After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/aldis/ordersprinter/broker
-ExecStart=/usr/bin/node /home/aldis/ordersprinter/broker/server.js
+WorkingDirectory=${BROKER_DIR}
+ExecStart=${NODE_BIN} ${BROKER_DIR}/server.js
 Restart=always
 Environment=PORT=3077
 Environment=BROKER_TOKEN=
