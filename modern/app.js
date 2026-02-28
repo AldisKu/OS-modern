@@ -282,16 +282,17 @@ function renderMenuItems() {
     return matchType && matchQuery;
   });
 
-  els.menuItems.innerHTML = items.map(p => `
-    <div class="menu-item" data-prodid="${p.id}">
+  state.lastMenuItems = items;
+  els.menuItems.innerHTML = items.map((p, idx) => `
+    <div class="menu-item" data-idx="${idx}">
       <div class="name">${p.longname || p.name}</div>
       <div class="price">${p.price}</div>
     </div>
   `).join("");
 
   els.menuItems.querySelectorAll(".menu-item").forEach(el => {
-    const prodid = Number(el.dataset.prodid);
-    const prod = state.menu.prods.find(p => p.id === prodid);
+    const idx = Number(el.dataset.idx);
+    const prod = (state.lastMenuItems && state.lastMenuItems[idx]) ? state.lastMenuItems[idx] : null;
     el.addEventListener("click", () => {
       if (!prod) {
         setBadge(els.badgeSync, "Produkt nicht gefunden", false);
