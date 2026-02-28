@@ -4,13 +4,13 @@
 - PHP Wrapper API: `webapp/php/modernapi.php`
 - PHP Plugin Emitter: `webapp/plugins/OSEventBroker.php`
 - Plugin Config: `webapp/plugins/config.json`
-- Broker: `webapp/broker/server.js`
-- UI: `webapp/modern/index.html`
+- Broker: `broker/server.js`
+- UI: `modern/index.html`
 
 ## Installation (Server)
 1. Broker installieren und starten
 ```bash
-cd webapp/broker
+cd broker
 ./install.sh
 ```
 Optional ohne Service:
@@ -19,11 +19,11 @@ node server.js
 ```
 
 2. Plugin konfigurieren
-- `webapp/plugins/config.json`
+- `plugins/config.json`
 - Setze `broker_url` auf `http://<server-ip>:3077/event`
 
 3. Client bereitstellen
-- Öffne `webapp/modern/index.html` im iPad-Browser.
+- Öffne `modern/index.html` im iPad-Browser.
 - Optional als Homescreen-App hinzufügen.
 
 ## API (modernapi.php)

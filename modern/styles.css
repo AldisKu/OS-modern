@@ -442,8 +442,6 @@ button.ghost {
   font-size: 12px;
 }
 
-.hidden { display: none; }
-
 .modal {
   position: fixed;
   inset: 0;
@@ -452,6 +450,9 @@ button.ghost {
   place-items: center;
   z-index: 20;
 }
+
+.hidden { display: none; }
+.modal.hidden { display: none; }
 
 .modal-content {
   background: #fff;

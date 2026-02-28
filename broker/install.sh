@@ -20,8 +20,8 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/aldis/ordersprinter/webapp/broker
-ExecStart=/usr/bin/node /home/aldis/ordersprinter/webapp/broker/server.js
+WorkingDirectory=/home/aldis/ordersprinter/broker
+ExecStart=/usr/bin/node /home/aldis/ordersprinter/broker/server.js
 Restart=always
 Environment=PORT=3077
 Environment=BROKER_TOKEN=

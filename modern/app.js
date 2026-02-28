@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const BROKER_URL = window.localStorage.getItem("os_broker") || "ws://localhost:3077";
+let brokerUrl = window.localStorage.getItem("os_broker") || "ws://localhost:3077";
 const DB_NAME = "ordersprinter-modern";
 const DB_VERSION = 1;
 
@@ -65,6 +65,7 @@ function setBadge(el, text, ok) {
 async function init() {
   db = await openDb();
   await warmFromCache();
+  await loadServerConfig();
   await checkSession();
   setupHandlers();
   initBroker();
@@ -92,6 +93,18 @@ async function api(cmd, body) {
     body: JSON.stringify(body || {})
   });
   return res.json();
+}
+
+async function loadServerConfig() {
+  try {
+    const data = await api("config", {});
+    if (data.status === "OK" && data.broker_ws) {
+      brokerUrl = data.broker_ws;
+      window.localStorage.setItem("os_broker", brokerUrl);
+    }
+  } catch (_) {
+    // ignore - fallback to localStorage/default
+  }
 }
 
 async function login() {
@@ -541,7 +554,7 @@ async function warmFromCache() {
 
 function initBroker() {
   try {
-    const ws = new WebSocket(BROKER_URL);
+    const ws = new WebSocket(brokerUrl);
     ws.onopen = () => setBadge(els.badgeBroker, "Broker OK", true);
     ws.onclose = () => setBadge(els.badgeBroker, "Broker Offline", false);
     ws.onerror = () => setBadge(els.badgeBroker, "Broker Fehler", false);

@@ -63,6 +63,24 @@ if ($cmd == "session") {
 	return;
 }
 
+if ($cmd == "config") {
+	$serverAddr = $_SERVER['SERVER_ADDR'] ?? '127.0.0.1';
+	$host = $_SERVER['HTTP_HOST'] ?? $serverAddr;
+	$host = preg_replace('/:\\d+$/', '', $host);
+	$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+	$wsScheme = ($scheme === 'https') ? 'wss' : 'ws';
+	$brokerWs = $wsScheme . '://' . $host . ':3077';
+	$brokerHttp = 'http://' . $host . ':3077/event';
+	echo json_encode(array(
+		"status" => "OK",
+		"server_ip" => $serverAddr,
+		"host" => $host,
+		"broker_ws" => $brokerWs,
+		"broker_http" => $brokerHttp
+	));
+	return;
+}
+
 if (!requireLogin()) {
 	return;
 }
