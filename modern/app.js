@@ -145,12 +145,6 @@ async function loadUsers() {
   const data = await api("users", {});
   if (data.users) {
     state.users = data.users;
-    const opts = [`<option value="">Bitte wählen</option>`];
-    data.users.forEach(u => {
-      const label = u.fullname || u.username || u.name || u.user || `User ${u.id}`;
-      opts.push(`<option value="${u.id}">${label}</option>`);
-    });
-    els.loginUser.innerHTML = opts.join("");
   }
 }
 
@@ -168,7 +162,7 @@ async function doLogin() {
   const userid = els.loginUser.value;
   const password = els.loginPass.value;
   if (!userid || !password) {
-    els.loginHint.textContent = "Bitte Benutzer und Passwort";
+    els.loginHint.textContent = "Bitte Benutzer-ID und Passwort";
     return;
   }
   const res = await api("login", { userid, password, modus: 0, time: Math.floor(Date.now() / 1000) });
