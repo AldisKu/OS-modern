@@ -176,7 +176,25 @@ body {
 .order-menu {
   display: flex;
   gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.order-menu-left {
+  display: flex;
+  gap: 8px;
   flex-wrap: wrap;
+}
+
+.order-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.menu-btn-right {
+  margin-left: auto;
 }
 
 .order-info {
@@ -257,18 +275,51 @@ body {
 .order-extra { font-size: 12px; color: var(--muted); margin-left: 10px; }
 .order-separator { border-top: 2px solid #000; margin: 10px 0; }
 
-.paydesk-body {
+.paydesk-layout {
   display: grid;
-  grid-template-columns: 35% 65%;
-  height: 80vh;
+  grid-template-columns: 80% 20%;
+  height: 100vh;
 }
 
-.paydesk-left, .paydesk-right {
-  padding: 10px;
+.paydesk-main {
+  display: grid;
+  grid-template-rows: 20% 80%;
+}
+
+.paydesk-top {
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  padding: 10px 14px;
+}
+
+.paydesk-bottom {
+  padding: 10px 14px;
   overflow: auto;
 }
 
-.paydesk-left { border-right: 1px solid var(--border); background: #fafafa; }
+.paydesk-side {
+  border-left: 1px solid var(--border);
+  background: #fafafa;
+  display: grid;
+  grid-template-rows: 20% 80%;
+}
+
+.paydesk-side-top {
+  padding: 10px;
+  font-weight: 800;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.paydesk-side-actions {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
 
 .paydesk-table {
   padding: 8px;
@@ -285,12 +336,6 @@ body {
   border-radius: 8px;
   background: #fff;
   margin-bottom: 8px;
-}
-
-.paydesk-payments {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
 }
 
 .paydesk-columns {
@@ -314,6 +359,34 @@ body {
   align-items: center;
   margin-bottom: 6px;
   font-weight: 700;
+}
+
+.paydesk-col-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-weight: 600;
+}
+
+.paydesk-side-payments {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.toggle-btn {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 700;
+}
+
+.toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
 }
 
 .modal {

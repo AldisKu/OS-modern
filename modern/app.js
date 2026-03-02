@@ -43,11 +43,11 @@ const els = {
   paydeskReceipt: document.getElementById("paydesk-receipt"),
   paydeskTotal: document.getElementById("paydesk-total"),
   paydeskPayments: document.getElementById("paydesk-payments"),
-  paydeskPay: document.getElementById("paydesk-pay"),
-  paydeskTip: document.getElementById("paydesk-tip"),
   paydeskTableLabel: document.getElementById("paydesk-table-label"),
   paydeskAddAll: document.getElementById("paydesk-add-all"),
   paydeskClear: document.getElementById("paydesk-clear-receipt"),
+  paydeskHost: document.getElementById("paydesk-host"),
+  paydeskPrint: document.getElementById("paydesk-print"),
 
   productModal: document.getElementById("product-modal"),
   modalTitle: document.getElementById("modal-title"),
@@ -90,6 +90,8 @@ const state = {
   paydeskReceipt: [],
   paydeskTable: null,
   paydeskMode: "list",
+  paydeskHost: false,
+  paydeskPrint: false,
   keyboardMode: "num",
   lastSync: "-"
 };
@@ -558,14 +560,17 @@ async function handleMenuAction(action, btn) {
     openOrderForTable({ id: 0, name: "To-Go" });
   } else if (action === "paydesk") {
     const fromOrder = btn && btn.closest("#order-screen");
+    const fromStart = btn && btn.closest("#start-screen");
     if (fromOrder && state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
       if (cart.length > 0) {
         await sendOrder(false, false);
       }
       await openPaydesk(state.selectedTable);
+    } else if (fromStart) {
+      await openPaydeskPicker();
     } else {
-      await openPaydesk();
+      await openPaydeskPicker();
     }
   } else if (action === "menu") {
     await openMenuModal();
@@ -665,12 +670,10 @@ async function openPaydesk(table) {
   state.paydeskReceipt = [];
   if (table) {
     state.paydeskMode = "table";
-    els.paydeskLeft.classList.add("hidden");
     await selectPaydeskTable(table.id, table.name);
   } else {
     state.paydeskMode = "list";
-    els.paydeskLeft.classList.remove("hidden");
-    await loadPaydeskTables();
+    await openPaydeskPicker();
   }
   await loadPayments();
 }
@@ -784,33 +787,91 @@ els.paydeskClear?.addEventListener("click", () => {
 async function loadPayments() {
   const data = await api("payments", {});
   state.payments = data.payments || [];
-  els.paydeskPayments.innerHTML = state.payments.map(p => `<label><input type="radio" name="pay" value="${p.id}" /> ${p.name}</label>`).join("");
+  els.paydeskPayments.innerHTML = state.payments.map(p => `<button class="menu-btn" data-pay="${p.id}">${p.name}</button>`).join("");
+  els.paydeskPayments.querySelectorAll("button").forEach(btn => {
+    btn.onclick = async () => {
+      const paymentId = Number(btn.dataset.pay);
+      await paydeskPay(paymentId);
+    };
+  });
 }
 
-els.paydeskPay?.addEventListener("click", async () => {
+async function paydeskPay(paymentId) {
   if (!state.paydeskTable) return;
   const ids = state.paydeskReceipt.map(i => i.id).join(",");
   if (!ids) return;
-  const payment = document.querySelector("input[name=pay]:checked");
-  if (!payment) return;
-  const tip = els.paydeskTip.value || 0;
   const res = await api("paydesk_pay", {
     ids,
     tableid: state.paydeskTable.id,
-    paymentid: Number(payment.value),
+    paymentid: paymentId,
     declareready: 0,
-    host: 0,
+    host: state.paydeskHost ? 1 : 0,
     reservationid: "",
     guestinfo: "",
     intguestid: "",
-    tip
+    tip: 0
   });
   if (res.status === "OK") {
     await loadPaydeskTables();
     els.paydeskOpen.innerHTML = "";
     els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
+    if (state.paydeskPrint && res.msg && res.msg.billid) {
+      await fetch("php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: `billid=${encodeURIComponent(res.msg.billid)}&useaddrecprinter=1`
+      });
+    }
   }
+}
+
+async function openPaydeskPicker(origin) {
+  const data = await api("refresh_tables", {});
+  if (data.status !== "OK") return;
+  state.rooms = data.rooms;
+  const tables = [];
+  (state.rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
+  if (Number(state.rooms.takeawayunpaidprodcount || 0) > 0) tables.push({ id: 0, name: "To-Go" });
+  if (tables.length === 0) {
+    alert("Keine offenen Tische");
+    return;
+  }
+  els.confirmTitle.textContent = "Tisch wählen";
+  els.confirmBody.innerHTML = "";
+  els.confirmActions.innerHTML = `
+    ${tables.map(t => `<button class="ghost" data-id="${t.id}" data-name="${t.name}">${t.name}</button>`).join("")}
+    <button class="primary" id="paydesk-cancel">Abbrechen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  els.confirmActions.querySelectorAll("button[data-id]").forEach(b => {
+    b.onclick = async () => {
+      const id = Number(b.dataset.id);
+      const name = b.dataset.name;
+      els.confirmModal.classList.add("hidden");
+      await openPaydesk({ id, name });
+    };
+  });
+  els.confirmActions.querySelector("#paydesk-cancel").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+    if (origin !== "paydesk") {
+      show(els.startScreen);
+    }
+  };
+}
+
+els.paydeskTableLabel?.addEventListener("click", async () => {
+  await openPaydeskPicker("paydesk");
+});
+
+els.paydeskHost?.addEventListener("click", () => {
+  state.paydeskHost = !state.paydeskHost;
+  els.paydeskHost.classList.toggle("active", state.paydeskHost);
+});
+
+els.paydeskPrint?.addEventListener("click", () => {
+  state.paydeskPrint = !state.paydeskPrint;
+  els.paydeskPrint.classList.toggle("active", state.paydeskPrint);
 });
 
 async function changeTableFlow() {

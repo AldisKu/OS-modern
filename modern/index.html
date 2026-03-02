@@ -36,13 +36,24 @@
     </section>
 
     <section class="app-screen hidden" id="start-screen">
-      <div class="split-top">
-        <div class="menu-left">
-          <button class="menu-btn" data-action="to-go">To Go</button>
-          <button class="menu-btn" data-action="paydesk">Kasse</button>
-          <button class="menu-btn" data-action="menu">Menu</button>
+      <div class="order-layout">
+        <div class="order-left">
+          <div class="order-top">
+            <div class="order-top-row">
+              <div class="order-menu">
+                <div class="order-menu-left">
+                  <button class="menu-btn" data-action="to-go">To Go</button>
+                  <button class="menu-btn" data-action="paydesk">Kasse</button>
+                </div>
+                <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+              </div>
+            </div>
+          </div>
+          <div class="order-bottom">
+            <div id="tables-grid" class="tables-grid"></div>
+          </div>
         </div>
-        <div class="menu-right" id="status-bar">
+        <div class="order-right" id="start-right">
           <div class="status-item">Kellner: <span id="status-user">-</span></div>
           <div class="status-item">Broker: <span id="status-broker">-</span></div>
           <div class="status-item">Online: <span id="status-online">-</span></div>
@@ -51,23 +62,24 @@
           <div class="status-item">TSE: <span id="status-tse">-</span></div>
         </div>
       </div>
-      <div class="split-bottom">
-        <div id="tables-grid" class="tables-grid"></div>
-      </div>
     </section>
 
     <section class="app-screen hidden" id="order-screen">
       <div class="order-layout">
         <div class="order-left">
           <div class="order-top">
-            <div class="order-title"><span id="order-table-label">Tisch</span></div>
-            <div class="order-menu">
-              <button class="menu-btn" data-action="start">Start</button>
-              <button class="menu-btn" data-action="paydesk">Kasse</button>
-              <button class="menu-btn" data-action="workprint">Arbeitsbon</button>
-              <button class="menu-btn" data-action="send">Bestellen</button>
-              <button class="menu-btn" data-action="changetable">Tisch wechseln</button>
-              <button class="menu-btn" data-action="menu">Menü</button>
+            <div class="order-top-row">
+              <div class="order-title"><span id="order-table-label">Tisch</span></div>
+              <div class="order-menu">
+                <div class="order-menu-left">
+                  <button class="menu-btn" data-action="start">Start</button>
+                  <button class="menu-btn" data-action="paydesk">Kasse</button>
+                  <button class="menu-btn" data-action="workprint">Arbeitsbon</button>
+                  <button class="menu-btn" data-action="send">Bestellen</button>
+                  <button class="menu-btn" data-action="changetable">Tisch wechseln</button>
+                </div>
+                <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+              </div>
             </div>
             <div class="order-info" id="order-info-bar">
               <span>Kellner: <b id="order-user">-</b></span>
@@ -90,47 +102,44 @@
     </section>
 
     <section class="app-screen hidden" id="paydesk-screen">
-      <div class="split-top">
-        <div class="menu-left">
-          <button class="menu-btn" data-action="start">Start</button>
-          <button class="menu-btn" data-action="menu">Menu</button>
-        </div>
-        <div class="menu-right" id="paydesk-status">
-          <div class="status-item">Kellner: <span id="paydesk-user">-</span></div>
-          <div class="status-item">Online: <span id="paydesk-online">-</span></div>
-          <div class="status-item">Sync: <span id="paydesk-sync">-</span></div>
-        </div>
-      </div>
-      <div class="paydesk-body">
-        <div class="paydesk-left" id="paydesk-left">
-          <h2>Offene Tische</h2>
-          <div id="paydesk-tables"></div>
-        </div>
-        <div class="paydesk-right">
-          <h2 id="paydesk-table-label">Tisch</h2>
-          <div class="paydesk-columns">
-            <div class="paydesk-col">
-              <div class="paydesk-col-head">
-                <span>Offen</span>
-                <button class="ghost" id="paydesk-add-all">Alle</button>
+      <div class="paydesk-layout">
+        <div class="paydesk-main">
+          <div class="paydesk-top">
+            <div class="order-menu">
+              <div class="order-menu-left">
+                <button class="menu-btn" data-action="start">Start</button>
               </div>
-              <div id="paydesk-open"></div>
-            </div>
-            <div class="paydesk-col">
-              <div class="paydesk-col-head">
-                <span>Rechnung</span>
-                <button class="ghost" id="paydesk-clear-receipt">Reset</button>
-              </div>
-              <div id="paydesk-receipt"></div>
-              <div class="paydesk-total">Summe: <span id="paydesk-total">0.00</span></div>
             </div>
           </div>
-          <div class="paydesk-payments" id="paydesk-payments"></div>
-          <div class="paydesk-actions">
-            <label>Trinkgeld</label>
-            <input type="number" id="paydesk-tip" value="0" step="0.01" />
-            <button class="primary" id="paydesk-pay">Bezahlen</button>
+          <div class="paydesk-bottom">
+            <div class="paydesk-columns">
+              <div class="paydesk-col">
+                <div class="paydesk-col-head">
+                  <span>Nicht bezahlt</span>
+                  <button class="ghost" id="paydesk-add-all">+alles</button>
+                </div>
+                <div id="paydesk-open"></div>
+              </div>
+              <div class="paydesk-col">
+                <div class="paydesk-col-head">
+                  <span>Bon</span>
+                  <div class="paydesk-col-actions">
+                    <span>Summe: <b id="paydesk-total">0.00</b></span>
+                    <button class="ghost" id="paydesk-clear-receipt">-alles</button>
+                  </div>
+                </div>
+                <div id="paydesk-receipt"></div>
+              </div>
+            </div>
           </div>
+        </div>
+        <div class="paydesk-side">
+          <div class="paydesk-side-top" id="paydesk-table-label">Tisch</div>
+          <div class="paydesk-side-actions">
+            <button class="toggle-btn" id="paydesk-host">Bewirtungsbeleg</button>
+            <button class="toggle-btn" id="paydesk-print">Bon drucken</button>
+          </div>
+          <div class="paydesk-side-payments" id="paydesk-payments"></div>
         </div>
       </div>
     </section>
