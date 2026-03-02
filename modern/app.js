@@ -210,12 +210,30 @@ function childTypes(parentId) {
 }
 
 function renderCategories() {
-  const types = state.typeStack.length === 0 ? topLevelTypes() : childTypes(state.typeStack[state.typeStack.length - 1]);
+  const stack = state.typeStack || [];
   const btns = [];
-  if (state.typeStack.length > 0) {
-    btns.push(`<button class="category-btn" data-cat="start">Start</button>`);
+
+  if (stack.length === 0) {
+    const tops = topLevelTypes();
+    btns.push(...tops.map(t => `<button class="category-btn down" data-cat="${t.id}">${t.name}</button>`));
+  } else {
+    const topId = stack[0];
+    const currentId = stack[stack.length - 1];
+    const top = state.menu?.types?.find(t => Number(t.id) === Number(topId));
+    const current = state.menu?.types?.find(t => Number(t.id) === Number(currentId));
+
+    btns.push(`<button class="category-btn up" data-cat="start">Start</button>`);
+    if (top) {
+      btns.push(`<button class="category-btn up" data-cat="${top.id}">${top.name}</button>`);
+    }
+    if (current) {
+      btns.push(`<button class="category-btn current" data-cat="current">${current.name}</button>`);
+    }
+
+    const children = childTypes(currentId);
+    btns.push(...children.map(t => `<button class="category-btn down" data-cat="${t.id}">${t.name}</button>`));
   }
-  btns.push(...types.map(t => `<button class="category-btn" data-cat="${t.id}">${t.name}</button>`));
+
   els.categoryRow.innerHTML = btns.join("");
   els.categoryRow.querySelectorAll(".category-btn").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -223,9 +241,20 @@ function renderCategories() {
       if (id === "start") {
         state.typeStack = [];
         state.selectedType = topLevelTypes()[0]?.id || null;
+      } else if (id === "current") {
+        return;
       } else {
-        state.typeStack.push(Number(id));
-        state.selectedType = Number(id);
+        const numId = Number(id);
+        if (stack.length === 0) {
+          state.typeStack = [numId];
+          state.selectedType = numId;
+        } else if (Number(stack[0]) === numId) {
+          state.typeStack = [numId];
+          state.selectedType = numId;
+        } else {
+          state.typeStack = [...stack, numId];
+          state.selectedType = numId;
+        }
       }
       renderCategories();
       renderProducts();
@@ -245,7 +274,7 @@ function renderProducts() {
   `).join("");
   els.productsGrid.querySelectorAll(".product-card").forEach(el => {
     const id = Number(el.dataset.id);
-    const prod = state.menu.prods.find(p => p.id === id);
+    const prod = state.menu.prods.find(p => Number(p.id) === id);
     el.addEventListener("click", () => openProductModal(prod));
   });
 }
