@@ -83,6 +83,26 @@ if ($cmd == "session") {
 	return;
 }
 
+if ($cmd == "state") {
+	$pdo = DbUtils::openDbAndReturnPdoStatic();
+	$queue = CommonUtils::fetchSqlAll($pdo, "SELECT MAX(id) as maxid, MAX(ordertime) as maxorder FROM %queue%", null);
+	$bill = CommonUtils::fetchSqlAll($pdo, "SELECT MAX(id) as maxid, MAX(billdate) as maxdate FROM %bill%", null);
+	$records = CommonUtils::fetchSqlAll($pdo, "SELECT MAX(id) as maxid, MAX(date) as maxdate FROM %records%", null);
+	$queueMaxId = $queue[0]["maxid"] ?? 0;
+	$queueMaxOrder = $queue[0]["maxorder"] ?? '';
+	$billMaxId = $bill[0]["maxid"] ?? 0;
+	$billMaxDate = $bill[0]["maxdate"] ?? '';
+	$recMaxId = $records[0]["maxid"] ?? 0;
+	$recMaxDate = $records[0]["maxdate"] ?? '';
+
+	$version = hash("sha256", $queueMaxId . "|" . $queueMaxOrder . "|" . $billMaxId . "|" . $billMaxDate . "|" . $recMaxId . "|" . $recMaxDate);
+	echo json_encode(array(
+		"status" => "OK",
+		"version" => $version
+	));
+	return;
+}
+
 if ($cmd == "config") {
 	$serverAddr = $_SERVER['SERVER_ADDR'] ?? '127.0.0.1';
 	$host = $_SERVER['HTTP_HOST'] ?? $serverAddr;

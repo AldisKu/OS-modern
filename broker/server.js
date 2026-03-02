@@ -3,6 +3,8 @@ import { WebSocketServer } from "ws";
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
 const TOKEN = process.env.BROKER_TOKEN || "";
+const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd=state";
+const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
 const clients = new Set();
 
 function sendAll(msg) {
@@ -67,3 +69,21 @@ wss.on("connection", (ws) => {
 server.listen(PORT, () => {
   console.log(`OrderSprinter broker listening on :${PORT}`);
 });
+
+let lastVersion = null;
+async function pollState() {
+  try {
+    const resp = await fetch(POLL_URL);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.status !== "OK") return;
+    if (lastVersion && lastVersion !== data.version) {
+      sendAll({ type: "UPDATE_REQUIRED", scope: "TABLES", event: "POLL_CHANGE", ts: Date.now() });
+    }
+    lastVersion = data.version;
+  } catch (_) {
+    // ignore polling errors
+  }
+}
+
+setInterval(pollState, POLL_INTERVAL);

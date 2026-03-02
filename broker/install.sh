@@ -26,6 +26,8 @@ ExecStart=${NODE_BIN} ${BROKER_DIR}/server.js
 Restart=always
 Environment=PORT=3077
 Environment=BROKER_TOKEN=
+Environment=POLL_URL=http://127.0.0.1/php/modernapi.php?cmd=state
+Environment=POLL_INTERVAL_MS=4000
 
 [Install]
 WantedBy=multi-user.target
