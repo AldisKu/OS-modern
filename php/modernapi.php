@@ -126,6 +126,18 @@ if (!requireLogin()) {
 }
 
 switch ($cmd) {
+	case "users":
+		$admin = new Admin();
+		$admin->getUserList();
+		return;
+	case "menu_items":
+		$admin = new Admin();
+		$admin->getJsonMenuItemsAndVersion();
+		return;
+	case "payments":
+		$admin = new Admin();
+		$admin->getPayments();
+		return;
 	case "bootstrap":
 		$pdo = DbUtils::openDbAndReturnPdoStatic();
 		$admin = new Admin();
@@ -181,6 +193,42 @@ switch ($cmd) {
 			$queue->handleCommand("addProductListToQueue");
 		});
 		echo json_encode($result);
+		return;
+
+	case "paydesk_items":
+		$queue = new QueueContent();
+		$_GET["tableid"] = $_POST["tableid"] ?? 0;
+		echo json_encode(captureJson(function() use ($queue) {
+			$queue->handleCommand("getJsonProductsOfTableToPay");
+		}));
+		return;
+
+	case "paydesk_pay":
+		$queue = new QueueContent();
+		$pdo = DbUtils::openDbAndReturnPdoStatic();
+		$ids = $_POST["ids"] ?? "";
+		$tableid = $_POST["tableid"] ?? 0;
+		$paymentid = $_POST["paymentid"] ?? 1;
+		$declareready = $_POST["declareready"] ?? 0;
+		$host = $_POST["host"] ?? 0;
+		$reservationid = $_POST["reservationid"] ?? "";
+		$guestinfo = $_POST["guestinfo"] ?? "";
+		$intguestid = $_POST["intguestid"] ?? "";
+		$tip = $_POST["tip"] ?? null;
+		$camefromordering = $_POST["camefromordering"] ?? 0;
+		echo json_encode(captureJson(function() use ($queue, $pdo, $ids, $tableid, $paymentid, $declareready, $host, $reservationid, $guestinfo, $intguestid, $tip, $camefromordering) {
+			$queue->declarePaidCreateBillReturnBillId($pdo,$ids,$tableid,$paymentid,$declareready,$host,QueueContent::$INTERNAL_CALL_NO,$reservationid,$guestinfo,$intguestid,null,null,$tip,$camefromordering);
+		}));
+		return;
+
+	case "change_table":
+		$queue = new QueueContent();
+		$fromTableId = $_POST["fromTableId"] ?? 0;
+		$toTableId = $_POST["toTableId"] ?? 0;
+		$queueids = $_POST["queueids"] ?? "";
+		echo json_encode(captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
+			$queue->changeTable($fromTableId, $toTableId, $queueids);
+		}));
 		return;
 
 	case "table_open_items":
