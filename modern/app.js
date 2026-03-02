@@ -738,7 +738,8 @@ els.paydeskPay?.addEventListener("click", async () => {
   });
   if (res.status === "OK") {
     await loadPaydeskTables();
-    els.paydeskItems.innerHTML = "";
+    els.paydeskOpen.innerHTML = "";
+    els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
   }
 });
