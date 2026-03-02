@@ -8,6 +8,7 @@ require_once ('roomtables.php');
 require_once ('ordersmanagement.php');
 require_once ('bill.php');
 require_once ('printqueue.php');
+require_once ('workreceipts.php');
 require_once ('hotelinterface.php');
 require_once ('rksv.php');
 require_once ('utilities/userrights.php');
