@@ -122,7 +122,7 @@ function bindMenuButtons() {
   document.querySelectorAll(".menu-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const action = btn.dataset.action;
-      handleMenuAction(action);
+      handleMenuAction(action, btn);
     });
   });
 }
@@ -512,11 +512,16 @@ function editCartItem(id) {
   els.confirmActions.querySelector("#close").onclick = () => els.confirmModal.classList.add("hidden");
 }
 
-async function handleMenuAction(action) {
+async function handleMenuAction(action, btn) {
   if (action === "to-go") {
     openOrderForTable({ id: 0, name: "To-Go" });
   } else if (action === "paydesk") {
-    if (state.selectedTable) {
+    const fromOrder = btn && btn.closest("#order-screen");
+    if (fromOrder && state.selectedTable) {
+      const cart = state.cartByTable[state.selectedTable.id] || [];
+      if (cart.length > 0) {
+        await sendOrder(false, false);
+      }
       await openPaydesk(state.selectedTable);
     } else {
       await openPaydesk();
