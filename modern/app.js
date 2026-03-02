@@ -38,12 +38,16 @@ const els = {
   orderItems: document.getElementById("order-items"),
 
   paydeskTables: document.getElementById("paydesk-tables"),
-  paydeskItems: document.getElementById("paydesk-items"),
+  paydeskLeft: document.getElementById("paydesk-left"),
+  paydeskOpen: document.getElementById("paydesk-open"),
+  paydeskReceipt: document.getElementById("paydesk-receipt"),
   paydeskTotal: document.getElementById("paydesk-total"),
   paydeskPayments: document.getElementById("paydesk-payments"),
   paydeskPay: document.getElementById("paydesk-pay"),
   paydeskTip: document.getElementById("paydesk-tip"),
   paydeskTableLabel: document.getElementById("paydesk-table-label"),
+  paydeskAddAll: document.getElementById("paydesk-add-all"),
+  paydeskClear: document.getElementById("paydesk-clear-receipt"),
 
   productModal: document.getElementById("product-modal"),
   modalTitle: document.getElementById("modal-title"),
@@ -82,7 +86,10 @@ const state = {
   orderExisting: [],
   payments: [],
   paydeskItems: [],
+  paydeskOpen: [],
+  paydeskReceipt: [],
   paydeskTable: null,
+  paydeskMode: "list",
   keyboardMode: "num",
   lastSync: "-"
 };
@@ -275,7 +282,17 @@ function renderProducts() {
   els.productsGrid.querySelectorAll(".product-card").forEach(el => {
     const id = Number(el.dataset.id);
     const prod = state.menu.prods.find(p => Number(p.id) === id);
-    el.addEventListener("click", () => openProductModal(prod));
+    el.addEventListener("click", () => {
+      if (!prod) {
+        alert("Produkt nicht gefunden");
+        return;
+      }
+      if (!prod.extras || prod.extras.length === 0) {
+        quickAddProduct(prod);
+      } else {
+        openProductModal(prod);
+      }
+    });
   });
 }
 
@@ -353,7 +370,7 @@ function renderOrderItems() {
   existing.forEach(p => {
     const extras = (p.extras || []).map(e => `<div class="order-extra">+ ${e.name}</div>`).join("");
     const qty = Number(p.unitamount || 1);
-    parts.push(`<div class="order-item"><b>${p.longname}</b> x${qty}${extras}</div>`);
+    parts.push(`<div class="order-item existing" data-queue="${p.id}"><b>${p.longname}</b> x${qty}${extras}</div>`);
   });
   els.orderItems.innerHTML = parts.join("");
   els.orderItems.querySelectorAll(".order-item.new").forEach(el => {
@@ -362,13 +379,17 @@ function renderOrderItems() {
       editCartItem(id);
     });
   });
+  els.orderItems.querySelectorAll(".order-item.existing").forEach(el => {
+    el.addEventListener("click", () => {
+      const id = Number(el.dataset.queue);
+      const item = (state.orderExisting || []).find(p => Number(p.id) === id);
+      if (item) showExistingItemActions(item);
+    });
+  });
 }
 
 function openProductModal(prod) {
-  if (!prod) {
-    alert("Produkt nicht gefunden");
-    return;
-  }
+  if (!prod) return;
   els.modalTitle.textContent = prod.longname || prod.name;
   els.modalQty.value = 1;
   els.modalNote.value = "";
@@ -379,6 +400,25 @@ function openProductModal(prod) {
   els.modalExtras.innerHTML = extras || "Keine Extras";
   els.productModal.classList.remove("hidden");
   state.modalProduct = prod;
+}
+
+function quickAddProduct(prod) {
+  const item = {
+    _id: Date.now(),
+    prodid: prod.id,
+    name: prod.longname || prod.name,
+    price: Number(prod.price || 0),
+    unit: Number(prod.unit || 0),
+    unitamount: 1,
+    togo: state.selectedTable?.id === 0 ? 1 : 0,
+    option: "",
+    extras: []
+  };
+  const tableId = state.selectedTable.id;
+  state.cartByTable[tableId] = state.cartByTable[tableId] || [];
+  state.cartByTable[tableId].unshift(item);
+  saveCart(tableId);
+  renderOrderItems();
 }
 
 function addProductToCart() {
@@ -408,6 +448,41 @@ function addProductToCart() {
   saveCart(state.selectedTable.id);
   els.productModal.classList.add("hidden");
   renderOrderItems();
+}
+
+function showExistingItemActions(item) {
+  els.confirmTitle.textContent = "Bestelltes Produkt";
+  els.confirmBody.innerHTML = `<div><b>${item.longname}</b></div>`;
+  els.confirmActions.innerHTML = `
+    <button class="ghost" id="reorder">Nachbestellen (1x)</button>
+    <button class="ghost" id="cancel">Abbrechen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  els.confirmActions.querySelector("#cancel").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+  };
+  els.confirmActions.querySelector("#reorder").onclick = () => {
+    const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
+    if (prod) {
+      const add = {
+        _id: Date.now(),
+        prodid: prod.id,
+        name: prod.longname || prod.name,
+        price: Number(prod.price || 0),
+        unit: Number(prod.unit || 0),
+        unitamount: 1,
+        togo: item.togo ? 1 : 0,
+        option: item.orderoption || "",
+        extras: (item.extras || []).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }))
+      };
+      const tableId = state.selectedTable.id;
+      state.cartByTable[tableId] = state.cartByTable[tableId] || [];
+      state.cartByTable[tableId].unshift(add);
+      saveCart(tableId);
+      renderOrderItems();
+    }
+    els.confirmModal.classList.add("hidden");
+  };
 }
 
 function editCartItem(id) {
@@ -441,7 +516,11 @@ async function handleMenuAction(action) {
   if (action === "to-go") {
     openOrderForTable({ id: 0, name: "To-Go" });
   } else if (action === "paydesk") {
-    await openPaydesk();
+    if (state.selectedTable) {
+      await openPaydesk(state.selectedTable);
+    } else {
+      await openPaydesk();
+    }
   } else if (action === "menu") {
     await openMenuModal();
   } else if (action === "start") {
@@ -452,6 +531,9 @@ async function handleMenuAction(action) {
         return;
       }
     }
+    state.typeStack = [];
+    state.selectedType = topLevelTypes()[0]?.id || null;
+    renderCategories();
     show(els.startScreen);
   } else if (action === "send") {
     await sendOrder(false, true);
@@ -505,6 +587,9 @@ function showUnsavedDialog() {
     state.cartByTable[state.selectedTable.id] = [];
     saveCart(state.selectedTable.id);
     els.confirmModal.classList.add("hidden");
+    state.typeStack = [];
+    state.selectedType = topLevelTypes()[0]?.id || null;
+    renderCategories();
     show(els.startScreen);
   };
   els.confirmActions.querySelector("#send").onclick = async () => {
@@ -529,9 +614,18 @@ function showUnsavedDialog() {
   };
 }
 
-async function openPaydesk() {
+async function openPaydesk(table) {
   show(els.paydeskScreen);
-  await loadPaydeskTables();
+  state.paydeskReceipt = [];
+  if (table) {
+    state.paydeskMode = "table";
+    els.paydeskLeft.classList.add("hidden");
+    await selectPaydeskTable(table.id, table.name);
+  } else {
+    state.paydeskMode = "list";
+    els.paydeskLeft.classList.remove("hidden");
+    await loadPaydeskTables();
+  }
   await loadPayments();
 }
 
@@ -553,22 +647,65 @@ async function selectPaydeskTable(id, name) {
   els.paydeskTableLabel.textContent = name;
   const data = await api("paydesk_items", { tableid: id });
   if (data.status === "OK") {
-    state.paydeskItems = data.msg || [];
+    state.paydeskOpen = data.msg || [];
+    state.paydeskReceipt = [];
     renderPaydeskItems();
   }
 }
 
 function renderPaydeskItems() {
-  const items = state.paydeskItems || [];
+  const open = state.paydeskOpen || [];
+  const receipt = state.paydeskReceipt || [];
   let total = 0;
-  els.paydeskItems.innerHTML = items.map(i => {
+  els.paydeskOpen.innerHTML = open.map(i => {
+    const qty = Number(i.unitamount || 1);
+    const line = Number(i.price || 0) * qty;
+    return `<div class="paydesk-item open" data-id="${i.id}">${i.longname} x${qty} - ${line.toFixed(2)}</div>`;
+  }).join("");
+  els.paydeskReceipt.innerHTML = receipt.map(i => {
     const qty = Number(i.unitamount || 1);
     const line = Number(i.price || 0) * qty;
     total += line;
-    return `<div class="paydesk-item">${i.longname} x${qty} - ${line.toFixed(2)}</div>`;
+    return `<div class="paydesk-item receipt" data-id="${i.id}">${i.longname} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
   els.paydeskTotal.textContent = total.toFixed(2);
+  els.paydeskOpen.querySelectorAll(".paydesk-item.open").forEach(el => {
+    el.onclick = () => movePaydeskItem(el.dataset.id, "to-receipt");
+  });
+  els.paydeskReceipt.querySelectorAll(".paydesk-item.receipt").forEach(el => {
+    el.onclick = () => movePaydeskItem(el.dataset.id, "to-open");
+  });
 }
+
+function movePaydeskItem(id, direction) {
+  const itemId = Number(id);
+  if (direction === "to-receipt") {
+    const idx = state.paydeskOpen.findIndex(i => Number(i.id) === itemId);
+    if (idx >= 0) {
+      state.paydeskReceipt.push(state.paydeskOpen[idx]);
+      state.paydeskOpen.splice(idx, 1);
+    }
+  } else {
+    const idx = state.paydeskReceipt.findIndex(i => Number(i.id) === itemId);
+    if (idx >= 0) {
+      state.paydeskOpen.push(state.paydeskReceipt[idx]);
+      state.paydeskReceipt.splice(idx, 1);
+    }
+  }
+  renderPaydeskItems();
+}
+
+els.paydeskAddAll?.addEventListener("click", () => {
+  state.paydeskReceipt = state.paydeskReceipt.concat(state.paydeskOpen);
+  state.paydeskOpen = [];
+  renderPaydeskItems();
+});
+
+els.paydeskClear?.addEventListener("click", () => {
+  state.paydeskOpen = state.paydeskOpen.concat(state.paydeskReceipt);
+  state.paydeskReceipt = [];
+  renderPaydeskItems();
+});
 
 async function loadPayments() {
   const data = await api("payments", {});
@@ -578,7 +715,8 @@ async function loadPayments() {
 
 els.paydeskPay?.addEventListener("click", async () => {
   if (!state.paydeskTable) return;
-  const ids = state.paydeskItems.map(i => i.id).join(",");
+  const ids = state.paydeskReceipt.map(i => i.id).join(",");
+  if (!ids) return;
   const payment = document.querySelector("input[name=pay]:checked");
   if (!payment) return;
   const tip = els.paydeskTip.value || 0;

@@ -293,6 +293,29 @@ body {
   margin-top: 8px;
 }
 
+.paydesk-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.paydesk-col {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafafa;
+  min-height: 200px;
+}
+
+.paydesk-col-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
 .modal {
   position: fixed;
   inset: 0;

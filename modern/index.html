@@ -102,14 +102,29 @@
         </div>
       </div>
       <div class="paydesk-body">
-        <div class="paydesk-left">
+        <div class="paydesk-left" id="paydesk-left">
           <h2>Offene Tische</h2>
           <div id="paydesk-tables"></div>
         </div>
         <div class="paydesk-right">
           <h2 id="paydesk-table-label">Tisch</h2>
-          <div id="paydesk-items"></div>
-          <div class="paydesk-total">Summe: <span id="paydesk-total">0.00</span></div>
+          <div class="paydesk-columns">
+            <div class="paydesk-col">
+              <div class="paydesk-col-head">
+                <span>Offen</span>
+                <button class="ghost" id="paydesk-add-all">Alle</button>
+              </div>
+              <div id="paydesk-open"></div>
+            </div>
+            <div class="paydesk-col">
+              <div class="paydesk-col-head">
+                <span>Rechnung</span>
+                <button class="ghost" id="paydesk-clear-receipt">Reset</button>
+              </div>
+              <div id="paydesk-receipt"></div>
+              <div class="paydesk-total">Summe: <span id="paydesk-total">0.00</span></div>
+            </div>
+          </div>
           <div class="paydesk-payments" id="paydesk-payments"></div>
           <div class="paydesk-actions">
             <label>Trinkgeld</label>
