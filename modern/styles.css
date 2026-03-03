@@ -275,50 +275,82 @@ body {
 .order-extra { font-size: 12px; color: var(--muted); margin-left: 10px; }
 .order-separator { border-top: 2px solid #000; margin: 10px 0; }
 
-.paydesk-layout {
+.paydesk-grid {
   display: grid;
-  grid-template-columns: 80% 20%;
+  grid-template-columns: 20% 20% 20% 20% 20%;
+  grid-template-rows: 20% 20% 20% 20% 20%;
   height: 100vh;
 }
 
-.paydesk-main {
-  display: grid;
-  grid-template-rows: 20% 80%;
-}
-
-.paydesk-top {
+.paydesk-ol {
+  grid-column: 1 / span 4;
+  grid-row: 1 / span 1;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
   padding: 10px 14px;
-}
-
-.paydesk-bottom {
-  padding: 10px 14px;
-  overflow: auto;
-}
-
-.paydesk-side {
-  border-left: 1px solid var(--border);
-  background: #fafafa;
   display: grid;
-  grid-template-rows: 20% 80%;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto;
+  gap: 8px;
 }
 
-.paydesk-side-top {
-  padding: 10px;
-  font-weight: 800;
+.paydesk-or {
+  grid-column: 5 / span 1;
+  grid-row: 1 / span 1;
+  border-left: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+  background: var(--panel);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
 }
 
-.paydesk-side-actions {
+.paydesk-url {
+  grid-column: 1 / span 2;
+  grid-row: 2 / span 4;
+  padding: 10px;
+  overflow: auto;
+}
+
+.paydesk-urr {
+  grid-column: 3 / span 2;
+  grid-row: 2 / span 4;
+  padding: 10px;
+  overflow: auto;
+  border-left: 1px solid var(--border);
+}
+
+.paydesk-ur {
+  grid-column: 5 / span 1;
+  grid-row: 2 / span 4;
+  border-left: 1px solid var(--border);
+  background: #fafafa;
   padding: 10px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   align-content: start;
+}
+
+.paydesk-header-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.paydesk-header-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.paydesk-title {
+  font-weight: 800;
+  margin-right: 8px;
+}
+
+.paydesk-table-name {
+  grid-column: 1 / -1;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .paydesk-table {
@@ -369,10 +401,16 @@ body {
 }
 
 .paydesk-side-payments {
-  padding: 10px;
   display: grid;
   gap: 8px;
   align-content: start;
+}
+
+.paydesk-payment-block {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  display: grid;
+  gap: 6px;
 }
 
 .toggle-btn {

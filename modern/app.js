@@ -44,10 +44,11 @@ const els = {
   paydeskTotal: document.getElementById("paydesk-total"),
   paydeskPayments: document.getElementById("paydesk-payments"),
   paydeskTableLabel: document.getElementById("paydesk-table-label"),
+  paydeskTableName: document.getElementById("paydesk-table-name"),
+  paydeskOpenTitle: document.getElementById("paydesk-open-title"),
   paydeskAddAll: document.getElementById("paydesk-add-all"),
   paydeskClear: document.getElementById("paydesk-clear-receipt"),
   paydeskHost: document.getElementById("paydesk-host"),
-  paydeskPrint: document.getElementById("paydesk-print"),
 
   productModal: document.getElementById("product-modal"),
   modalTitle: document.getElementById("modal-title"),
@@ -574,6 +575,10 @@ async function handleMenuAction(action, btn) {
     }
   } else if (action === "menu") {
     await openMenuModal();
+  } else if (action === "order") {
+    if (state.paydeskTable) {
+      openOrderForTable({ id: state.paydeskTable.id, name: state.paydeskTable.name });
+    }
   } else if (action === "start") {
     if (state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
@@ -694,6 +699,8 @@ async function loadPaydeskTables() {
 async function selectPaydeskTable(id, name) {
   state.paydeskTable = { id, name };
   els.paydeskTableLabel.textContent = name;
+  if (els.paydeskTableName) els.paydeskTableName.textContent = name;
+  if (els.paydeskOpenTitle) els.paydeskOpenTitle.textContent = name;
   const data = await api("paydesk_items", { tableid: id });
   if (data.status === "OK") {
     state.paydeskOpen = data.msg || [];
@@ -708,6 +715,7 @@ function renderPaydeskItems() {
   const openGroups = groupPaydeskItems(open);
   const receiptGroups = groupPaydeskItems(receipt);
   let total = 0;
+  const hasReceipt = receipt.length > 0;
   els.paydeskOpen.innerHTML = openGroups.map(g => {
     const qty = g.count;
     const line = Number(g.item.price || 0) * qty;
@@ -720,6 +728,9 @@ function renderPaydeskItems() {
     return `<div class="paydesk-item receipt" data-key="${g.key}">${g.item.longname} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
   els.paydeskTotal.textContent = total.toFixed(2);
+  els.paydeskPayments.querySelectorAll("button").forEach(btn => {
+    btn.disabled = !hasReceipt;
+  });
   els.paydeskOpen.querySelectorAll(".paydesk-item.open").forEach(el => {
     el.onclick = () => movePaydeskItemByKey(el.dataset.key, "to-receipt");
   });
@@ -787,16 +798,22 @@ els.paydeskClear?.addEventListener("click", () => {
 async function loadPayments() {
   const data = await api("payments", {});
   state.payments = data.payments || [];
-  els.paydeskPayments.innerHTML = state.payments.map(p => `<button class="menu-btn" data-pay="${p.id}">${p.name}</button>`).join("");
+  els.paydeskPayments.innerHTML = state.payments.map(p => `
+    <div class="paydesk-payment-block">
+      <button class="menu-btn" data-pay="${p.id}" data-print="0">${p.name}</button>
+      <button class="ghost" data-pay="${p.id}" data-print="1">Bondruck</button>
+    </div>
+  `).join("");
   els.paydeskPayments.querySelectorAll("button").forEach(btn => {
     btn.onclick = async () => {
       const paymentId = Number(btn.dataset.pay);
-      await paydeskPay(paymentId);
+      const print = Number(btn.dataset.print || 0) === 1;
+      await paydeskPay(paymentId, print);
     };
   });
 }
 
-async function paydeskPay(paymentId) {
+async function paydeskPay(paymentId, print) {
   if (!state.paydeskTable) return;
   const ids = state.paydeskReceipt.map(i => i.id).join(",");
   if (!ids) return;
@@ -816,12 +833,15 @@ async function paydeskPay(paymentId) {
     els.paydeskOpen.innerHTML = "";
     els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
-    if (state.paydeskPrint && res.msg && res.msg.billid) {
+    if (print && res.msg && res.msg.billid) {
       await fetch("php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `billid=${encodeURIComponent(res.msg.billid)}&useaddrecprinter=1`
       });
+    }
+    if ((state.paydeskOpen || []).length === 0) {
+      show(els.startScreen);
     }
   }
 }
@@ -863,15 +883,13 @@ async function openPaydeskPicker(origin) {
 els.paydeskTableLabel?.addEventListener("click", async () => {
   await openPaydeskPicker("paydesk");
 });
+els.paydeskTableName?.addEventListener("click", async () => {
+  await openPaydeskPicker("paydesk");
+});
 
 els.paydeskHost?.addEventListener("click", () => {
   state.paydeskHost = !state.paydeskHost;
   els.paydeskHost.classList.toggle("active", state.paydeskHost);
-});
-
-els.paydeskPrint?.addEventListener("click", () => {
-  state.paydeskPrint = !state.paydeskPrint;
-  els.paydeskPrint.classList.toggle("active", state.paydeskPrint);
 });
 
 async function changeTableFlow() {

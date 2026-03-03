@@ -102,43 +102,40 @@
     </section>
 
     <section class="app-screen hidden" id="paydesk-screen">
-      <div class="paydesk-layout">
-        <div class="paydesk-main">
-          <div class="paydesk-top">
-            <div class="order-menu">
-              <div class="order-menu-left">
-                <button class="menu-btn" data-action="start">Start</button>
-              </div>
-            </div>
+      <div class="paydesk-grid">
+        <div class="paydesk-ol">
+          <div class="paydesk-header-left">
+            <span class="paydesk-title">Kasse</span>
+            <button class="menu-btn" data-action="start">Start</button>
+            <button class="menu-btn" data-action="order">Bestellung</button>
           </div>
-          <div class="paydesk-bottom">
-            <div class="paydesk-columns">
-              <div class="paydesk-col">
-                <div class="paydesk-col-head">
-                  <span>Nicht bezahlt</span>
-                  <button class="ghost" id="paydesk-add-all">+alles</button>
-                </div>
-                <div id="paydesk-open"></div>
-              </div>
-              <div class="paydesk-col">
-                <div class="paydesk-col-head">
-                  <span>Bon</span>
-                  <div class="paydesk-col-actions">
-                    <span>Summe: <b id="paydesk-total">0.00</b></span>
-                    <button class="ghost" id="paydesk-clear-receipt">-alles</button>
-                  </div>
-                </div>
-                <div id="paydesk-receipt"></div>
-              </div>
-            </div>
+          <div class="paydesk-header-right">
+            <button class="menu-btn" data-action="menu">Menü</button>
           </div>
+          <div class="paydesk-table-name" id="paydesk-table-name">Tisch</div>
         </div>
-        <div class="paydesk-side">
-          <div class="paydesk-side-top" id="paydesk-table-label">Tisch</div>
-          <div class="paydesk-side-actions">
-            <button class="toggle-btn" id="paydesk-host">Bewirtungsbeleg</button>
-            <button class="toggle-btn" id="paydesk-print">Bon drucken</button>
+        <div class="paydesk-or">
+          <button class="menu-btn" id="paydesk-table-label">Tisch</button>
+        </div>
+        <div class="paydesk-url">
+          <div class="paydesk-col-head">
+            <span id="paydesk-open-title">Tisch</span>
+            <button class="ghost" id="paydesk-add-all">+alles</button>
           </div>
+          <div id="paydesk-open"></div>
+        </div>
+        <div class="paydesk-urr">
+          <div class="paydesk-col-head">
+            <span>Bon</span>
+            <div class="paydesk-col-actions">
+              <span>Summe: <b id="paydesk-total">0.00</b></span>
+              <button class="ghost" id="paydesk-clear-receipt">-alles</button>
+            </div>
+          </div>
+          <div id="paydesk-receipt"></div>
+        </div>
+        <div class="paydesk-ur">
+          <button class="toggle-btn" id="paydesk-host">Bewirtungsbeleg</button>
           <div class="paydesk-side-payments" id="paydesk-payments"></div>
         </div>
       </div>
