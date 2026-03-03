@@ -201,12 +201,12 @@ async function bootstrap() {
 
 function updateStatus() {
   const name = state.user?.name || "-";
-  [els.statusUser, els.orderUser, els.paydeskUser].forEach(el => el.textContent = name);
-  [els.statusBroker, els.orderBroker].forEach(el => el.textContent = "poll" );
-  [els.statusOnline, els.orderOnline, els.paydeskOnline].forEach(el => el.textContent = "OK");
-  [els.statusSync, els.orderSync, els.paydeskSync].forEach(el => el.textContent = state.lastSync);
-  [els.statusPrinter, els.orderPrinter].forEach(el => el.textContent = "-" );
-  [els.statusTse, els.orderTse].forEach(el => el.textContent = "-" );
+  [els.statusUser, els.orderUser, els.paydeskUser].filter(Boolean).forEach(el => el.textContent = name);
+  [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "poll" );
+  [els.statusOnline, els.orderOnline, els.paydeskOnline].filter(Boolean).forEach(el => el.textContent = "OK");
+  [els.statusSync, els.orderSync, els.paydeskSync].filter(Boolean).forEach(el => el.textContent = state.lastSync);
+  [els.statusPrinter, els.orderPrinter].filter(Boolean).forEach(el => el.textContent = "-" );
+  [els.statusTse, els.orderTse].filter(Boolean).forEach(el => el.textContent = "-" );
 }
 
 function topLevelTypes() {
