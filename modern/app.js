@@ -835,7 +835,7 @@ async function paydeskPay(paymentId, print) {
     els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
     if (print && res.msg && res.msg.billid) {
-      await fetch("php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
+      await fetch("../php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: `billid=${encodeURIComponent(res.msg.billid)}&useaddrecprinter=1`
