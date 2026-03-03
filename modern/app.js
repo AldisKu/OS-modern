@@ -690,10 +690,12 @@ async function loadPaydeskTables() {
   const tables = [];
   (state.rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
   if (Number(state.rooms.takeawayunpaidprodcount || 0) > 0) tables.push({ id: 0, name: "To-Go" });
-  els.paydeskTables.innerHTML = tables.map(t => `<div class="paydesk-table" data-id="${t.id}">${t.name}</div>`).join("");
-  els.paydeskTables.querySelectorAll(".paydesk-table").forEach(el => {
-    el.onclick = () => selectPaydeskTable(Number(el.dataset.id), el.textContent);
-  });
+  if (els.paydeskTables) {
+    els.paydeskTables.innerHTML = tables.map(t => `<div class="paydesk-table" data-id="${t.id}">${t.name}</div>`).join("");
+    els.paydeskTables.querySelectorAll(".paydesk-table").forEach(el => {
+      el.onclick = () => selectPaydeskTable(Number(el.dataset.id), el.textContent);
+    });
+  }
 }
 
 async function selectPaydeskTable(id, name) {
