@@ -831,8 +831,7 @@ async function paydeskPay(paymentId, print) {
     tip: 0
   });
   if (res.status === "OK") {
-    await loadPaydeskTables();
-    els.paydeskOpen.innerHTML = "";
+    await selectPaydeskTable(state.paydeskTable.id, state.paydeskTable.name);
     els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
     if (print && res.msg && res.msg.billid) {
