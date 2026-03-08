@@ -166,6 +166,16 @@ if ($cmd == "config") {
 	return;
 }
 
+if ($cmd == "printer_status") {
+	$admin = new Admin();
+	$response = captureJson(function() use ($admin) {
+		$admin->isPrinterServerActive();
+	});
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
+	return;
+}
+
 if (!requireLogin()) {
 	return;
 }
@@ -295,6 +305,9 @@ switch ($cmd) {
 		$queue = new QueueContent();
 		$fromTableId = $_POST["fromTableId"] ?? 0;
 		$toTableId = $_POST["toTableId"] ?? 0;
+		if ($toTableId === 0 || $toTableId === "0") {
+			$toTableId = null;
+		}
 		$queueids = $_POST["queueids"] ?? "";
 		$response = captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
 			$queue->changeTable($fromTableId, $toTableId, $queueids);

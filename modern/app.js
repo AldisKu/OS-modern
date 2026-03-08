@@ -95,6 +95,8 @@ const state = {
   paydeskHost: false,
   paydeskPrint: false,
   maxTableLabelWidth: 0,
+  printerStatus: undefined,
+  tseStatus: undefined,
   keyboardMode: "num",
   lastSync: "-"
 };
@@ -102,6 +104,12 @@ const state = {
 function show(screen) {
   [els.loginScreen, els.startScreen, els.orderScreen, els.paydeskScreen].forEach(s => s.classList.add("hidden"));
   screen.classList.remove("hidden");
+  if (screen !== els.startScreen && els.startMessageBody) {
+    els.startMessageBody.textContent = "";
+  }
+  if (screen === els.startScreen && els.startMessageBody && els.startMessageBody.textContent.trim() === "") {
+    els.startMessageBody.textContent = "Bereit.";
+  }
 }
 
 async function api(cmd, body) {
@@ -120,7 +128,33 @@ async function init() {
   await loadServerConfig();
   await loadUsers();
   await checkSession();
+  initBroker();
   startPolling();
+}
+
+function initBroker() {
+  if (!brokerUrl) return;
+  try {
+    const ws = new WebSocket(brokerUrl);
+    ws.onopen = () => {
+      [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OK");
+    };
+    ws.onclose = () => {
+      [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+    };
+    ws.onerror = () => {
+      [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+    };
+    ws.onmessage = (evt) => {
+      let payload = null;
+      try { payload = JSON.parse(evt.data); } catch (_) { return; }
+      if (payload && payload.type === "STATUS_UPDATE" && payload.status) {
+        if (payload.status.printer !== undefined) state.printerStatus = payload.status.printer;
+        if (payload.status.tse !== undefined) state.tseStatus = payload.status.tse;
+        updateStatus();
+      }
+    };
+  } catch (_) {}
 }
 
 function bindMenuButtons() {
@@ -204,11 +238,17 @@ async function bootstrap() {
 function updateStatus() {
   const name = state.user?.name || "-";
   [els.statusUser, els.orderUser, els.paydeskUser].filter(Boolean).forEach(el => el.textContent = name);
-  [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "poll" );
+  [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "broker" );
   [els.statusOnline, els.orderOnline, els.paydeskOnline].filter(Boolean).forEach(el => el.textContent = "OK");
   [els.statusSync, els.orderSync, els.paydeskSync].filter(Boolean).forEach(el => el.textContent = state.lastSync);
-  [els.statusPrinter, els.orderPrinter].filter(Boolean).forEach(el => el.textContent = "-" );
-  [els.statusTse, els.orderTse].filter(Boolean).forEach(el => el.textContent = "-" );
+  if (state.printerStatus !== undefined) {
+    const txt = state.printerStatus === 0 ? "OK" : "DOWN";
+    [els.statusPrinter, els.orderPrinter].filter(Boolean).forEach(el => el.textContent = txt);
+  }
+  if (state.tseStatus !== undefined) {
+    const txt = state.tseStatus ? "OK" : "DOWN";
+    [els.statusTse, els.orderTse].filter(Boolean).forEach(el => el.textContent = txt);
+  }
 }
 
 function topLevelTypes() {
@@ -561,7 +601,7 @@ async function handleMenuAction(action, btn) {
     if (fromOrder && state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
       if (cart.length > 0) {
-        await sendOrder(false, false);
+        await sendOrder(true, false);
       }
       await openPaydesk(state.selectedTable);
     } else if (fromStart) {
@@ -907,21 +947,88 @@ async function changeTableFlow() {
   if (!table) return;
   const data = await api("table_open_items", { tableid: table.id });
   if (data.status !== "OK") return;
-  const items = data.msg || [];
-  const ids = items.map(i => i.queueid).join(",");
+  const existing = data.msg || [];
+  const cart = state.cartByTable[table.id] || [];
+  const tables = (state.rooms?.roomstables || []).flatMap(r => r.tables).map(t => ({ id: t.id, name: t.name }));
+  tables.push({ id: 0, name: "To-Go" });
+
+  let selectedTableId = null;
+  const items = [];
+  existing.forEach((it, idx) => {
+    items.push({ type: "existing", id: `e_${idx}`, queueid: it.queueid, label: it.productname, checked: true });
+  });
+  cart.forEach((it, idx) => {
+    items.push({ type: "cart", id: `c_${idx}`, cartId: it._id, label: it.name, checked: true });
+  });
+
   els.confirmTitle.textContent = "Tisch wechseln";
-  const list = (state.rooms?.roomstables || []).flatMap(r => r.tables).map(t => `<button class="ghost" data-id="${t.id}">${t.name}</button>`).join("");
-  els.confirmBody.innerHTML = "Ziel‑Tisch wählen";
-  els.confirmActions.innerHTML = list;
+  els.confirmBody.innerHTML = `
+    <div class="change-table-area">
+      <div class="change-table-buttons">
+        ${tables.map(t => `<button class="ghost change-table-btn" data-id="${t.id}">${t.name}</button>`).join("")}
+      </div>
+      <div class="change-table-actions">
+        <button class="primary" id="change-table-do">Wechsel</button>
+        <button class="ghost" id="change-table-cancel">Abbruch</button>
+      </div>
+      <div class="change-table-items">
+        ${items.map(it => `<label class="change-item ${it.type}"><input type="checkbox" data-id="${it.id}" checked /> ${it.label}</label>`).join("")}
+      </div>
+    </div>
+  `;
+  els.confirmActions.innerHTML = "";
   els.confirmModal.classList.remove("hidden");
-  els.confirmActions.querySelectorAll("button").forEach(b => {
-    b.onclick = async () => {
-      const to = Number(b.dataset.id);
-      await api("change_table", { fromTableId: table.id, toTableId: to, queueids: ids });
-      els.confirmModal.classList.add("hidden");
-      openOrderForTable({ id: to, name: b.textContent });
+
+  els.confirmBody.querySelectorAll(".change-table-btn").forEach(b => {
+    b.onclick = () => {
+      selectedTableId = Number(b.dataset.id);
+      els.confirmBody.querySelectorAll(".change-table-btn").forEach(x => x.classList.remove("active"));
+      b.classList.add("active");
     };
   });
+
+  els.confirmBody.querySelector("#change-table-cancel").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+  };
+
+  els.confirmBody.querySelector("#change-table-do").onclick = async () => {
+    if (selectedTableId === null) {
+      alert("Bitte Tisch auswählen");
+      return;
+    }
+    const selectedIds = Array.from(els.confirmBody.querySelectorAll("input[type=checkbox]:checked")).map(i => i.dataset.id);
+    if (selectedIds.length === 0) {
+      alert("Bitte Produkte auswählen");
+      return;
+    }
+    const queueids = [];
+    selectedIds.forEach(id => {
+      const it = items.find(x => x.id === id);
+      if (!it) return;
+      if (it.type === "existing") {
+        queueids.push(it.queueid);
+      }
+      if (it.type === "cart") {
+        const idx = cart.findIndex(c => c._id === it.cartId);
+        if (idx >= 0) {
+          const [moved] = cart.splice(idx, 1);
+          moved.togo = selectedTableId === 0 ? 1 : 0;
+          const target = state.cartByTable[selectedTableId] || [];
+          target.push(moved);
+          state.cartByTable[selectedTableId] = target;
+        }
+      }
+    });
+    saveCart(table.id);
+    if (selectedTableId !== 0 && queueids.length > 0) {
+      await api("change_table", { fromTableId: table.id, toTableId: selectedTableId, queueids: queueids.join(",") });
+    }
+    if (selectedTableId === 0 && queueids.length > 0) {
+      await api("change_table", { fromTableId: table.id, toTableId: 0, queueids: queueids.join(",") });
+    }
+    els.confirmModal.classList.add("hidden");
+    openOrderForTable({ id: selectedTableId, name: tables.find(t => t.id === selectedTableId)?.name || "To-Go" });
+  };
 }
 
 async function openMenuModal() {
@@ -933,8 +1040,11 @@ async function openMenuModal() {
     });
     els.menuItems.innerHTML = items.map(m => {
       const link = normalizeMenuLink(m.link || "");
-      return `<div><a href="${link}" target="_blank">${m.name}</a></div>`;
+      return `<button class="menu-link-btn" data-link="${link}">${m.name}</button>`;
     }).join("");
+    els.menuItems.querySelectorAll("button").forEach(b => {
+      b.onclick = () => window.open(b.dataset.link, "_blank");
+    });
   }
   els.menuModal.classList.remove("hidden");
 }

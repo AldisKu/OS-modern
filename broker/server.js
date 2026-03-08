@@ -5,6 +5,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
 const TOKEN = process.env.BROKER_TOKEN || "";
 const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd=state";
 const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
+const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
 const clients = new Set();
 
 function sendAll(msg) {
@@ -71,6 +72,7 @@ server.listen(PORT, () => {
 });
 
 let lastVersion = null;
+let lastStatus = null;
 async function pollState() {
   try {
     const resp = await fetch(POLL_URL);
@@ -86,4 +88,25 @@ async function pollState() {
   }
 }
 
+async function pollPrinter() {
+  try {
+    const resp = await fetch(PRINTER_URL);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.status !== "OK") return;
+    const status = {
+      printer: data.msg ?? null,
+      tse: data.tsestatus ?? null,
+      tasksforme: data.tasksforme ?? null
+    };
+    if (!lastStatus || JSON.stringify(lastStatus) !== JSON.stringify(status)) {
+      sendAll({ type: "STATUS_UPDATE", status, ts: Date.now() });
+      lastStatus = status;
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
 setInterval(pollState, POLL_INTERVAL);
+setInterval(pollPrinter, POLL_INTERVAL);

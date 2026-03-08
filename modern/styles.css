@@ -266,6 +266,59 @@ body {
   background: #fafafa;
 }
 
+.menu-link-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  text-align: left;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.change-table-area {
+  display: grid;
+  gap: 10px;
+}
+
+.change-table-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.change-table-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.change-table-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.change-table-items {
+  display: grid;
+  gap: 6px;
+}
+
+.change-item.existing {
+  background: #fff;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.change-item.cart {
+  background: #e8f6ff;
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
 .start-message {
   border: 1px solid var(--border);
   border-radius: 10px;
