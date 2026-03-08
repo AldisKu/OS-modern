@@ -660,7 +660,7 @@ function editCartItem(id) {
   const item = cart.find(c => c._id === id);
   if (!item) return;
   const groupCount = cart.filter(c => cartKey(c) === cartKey(item)).reduce((sum, c) => sum + Number(c.unitamount || 1), 0);
-  const basePrice = item.changedPrice && item.changedPrice !== "NO" ? Number(item.changedPrice) : Number(item.price || 0);
+  const basePrice = Number(item.price || 0);
   const disc1 = state.discounts.d1;
   const disc2 = state.discounts.d2;
   const disc3 = state.discounts.d3;
