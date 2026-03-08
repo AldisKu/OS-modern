@@ -675,10 +675,10 @@ function editCartItem(id) {
     <input type="text" id="price-val" value="${basePrice.toFixed(2)}" readonly />
     <div class="edit-row"><b>Aktion</b></div>
     <div class="edit-actions">
-      <button class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
-      <button class="ghost" id="disc1">${discName1} ${disc1}%</button>
-      <button class="ghost" id="disc2">${discName2} ${disc2}%</button>
-      <button class="ghost" id="disc3">${discName3} ${disc3}%</button>
+      <button type="button" class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
+      <button type="button" class="ghost" id="disc1">${discName1} ${disc1}%</button>
+      <button type="button" class="ghost" id="disc2">${discName2} ${disc2}%</button>
+      <button type="button" class="ghost" id="disc3">${discName3} ${disc3}%</button>
     </div>
     <div class="edit-qty">
       <button class="ghost" id="qty-dec">-1</button>
@@ -706,9 +706,12 @@ function editCartItem(id) {
   els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
 
   const priceVal = els.confirmBody.querySelector("#price-val");
-  els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc1 / 100).toFixed(2); };
-  els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc2 / 100).toFixed(2); };
-  els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc3 / 100).toFixed(2); };
+  const applyDiscount = (pct) => {
+    priceVal.value = (basePrice - basePrice * pct / 100).toFixed(2);
+  };
+  els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1); };
+  els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2); };
+  els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); applyDiscount(disc3); };
 
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {

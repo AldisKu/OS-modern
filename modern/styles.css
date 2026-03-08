@@ -306,6 +306,10 @@ body {
   gap: 8px;
 }
 
+.edit-actions button {
+  cursor: pointer;
+}
+
 .change-table-area {
   display: grid;
   gap: 10px;
