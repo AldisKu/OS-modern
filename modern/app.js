@@ -566,6 +566,8 @@ function showExistingItemActions(item) {
   els.confirmTitle.textContent = item.longname;
   const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" placeholder="Stornocode" />` : "";
   els.confirmBody.innerHTML = `
+    <div class="edit-row"><b>${item.longname}</b> (aktuell: ${groupCount})</div>
+    <div class="edit-row"><button class="ghost" id="reorder">Nachbestellen</button></div>
     <div class="edit-row"><b>Anzahl</b></div>
     <div class="edit-qty">
       <button class="ghost" id="qty-dec">-1</button>
@@ -576,7 +578,6 @@ function showExistingItemActions(item) {
     ${codeField}
   `;
   els.confirmActions.innerHTML = `
-    <button class="ghost" id="reorder">Nachbestellen</button>
     <button class="ghost" id="cancel">Abbrechen</button>
     <button class="primary" id="remove">Entfernen</button>
   `;
@@ -595,7 +596,7 @@ function showExistingItemActions(item) {
   els.confirmActions.querySelector("#cancel").onclick = () => {
     els.confirmModal.classList.add("hidden");
   };
-  els.confirmActions.querySelector("#reorder").onclick = () => {
+  els.confirmBody.querySelector("#reorder").onclick = () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
@@ -645,25 +646,24 @@ function editCartItem(id) {
 
   els.confirmTitle.textContent = item.name;
   els.confirmBody.innerHTML = `
-    <div class="edit-row"><b>Anzahl</b></div>
+    <div class="edit-row"><b>${item.name}</b> (aktuell: ${groupCount})</div>
+    <div class="edit-row"><b>Preis</b></div>
+    <input type="text" id="price-val" value="${basePrice.toFixed(2)}" readonly />
+    <div class="edit-row"><b>Aktion</b></div>
+    <div class="edit-actions">
+      <button class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
+      <button class="ghost" id="disc1">${discName1} ${disc1}%</button>
+      <button class="ghost" id="disc2">${discName2} ${disc2}%</button>
+      <button class="ghost" id="disc3">${discName3} ${disc3}%</button>
+    </div>
     <div class="edit-qty">
       <button class="ghost" id="qty-dec">-1</button>
       <input type="number" id="qty-val" value="1" min="1" max="${groupCount}" />
       <button class="ghost" id="qty-inc">+1</button>
       <span class="edit-qty-max">/ ${groupCount}</span>
     </div>
-    <div class="edit-row"><b>Aktion</b></div>
-    <div class="edit-actions">
-      <button class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
-      <button class="ghost" id="disc1">${discName1}</button>
-      <button class="ghost" id="disc2">${discName2}</button>
-      <button class="ghost" id="disc3">${discName3}</button>
-      <button class="ghost" id="act-price">Neuer Preis</button>
-    </div>
     <div class="edit-row"><b>Notiz</b></div>
     <input type="text" id="note-val" value="${item.option || ""}" />
-    <div class="edit-row"><b>Preis</b></div>
-    <input type="number" id="price-val" value="${basePrice.toFixed(2)}" step="0.01" />
   `;
   els.confirmActions.innerHTML = `
     <button class="ghost" id="cancel">Abbruch</button>
@@ -685,7 +685,6 @@ function editCartItem(id) {
   els.confirmBody.querySelector("#disc1").onclick = () => { priceVal.value = (basePrice - basePrice * disc1 / 100).toFixed(2); };
   els.confirmBody.querySelector("#disc2").onclick = () => { priceVal.value = (basePrice - basePrice * disc2 / 100).toFixed(2); };
   els.confirmBody.querySelector("#disc3").onclick = () => { priceVal.value = (basePrice - basePrice * disc3 / 100).toFixed(2); };
-  els.confirmBody.querySelector("#act-price").onclick = () => { priceVal.focus(); priceVal.select(); };
 
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {

@@ -292,6 +292,10 @@ body {
   text-align: center;
 }
 
+.modal-body input[type="text"] {
+  width: 100%;
+}
+
 .edit-qty-max {
   color: var(--muted);
 }
