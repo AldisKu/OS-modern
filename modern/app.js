@@ -230,6 +230,7 @@ async function doLogin() {
   const res = await api("login", { userid, password, modus: 0, time: Math.floor(Date.now() / 1000) });
   if (res.status === "YES") {
     els.loginHint.textContent = "";
+    resetClientState();
     await bootstrap();
   } else {
     els.loginHint.textContent = "Login fehlgeschlagen";
@@ -533,6 +534,29 @@ function addToCart(prod, extras, option, qty) {
   renderOrderItems();
 }
 
+function resetClientState() {
+  try { localStorage.clear(); } catch (_) {}
+  state.user = null;
+  state.config = null;
+  state.menu = null;
+  state.rooms = null;
+  state.selectedTable = null;
+  state.selectedType = null;
+  state.typeStack = [];
+  state.cartByTable = {};
+  state.orderExisting = [];
+  state.payments = [];
+  state.paydeskItems = [];
+  state.paydeskOpen = [];
+  state.paydeskReceipt = [];
+  state.paydeskTable = null;
+  state.notDelivered = [];
+  state.lastSync = "-";
+  if (els.startMessageBody) {
+    els.startMessageBody.textContent = "Bereit.";
+  }
+}
+
 function cartKey(item) {
   const extras = (item.extras || []).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
   return [item.prodid, item.option || "", item.togo ? 1 : 0, extras].join("#");
@@ -798,6 +822,7 @@ async function handleMenuAction(action, btn) {
       }
     }
     await api("logout", {});
+    resetClientState();
     show(els.loginScreen);
   } else if (action === "order") {
     if (state.paydeskTable) {
