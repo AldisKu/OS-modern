@@ -100,7 +100,8 @@ const state = {
   notDelivered: [],
   keyboardMode: "num",
   lastSync: "-",
-  cancelUnpaidCode: ""
+  cancelUnpaidCode: "",
+  discounts: { d1: 0, d2: 0, d3: 0, n1: "Rabatt 1", n2: "Rabatt 2", n3: "Rabatt 3" }
 };
 
 function show(screen) {
@@ -245,6 +246,14 @@ async function bootstrap() {
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
   state.cancelUnpaidCode = state.config?.cancelunpaidcode || "";
+  state.discounts = {
+    d1: parseFloat(state.config?.discount1 || 0) || 0,
+    d2: parseFloat(state.config?.discount2 || 0) || 0,
+    d3: parseFloat(state.config?.discount3 || 0) || 0,
+    n1: state.config?.discountname1 || "Rabatt 1",
+    n2: state.config?.discountname2 || "Rabatt 2",
+    n3: state.config?.discountname3 || "Rabatt 3"
+  };
   updateStatus();
   renderTables();
   renderCategories();
@@ -652,12 +661,12 @@ function editCartItem(id) {
   if (!item) return;
   const groupCount = cart.filter(c => cartKey(c) === cartKey(item)).reduce((sum, c) => sum + Number(c.unitamount || 1), 0);
   const basePrice = item.changedPrice && item.changedPrice !== "NO" ? Number(item.changedPrice) : Number(item.price || 0);
-  const disc1 = parseFloat(state.config?.discount1 || 0) || 0;
-  const disc2 = parseFloat(state.config?.discount2 || 0) || 0;
-  const disc3 = parseFloat(state.config?.discount3 || 0) || 0;
-  const discName1 = state.config?.discountname1 || "Rabatt 1";
-  const discName2 = state.config?.discountname2 || "Rabatt 2";
-  const discName3 = state.config?.discountname3 || "Rabatt 3";
+  const disc1 = state.discounts.d1;
+  const disc2 = state.discounts.d2;
+  const disc3 = state.discounts.d3;
+  const discName1 = state.discounts.n1;
+  const discName2 = state.discounts.n2;
+  const discName3 = state.discounts.n3;
 
   els.confirmTitle.textContent = item.name;
   els.confirmBody.innerHTML = `
