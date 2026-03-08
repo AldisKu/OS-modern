@@ -38,7 +38,7 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-$logFile = "/tmp/modernapi.log";
+$logFile = "/var/log/ordersprinter/modernapi.log";
 function redactSensitive($data) {
 	if (!is_array($data)) {
 		return $data;
