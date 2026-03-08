@@ -671,18 +671,19 @@ function editCartItem(id) {
   const discName1 = state.discounts.n1;
   const discName2 = state.discounts.n2;
   const discName3 = state.discounts.n3;
+  const formatPct = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2));
 
   els.confirmTitle.textContent = item.name;
   els.confirmBody.innerHTML = `
     <div class="edit-row"><b>${item.name}</b> (aktuell: ${groupCount})</div>
-    <div class="edit-row"><b>Preis</b></div>
-    <input type="text" id="price-val" value="${basePrice.toFixed(2)}" readonly />
+    <div class="edit-row"><b>Einzelpreis</b></div>
+    <div id="price-val" class="price-display">${basePrice.toFixed(2)}</div>
     <div class="edit-row"><b>Aktion</b></div>
     <div class="edit-actions">
       <button type="button" class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
-      <button type="button" class="ghost" id="disc1">${discName1} ${disc1}%</button>
-      <button type="button" class="ghost" id="disc2">${discName2} ${disc2}%</button>
-      <button type="button" class="ghost" id="disc3">${discName3} ${disc3}%</button>
+      <button type="button" class="ghost" id="disc1">${discName1} ${formatPct(disc1)}%</button>
+      <button type="button" class="ghost" id="disc2">${discName2} ${formatPct(disc2)}%</button>
+      <button type="button" class="ghost" id="disc3">${discName3} ${formatPct(disc3)}%</button>
     </div>
     <div class="edit-qty">
       <button class="ghost" id="qty-dec">-1</button>
@@ -710,8 +711,13 @@ function editCartItem(id) {
   els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
 
   const priceVal = els.confirmBody.querySelector("#price-val");
+  let currentPrice = basePrice;
+  const setPrice = (val) => {
+    currentPrice = Number(val);
+    priceVal.textContent = currentPrice.toFixed(2);
+  };
   const applyDiscount = (pct) => {
-    priceVal.value = (basePrice - basePrice * pct / 100).toFixed(2);
+    setPrice(basePrice - basePrice * pct / 100);
   };
   els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1); };
   els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2); };
@@ -727,7 +733,7 @@ function editCartItem(id) {
   els.confirmActions.querySelector("#apply").onclick = () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const newNote = els.confirmBody.querySelector("#note-val").value.trim();
-    const newPrice = Number(priceVal.value || basePrice);
+    const newPrice = Number(currentPrice || basePrice);
     const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
 
     if (qty < groupCount) {

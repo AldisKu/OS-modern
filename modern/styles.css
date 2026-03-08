@@ -310,6 +310,11 @@ body {
   cursor: pointer;
 }
 
+.price-display {
+  font-weight: 700;
+  padding: 6px 0;
+}
+
 .change-table-area {
   display: grid;
   gap: 10px;
