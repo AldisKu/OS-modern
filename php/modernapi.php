@@ -305,13 +305,30 @@ switch ($cmd) {
 		$queue = new QueueContent();
 		$fromTableId = $_POST["fromTableId"] ?? 0;
 		$toTableId = $_POST["toTableId"] ?? 0;
-		if ($toTableId === 0 || $toTableId === "0") {
+		$fromIsTogo = ($fromTableId === 0 || $fromTableId === "0");
+		$toIsTogo = ($toTableId === 0 || $toTableId === "0");
+		if ($toIsTogo) {
 			$toTableId = null;
 		}
 		$queueids = $_POST["queueids"] ?? "";
 		$response = captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
 			$queue->changeTable($fromTableId, $toTableId, $queueids);
 		});
+		if (!empty($queueids)) {
+			$pdo = DbUtils::openDbAndReturnPdoStatic();
+			$ids = explode(",", $queueids);
+			$ids = array_filter($ids, 'strlen');
+			if (count($ids) > 0) {
+				$placeholders = implode(",", array_fill(0, count($ids), "?"));
+				if ($toIsTogo) {
+					$sql = "UPDATE %queue% SET togo=1 WHERE id IN($placeholders)";
+					CommonUtils::execSql($pdo, $sql, $ids);
+				} else if ($fromIsTogo) {
+					$sql = "UPDATE %queue% SET togo=0 WHERE id IN($placeholders)";
+					CommonUtils::execSql($pdo, $sql, $ids);
+				}
+			}
+		}
 		echo json_encode($response);
 		logApi($cmd, $requestForLog, $response);
 		return;
@@ -322,6 +339,25 @@ switch ($cmd) {
 		$response = captureJson(function() use ($queue) {
 			$queue->handleCommand("getProdsForTableChange");
 		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
+		return;
+	case "table_notdelivered":
+		$queue = new QueueContent();
+		$_GET["tableid"] = $_POST["tableid"] ?? 0;
+		$response = captureJson(function() use ($queue) {
+			$queue->handleCommand("getJsonLongNamesOfProdsForTableNotDelivered");
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
+		return;
+	case "remove_product":
+		$queue = new QueueContent();
+		$queueid = $_POST["queueid"] ?? 0;
+		$isPaid = $_POST["isPaid"] ?? 0;
+		$isCooking = $_POST["isCooking"] ?? 0;
+		$isReady = $_POST["isReady"] ?? 0;
+		$response = $queue->removeProductFromQueue($queueid, $isPaid, $isCooking, $isReady);
 		echo json_encode($response);
 		logApi($cmd, $requestForLog, $response);
 		return;

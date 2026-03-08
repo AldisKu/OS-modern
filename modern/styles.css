@@ -277,6 +277,31 @@ body {
   margin-bottom: 8px;
 }
 
+.edit-row {
+  margin-top: 8px;
+}
+
+.edit-qty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-qty input {
+  width: 80px;
+  text-align: center;
+}
+
+.edit-qty-max {
+  color: var(--muted);
+}
+
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .change-table-area {
   display: grid;
   gap: 10px;

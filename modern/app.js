@@ -97,8 +97,10 @@ const state = {
   maxTableLabelWidth: 0,
   printerStatus: undefined,
   tseStatus: undefined,
+  notDelivered: [],
   keyboardMode: "num",
-  lastSync: "-"
+  lastSync: "-",
+  cancelUnpaidCode: ""
 };
 
 function show(screen) {
@@ -229,6 +231,7 @@ async function bootstrap() {
   state.rooms = data.rooms;
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
+  state.cancelUnpaidCode = state.config?.cancelunpaidcode || "";
   updateStatus();
   renderTables();
   renderCategories();
@@ -371,6 +374,7 @@ async function openOrderForTable(table) {
   }
   loadCart(table.id);
   await fetchExistingOrders();
+  await fetchNotDelivered();
   renderOrderItems();
   renderCategories();
   show(els.orderScreen);
@@ -392,6 +396,18 @@ async function fetchExistingOrders() {
     state.orderExisting = data.msg || [];
   } else {
     state.orderExisting = [];
+  }
+}
+
+async function fetchNotDelivered() {
+  if (!state.selectedTable) return;
+  const data = await api("table_notdelivered", { tableid: state.selectedTable.id });
+  if (Array.isArray(data)) {
+    state.notDelivered = data;
+  } else if (data.status === "OK" && Array.isArray(data.msg)) {
+    state.notDelivered = data.msg;
+  } else {
+    state.notDelivered = [];
   }
 }
 
@@ -545,22 +561,71 @@ function groupExistingItems(items) {
 }
 
 function showExistingItemActions(item) {
-  els.confirmTitle.textContent = "Bestelltes Produkt";
-  els.confirmBody.innerHTML = `<div><b>${item.longname}</b></div>`;
+  const key = existingKey(item);
+  const groupCount = (state.orderExisting || []).filter(p => existingKey(p) === key).reduce((s, p) => s + Number(p.unitamount || 1), 0);
+  els.confirmTitle.textContent = item.longname;
+  const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" placeholder="Stornocode" />` : "";
+  els.confirmBody.innerHTML = `
+    <div class="edit-row"><b>Anzahl</b></div>
+    <div class="edit-qty">
+      <button class="ghost" id="qty-dec">-1</button>
+      <input type="number" id="qty-val" value="1" min="1" max="${groupCount}" />
+      <button class="ghost" id="qty-inc">+1</button>
+      <span class="edit-qty-max">/ ${groupCount}</span>
+    </div>
+    ${codeField}
+  `;
   els.confirmActions.innerHTML = `
-    <button class="ghost" id="reorder">Nachbestellen (1x)</button>
+    <button class="ghost" id="reorder">Nachbestellen</button>
     <button class="ghost" id="cancel">Abbrechen</button>
+    <button class="primary" id="remove">Entfernen</button>
   `;
   els.confirmModal.classList.remove("hidden");
+
+  const qtyVal = els.confirmBody.querySelector("#qty-val");
+  const updateQtyButtons = () => {
+    const q = Number(qtyVal.value || 1);
+    els.confirmBody.querySelector("#qty-dec").disabled = q <= 1;
+    els.confirmBody.querySelector("#qty-inc").disabled = q >= groupCount;
+  };
+  updateQtyButtons();
+  els.confirmBody.querySelector("#qty-dec").onclick = () => { qtyVal.value = Math.max(1, Number(qtyVal.value) - 1); updateQtyButtons(); };
+  els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
+
   els.confirmActions.querySelector("#cancel").onclick = () => {
     els.confirmModal.classList.add("hidden");
   };
   els.confirmActions.querySelector("#reorder").onclick = () => {
+    const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
       const extras = (item.extras || []).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
-      addToCart(prod, extras, item.orderoption || "", 1);
+      addToCart(prod, extras, item.orderoption || "", qty);
     }
+    els.confirmModal.classList.add("hidden");
+  };
+  els.confirmActions.querySelector("#remove").onclick = async () => {
+    const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
+    if (state.cancelUnpaidCode) {
+      const codeVal = els.confirmBody.querySelector("#storno-code")?.value || "";
+      if (codeVal !== state.cancelUnpaidCode) {
+        alert("Stornocode falsch");
+        return;
+      }
+    }
+    const candidates = (state.notDelivered || []).filter(p => existingKey({
+      prodid: p.prodid,
+      orderoption: p.option,
+      togo: p.togo,
+      extras: (p.extrasids || []).map((id, idx) => ({ id, amount: (p.extrasamounts || [])[idx] || 1 }))
+    }) === key);
+    for (let i = 0; i < Math.min(qty, candidates.length); i++) {
+      const c = candidates[i];
+      await api("remove_product", { queueid: c.id, isPaid: c.isPaid, isCooking: c.isCooking, isReady: c.isready });
+    }
+    await fetchNotDelivered();
+    await fetchExistingOrders();
+    renderOrderItems();
     els.confirmModal.classList.add("hidden");
   };
 }
@@ -569,27 +634,104 @@ function editCartItem(id) {
   const cart = state.cartByTable[state.selectedTable.id] || [];
   const item = cart.find(c => c._id === id);
   if (!item) return;
+  const groupCount = cart.filter(c => cartKey(c) === cartKey(item)).reduce((sum, c) => sum + Number(c.unitamount || 1), 0);
+  const basePrice = item.changedPrice && item.changedPrice !== "NO" ? Number(item.changedPrice) : Number(item.price || 0);
+  const disc1 = Number(state.config?.discount1 || 0);
+  const disc2 = Number(state.config?.discount2 || 0);
+  const disc3 = Number(state.config?.discount3 || 0);
+  const discName1 = state.config?.discountname1 || "Rabatt 1";
+  const discName2 = state.config?.discountname2 || "Rabatt 2";
+  const discName3 = state.config?.discountname3 || "Rabatt 3";
+
   els.confirmTitle.textContent = item.name;
   els.confirmBody.innerHTML = `
-    <div>Menge: ${item.unitamount}</div>
-    <div>${item.option || ""}</div>
+    <div class="edit-row"><b>Anzahl</b></div>
+    <div class="edit-qty">
+      <button class="ghost" id="qty-dec">-1</button>
+      <input type="number" id="qty-val" value="1" min="1" max="${groupCount}" />
+      <button class="ghost" id="qty-inc">+1</button>
+      <span class="edit-qty-max">/ ${groupCount}</span>
+    </div>
+    <div class="edit-row"><b>Aktion</b></div>
+    <div class="edit-actions">
+      <button class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
+      <button class="ghost" id="disc1">${discName1}</button>
+      <button class="ghost" id="disc2">${discName2}</button>
+      <button class="ghost" id="disc3">${discName3}</button>
+      <button class="ghost" id="act-price">Neuer Preis</button>
+    </div>
+    <div class="edit-row"><b>Notiz</b></div>
+    <input type="text" id="note-val" value="${item.option || ""}" />
+    <div class="edit-row"><b>Preis</b></div>
+    <input type="number" id="price-val" value="${basePrice.toFixed(2)}" step="0.01" />
   `;
   els.confirmActions.innerHTML = `
-    <button class="ghost" id="dec">-</button>
-    <button class="ghost" id="inc">+</button>
-    <button class="ghost" id="del">Löschen</button>
-    <button class="primary" id="close">OK</button>
+    <button class="ghost" id="cancel">Abbruch</button>
+    <button class="primary" id="apply">Ändern</button>
   `;
   els.confirmModal.classList.remove("hidden");
-  els.confirmActions.querySelector("#dec").onclick = () => { if (item.unitamount > 1) item.unitamount -= 1; saveCart(state.selectedTable.id); renderOrderItems(); };
-  els.confirmActions.querySelector("#inc").onclick = () => { item.unitamount += 1; saveCart(state.selectedTable.id); renderOrderItems(); };
-  els.confirmActions.querySelector("#del").onclick = () => {
-    state.cartByTable[state.selectedTable.id] = cart.filter(c => c._id !== id);
+
+  const qtyVal = els.confirmBody.querySelector("#qty-val");
+  const updateQtyButtons = () => {
+    const q = Number(qtyVal.value || 1);
+    els.confirmBody.querySelector("#qty-dec").disabled = q <= 1;
+    els.confirmBody.querySelector("#qty-inc").disabled = q >= groupCount;
+  };
+  updateQtyButtons();
+  els.confirmBody.querySelector("#qty-dec").onclick = () => { qtyVal.value = Math.max(1, Number(qtyVal.value) - 1); updateQtyButtons(); };
+  els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
+
+  const priceVal = els.confirmBody.querySelector("#price-val");
+  els.confirmBody.querySelector("#disc1").onclick = () => { priceVal.value = (basePrice - basePrice * disc1 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#disc2").onclick = () => { priceVal.value = (basePrice - basePrice * disc2 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#disc3").onclick = () => { priceVal.value = (basePrice - basePrice * disc3 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#act-price").onclick = () => { priceVal.focus(); priceVal.select(); };
+
+  let togoVal = item.togo ? 1 : 0;
+  els.confirmBody.querySelector("#act-togo").onclick = () => {
+    togoVal = togoVal ? 0 : 1;
+    els.confirmBody.querySelector("#act-togo").textContent = togoVal ? "ToGo ✓" : "ToGo";
+  };
+
+  els.confirmActions.querySelector("#cancel").onclick = () => els.confirmModal.classList.add("hidden");
+  els.confirmActions.querySelector("#apply").onclick = () => {
+    const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
+    const newNote = els.confirmBody.querySelector("#note-val").value.trim();
+    const newPrice = Number(priceVal.value || basePrice);
+    const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
+
+    if (qty < groupCount) {
+      // reduce original group by qty, create new item for changed subset
+      let remaining = qty;
+      for (let i = 0; i < cart.length && remaining > 0; i++) {
+        if (cartKey(cart[i]) !== cartKey(item)) continue;
+        const take = Math.min(remaining, cart[i].unitamount);
+        cart[i].unitamount -= take;
+        remaining -= take;
+        if (cart[i].unitamount <= 0) {
+          cart.splice(i, 1);
+          i--;
+        }
+      }
+      const newItem = {
+        ...item,
+        _id: Date.now(),
+        unitamount: qty,
+        option: newNote,
+        togo: togoVal,
+        changedPrice
+      };
+      cart.push(newItem);
+    } else {
+      item.option = newNote;
+      item.togo = togoVal;
+      item.changedPrice = changedPrice;
+    }
+    state.cartByTable[state.selectedTable.id] = cart;
     saveCart(state.selectedTable.id);
     renderOrderItems();
     els.confirmModal.classList.add("hidden");
   };
-  els.confirmActions.querySelector("#close").onclick = () => els.confirmModal.classList.add("hidden");
 }
 
 async function handleMenuAction(action, btn) {
@@ -657,7 +799,7 @@ async function sendOrder(workprint, goStart) {
     extras: c.extras.map(e => ({ id: e.id, name: e.name, amount: e.amount })),
     prodid: c.prodid,
     price: c.price,
-    changedPrice: "NO",
+    changedPrice: c.changedPrice || "NO",
     togo: c.togo,
     unit: c.unit,
     unitamount: c.unitamount,
@@ -1008,18 +1150,19 @@ async function changeTableFlow() {
       if (it.type === "existing") {
         queueids.push(it.queueid);
       }
-      if (it.type === "cart") {
-        const idx = cart.findIndex(c => c._id === it.cartId);
-        if (idx >= 0) {
-          const [moved] = cart.splice(idx, 1);
-          moved.togo = selectedTableId === 0 ? 1 : 0;
-          const target = state.cartByTable[selectedTableId] || [];
-          target.push(moved);
-          state.cartByTable[selectedTableId] = target;
+        if (it.type === "cart") {
+          const idx = cart.findIndex(c => c._id === it.cartId);
+          if (idx >= 0) {
+            const [moved] = cart.splice(idx, 1);
+            moved.togo = selectedTableId === 0 ? 1 : 0;
+            const target = state.cartByTable[selectedTableId] || [];
+            target.push(moved);
+            state.cartByTable[selectedTableId] = target;
+          }
         }
-      }
-    });
+      });
     saveCart(table.id);
+    saveCart(selectedTableId);
     if (selectedTableId !== 0 && queueids.length > 0) {
       await api("change_table", { fromTableId: table.id, toTableId: selectedTableId, queueids: queueids.join(",") });
     }
