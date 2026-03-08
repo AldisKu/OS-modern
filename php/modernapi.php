@@ -217,6 +217,17 @@ switch ($cmd) {
 		$config = captureJson(function() use ($admin, $pdo) {
 			$admin->getGeneralConfigItems(false, $pdo, false);
 		});
+		if (!is_array($config)) {
+			$config = array(
+				"discount1" => CommonUtils::getConfigValue($pdo, "discount1", 0),
+				"discount2" => CommonUtils::getConfigValue($pdo, "discount2", 0),
+				"discount3" => CommonUtils::getConfigValue($pdo, "discount3", 0),
+				"discountname1" => CommonUtils::getConfigValue($pdo, "discountname1", ""),
+				"discountname2" => CommonUtils::getConfigValue($pdo, "discountname2", ""),
+				"discountname3" => CommonUtils::getConfigValue($pdo, "discountname3", ""),
+				"cancelunpaidcode" => CommonUtils::getConfigValue($pdo, "cancelunpaidcode", "")
+			);
+		}
 		$menu = captureJson(function() use ($products) {
 			$products->handleCommand("getAllTypesAndAvailProds");
 		});
