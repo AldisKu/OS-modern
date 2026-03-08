@@ -385,6 +385,8 @@ async function openOrderForTable(table) {
     els.orderTableLabel.style.display = "inline-block";
     els.orderTableLabel.style.minWidth = `${state.maxTableLabelWidth}px`;
   }
+  state.typeStack = [];
+  state.selectedType = topLevelTypes()[0]?.id || null;
   loadCart(table.id);
   await fetchExistingOrders();
   await fetchNotDelivered();
@@ -650,9 +652,9 @@ function editCartItem(id) {
   if (!item) return;
   const groupCount = cart.filter(c => cartKey(c) === cartKey(item)).reduce((sum, c) => sum + Number(c.unitamount || 1), 0);
   const basePrice = item.changedPrice && item.changedPrice !== "NO" ? Number(item.changedPrice) : Number(item.price || 0);
-  const disc1 = Number(state.config?.discount1 || 0);
-  const disc2 = Number(state.config?.discount2 || 0);
-  const disc3 = Number(state.config?.discount3 || 0);
+  const disc1 = parseFloat(state.config?.discount1 || 0) || 0;
+  const disc2 = parseFloat(state.config?.discount2 || 0) || 0;
+  const disc3 = parseFloat(state.config?.discount3 || 0) || 0;
   const discName1 = state.config?.discountname1 || "Rabatt 1";
   const discName2 = state.config?.discountname2 || "Rabatt 2";
   const discName3 = state.config?.discountname3 || "Rabatt 3";
@@ -695,9 +697,9 @@ function editCartItem(id) {
   els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
 
   const priceVal = els.confirmBody.querySelector("#price-val");
-  els.confirmBody.querySelector("#disc1").onclick = () => { priceVal.value = (basePrice - basePrice * disc1 / 100).toFixed(2); };
-  els.confirmBody.querySelector("#disc2").onclick = () => { priceVal.value = (basePrice - basePrice * disc2 / 100).toFixed(2); };
-  els.confirmBody.querySelector("#disc3").onclick = () => { priceVal.value = (basePrice - basePrice * disc3 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc1 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc2 / 100).toFixed(2); };
+  els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); priceVal.value = (basePrice - basePrice * disc3 / 100).toFixed(2); };
 
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {
@@ -1182,7 +1184,9 @@ async function changeTableFlow() {
       await api("change_table", { fromTableId: table.id, toTableId: 0, queueids: queueids.join(",") });
     }
     els.confirmModal.classList.add("hidden");
-    openOrderForTable({ id: selectedTableId, name: tables.find(t => t.id === selectedTableId)?.name || "To-Go" });
+    const found = tables.find(t => Number(t.id) === Number(selectedTableId));
+    const targetName = found ? found.name : (selectedTableId === 0 ? "To-Go" : String(selectedTableId));
+    openOrderForTable({ id: selectedTableId, name: targetName });
   };
 }
 
