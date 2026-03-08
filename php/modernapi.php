@@ -360,7 +360,9 @@ switch ($cmd) {
 		$isPaid = $_POST["isPaid"] ?? 0;
 		$isCooking = $_POST["isCooking"] ?? 0;
 		$isReady = $_POST["isReady"] ?? 0;
+		ob_start();
 		$response = $queue->removeProductFromQueue($queueid, $isPaid, $isCooking, $isReady);
+		ob_end_clean();
 		echo json_encode($response);
 		logApi($cmd, $requestForLog, $response);
 		return;
