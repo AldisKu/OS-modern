@@ -246,10 +246,14 @@ async function bootstrap() {
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
   state.cancelUnpaidCode = state.config?.cancelunpaidcode || "";
+  const parsePct = (v) => {
+    if (v === null || v === undefined) return 0;
+    return parseFloat(String(v).replace(",", ".")) || 0;
+  };
   state.discounts = {
-    d1: parseFloat(state.config?.discount1 || 0) || 0,
-    d2: parseFloat(state.config?.discount2 || 0) || 0,
-    d3: parseFloat(state.config?.discount3 || 0) || 0,
+    d1: parsePct(state.config?.discount1),
+    d2: parsePct(state.config?.discount2),
+    d3: parsePct(state.config?.discount3),
     n1: state.config?.discountname1 || "Rabatt 1",
     n2: state.config?.discountname2 || "Rabatt 2",
     n3: state.config?.discountname3 || "Rabatt 3"
