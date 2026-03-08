@@ -305,25 +305,14 @@ function renderTables() {
   state.rooms.roomstables.forEach(room => {
     room.tables.forEach(t => {
       const sum = t.pricesum || "0.00";
-      const unpaid = t.unpaidprodcount || 0;
-      const total = t.prodcount || 0;
       cards.push(`
         <div class="table-card" data-id="${t.id}" data-name="${t.name}">
           <div class="name">${t.name}</div>
-          <div class="meta">${unpaid}/${total} | ${sum}</div>
+          <div class="meta">${sum}</div>
         </div>
       `);
     });
   });
-  const togoSum = state.rooms.takeawayprice || "0.00";
-  const togoUnpaid = state.rooms.takeawayunpaidprodcount || 0;
-  const togoTotal = state.rooms.takeawayprodcount || 0;
-  cards.push(`
-    <div class="table-card" data-id="0" data-name="To-Go">
-      <div class="name">To-Go</div>
-      <div class="meta">${togoUnpaid}/${togoTotal} | ${togoSum}</div>
-    </div>
-  `);
   els.tablesGrid.innerHTML = cards.join("");
   els.tablesGrid.querySelectorAll(".table-card").forEach(el => {
     el.addEventListener("click", () => openOrderForTable({ id: Number(el.dataset.id), name: el.dataset.name }));
@@ -919,9 +908,22 @@ async function openMenuModal() {
   const data = await api("menu_items", {});
   if (data.menu) {
     const items = data.menu || [];
-    els.menuItems.innerHTML = items.map(m => `<div><a href="${m.link}" target="_blank">${m.name}</a></div>`).join("");
+    els.menuItems.innerHTML = items.map(m => {
+      const link = normalizeMenuLink(m.link || "");
+      return `<div><a href="${link}" target="_blank">${m.name}</a></div>`;
+    }).join("");
   }
   els.menuModal.classList.remove("hidden");
+}
+
+function normalizeMenuLink(link) {
+  if (!link) return "#";
+  let out = link;
+  out = out.replace("/modern/", "/");
+  out = out.replace(/^modern\//, "");
+  if (out.startsWith("./")) out = out.slice(2);
+  if (!out.startsWith("/") && !out.startsWith("http")) out = "/" + out;
+  return out;
 }
 
 function buildKeyboard() {

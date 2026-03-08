@@ -35,6 +35,37 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
+$logFile = "/tmp/modernapi.log";
+function redactSensitive($data) {
+	if (!is_array($data)) {
+		return $data;
+	}
+	$redactKeys = array("password", "pass", "passwd", "pin");
+	$clean = array();
+	foreach ($data as $k => $v) {
+		$lk = strtolower($k);
+		if (in_array($lk, $redactKeys)) {
+			$clean[$k] = "***";
+		} else if (is_array($v)) {
+			$clean[$k] = redactSensitive($v);
+		} else {
+			$clean[$k] = $v;
+		}
+	}
+	return $clean;
+}
+function logApi($cmd, $request, $response) {
+	global $logFile;
+	$entry = array(
+		"ts" => date('c'),
+		"ip" => $_SERVER['REMOTE_ADDR'] ?? "",
+		"cmd" => $cmd,
+		"request" => redactSensitive($request),
+		"response" => $response
+	);
+	@file_put_contents($logFile, json_encode($entry) . "\n", FILE_APPEND);
+}
+
 $cmd = "";
 if (isset($_GET["cmd"])) {
 	$cmd = $_GET["cmd"];
@@ -51,6 +82,7 @@ if (!empty($input)) {
 		$cmd = $input["cmd"];
 	}
 }
+$requestForLog = !empty($input) ? $input : (count($_POST) ? $_POST : $_GET);
 
 if ($cmd == "login") {
 	$admin = new Admin();
@@ -58,7 +90,11 @@ if ($cmd == "login") {
 	$password = $_POST["password"] ?? "";
 	$modus = $_POST["modus"] ?? 0;
 	$time = $_POST["time"] ?? time();
-	$admin->tryAuthenticate($userid, $password, $modus, $time);
+	$response = captureJson(function() use ($admin, $userid, $password, $modus, $time) {
+		$admin->tryAuthenticate($userid, $password, $modus, $time);
+	});
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -67,7 +103,9 @@ if ($cmd == "logout") {
 		session_start();
 	}
 	session_destroy();
-	echo json_encode(array("status" => "OK"));
+	$response = array("status" => "OK");
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -80,7 +118,9 @@ if ($cmd == "session") {
 	if ($isLoggedIn) {
 		$user = sessionUserInfo();
 	}
-	echo json_encode(array("status" => "OK", "loggedIn" => $isLoggedIn, "user" => $user));
+	$response = array("status" => "OK", "loggedIn" => $isLoggedIn, "user" => $user);
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -97,10 +137,12 @@ if ($cmd == "state") {
 	$recMaxDate = $records[0]["maxdate"] ?? '';
 
 	$version = hash("sha256", $queueMaxId . "|" . $queueMaxOrder . "|" . $billMaxId . "|" . $billMaxDate . "|" . $recMaxId . "|" . $recMaxDate);
-	echo json_encode(array(
+	$response = array(
 		"status" => "OK",
 		"version" => $version
-	));
+	);
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -112,13 +154,15 @@ if ($cmd == "config") {
 	$wsScheme = ($scheme === 'https') ? 'wss' : 'ws';
 	$brokerWs = $wsScheme . '://' . $host . ':3077';
 	$brokerHttp = 'http://' . $host . ':3077/event';
-	echo json_encode(array(
+	$response = array(
 		"status" => "OK",
 		"server_ip" => $serverAddr,
 		"host" => $host,
 		"broker_ws" => $brokerWs,
 		"broker_http" => $brokerHttp
-	));
+	);
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -129,15 +173,27 @@ if (!requireLogin()) {
 switch ($cmd) {
 	case "users":
 		$admin = new Admin();
-		$admin->getUserList();
+		$response = captureJson(function() use ($admin) {
+			$admin->getUserList();
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 	case "menu_items":
 		$admin = new Admin();
-		$admin->getJsonMenuItemsAndVersion();
+		$response = captureJson(function() use ($admin) {
+			$admin->getJsonMenuItemsAndVersion();
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 	case "payments":
 		$admin = new Admin();
-		$admin->getPayments();
+		$response = captureJson(function() use ($admin) {
+			$admin->getPayments();
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 	case "bootstrap":
 		$pdo = DbUtils::openDbAndReturnPdoStatic();
@@ -155,33 +211,41 @@ switch ($cmd) {
 			$roomtables->showAllRooms();
 		});
 
-		echo json_encode(array(
+		$response = array(
 			"status" => "OK",
 			"user" => sessionUserInfo(),
 			"config" => $config,
 			"menu" => $menu,
 			"rooms" => $rooms
-		));
+		);
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "refresh_tables":
 		$roomtables = new Roomtables();
-		echo json_encode(array("status" => "OK", "rooms" => captureJson(function() use ($roomtables) {
+		$response = array("status" => "OK", "rooms" => captureJson(function() use ($roomtables) {
 			$roomtables->showAllRooms();
-		})));
+		}));
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "refresh_menu":
 		$products = new Products();
-		echo json_encode(array("status" => "OK", "menu" => captureJson(function() use ($products) {
+		$response = array("status" => "OK", "menu" => captureJson(function() use ($products) {
 			$products->handleCommand("getAllTypesAndAvailProds");
-		})));
+		}));
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "order":
 		$userrights = new Userrights();
 		if (!$userrights->hasCurrentUserRight('right_waiter')) {
-			echo json_encode(array("status" => "ERROR","msg" => "Benutzerrechte nicht ausreichend!"));
+			$response = array("status" => "ERROR","msg" => "Benutzerrechte nicht ausreichend!");
+			echo json_encode($response);
+			logApi($cmd, $requestForLog, $response);
 			return;
 		}
 		$queue = new QueueContent();
@@ -194,14 +258,17 @@ switch ($cmd) {
 			$queue->handleCommand("addProductListToQueue");
 		});
 		echo json_encode($result);
+		logApi($cmd, $requestForLog, $result);
 		return;
 
 	case "paydesk_items":
 		$queue = new QueueContent();
 		$_GET["tableid"] = $_POST["tableid"] ?? 0;
-		echo json_encode(captureJson(function() use ($queue) {
+		$response = captureJson(function() use ($queue) {
 			$queue->handleCommand("getJsonProductsOfTableToPay");
-		}));
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "paydesk_pay":
@@ -217,9 +284,11 @@ switch ($cmd) {
 		$intguestid = $_POST["intguestid"] ?? "";
 		$tip = $_POST["tip"] ?? null;
 		$camefromordering = $_POST["camefromordering"] ?? 0;
-		echo json_encode(captureJson(function() use ($queue, $pdo, $ids, $tableid, $paymentid, $declareready, $host, $reservationid, $guestinfo, $intguestid, $tip, $camefromordering) {
+		$response = captureJson(function() use ($queue, $pdo, $ids, $tableid, $paymentid, $declareready, $host, $reservationid, $guestinfo, $intguestid, $tip, $camefromordering) {
 			$queue->declarePaidCreateBillReturnBillId($pdo,$ids,$tableid,$paymentid,$declareready,$host,QueueContent::$INTERNAL_CALL_NO,$reservationid,$guestinfo,$intguestid,null,null,$tip,$camefromordering);
-		}));
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "change_table":
@@ -227,26 +296,32 @@ switch ($cmd) {
 		$fromTableId = $_POST["fromTableId"] ?? 0;
 		$toTableId = $_POST["toTableId"] ?? 0;
 		$queueids = $_POST["queueids"] ?? "";
-		echo json_encode(captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
+		$response = captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
 			$queue->changeTable($fromTableId, $toTableId, $queueids);
-		}));
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "table_open_items":
 		$queue = new QueueContent();
 		$_GET["tableId"] = $_POST["tableid"] ?? 0;
-		echo json_encode(captureJson(function() use ($queue) {
+		$response = captureJson(function() use ($queue) {
 			$queue->handleCommand("getProdsForTableChange");
-		}));
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	case "table_records":
 		$queue = new QueueContent();
 		$pdo = DbUtils::openDbAndReturnPdoStatic();
 		$tableid = $_POST["tableid"] ?? 0;
-		echo json_encode(captureJson(function() use ($queue, $pdo, $tableid) {
+		$response = captureJson(function() use ($queue, $pdo, $tableid) {
 			$queue->getRecords($pdo, $tableid);
-		}));
+		});
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
 		return;
 
 	default:
