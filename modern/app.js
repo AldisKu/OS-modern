@@ -67,6 +67,7 @@ const els = {
   menuModal: document.getElementById("menu-modal"),
   menuItems: document.getElementById("menu-items"),
   menuClose: document.getElementById("menu-close"),
+  startMessageBody: document.getElementById("start-message-body"),
 
   kbdRow1: document.getElementById("kbd-row-1"),
   kbdRow2: document.getElementById("kbd-row-2"),
@@ -93,6 +94,7 @@ const state = {
   paydeskMode: "list",
   paydeskHost: false,
   paydeskPrint: false,
+  maxTableLabelWidth: 0,
   keyboardMode: "num",
   lastSync: "-"
 };
@@ -317,11 +319,16 @@ function renderTables() {
   els.tablesGrid.querySelectorAll(".table-card").forEach(el => {
     el.addEventListener("click", () => openOrderForTable({ id: Number(el.dataset.id), name: el.dataset.name }));
   });
+  updateTableLabelWidth();
 }
 
 async function openOrderForTable(table) {
   state.selectedTable = table;
   els.orderTableLabel.textContent = table.name;
+  if (state.maxTableLabelWidth > 0) {
+    els.orderTableLabel.style.display = "inline-block";
+    els.orderTableLabel.style.minWidth = `${state.maxTableLabelWidth}px`;
+  }
   loadCart(table.id);
   await fetchExistingOrders();
   renderOrderItems();
@@ -564,6 +571,16 @@ async function handleMenuAction(action, btn) {
     }
   } else if (action === "menu") {
     await openMenuModal();
+  } else if (action === "logout") {
+    if (state.selectedTable) {
+      const cart = state.cartByTable[state.selectedTable.id] || [];
+      if (cart.length > 0) {
+        showUnsavedDialog();
+        return;
+      }
+    }
+    await api("logout", {});
+    show(els.loginScreen);
   } else if (action === "order") {
     if (state.paydeskTable) {
       openOrderForTable({ id: state.paydeskTable.id, name: state.paydeskTable.name });
@@ -572,7 +589,7 @@ async function handleMenuAction(action, btn) {
     if (state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
       if (cart.length > 0) {
-        showUnsavedDialog();
+        await sendOrder(true, true);
         return;
       }
     }
@@ -581,7 +598,7 @@ async function handleMenuAction(action, btn) {
     renderCategories();
     show(els.startScreen);
   } else if (action === "send") {
-    await sendOrder(false, true);
+    await sendOrder(true, true);
   } else if (action === "workprint") {
     await sendOrder(true, false);
   } else if (action === "changetable") {
@@ -615,7 +632,10 @@ async function sendOrder(workprint, goStart) {
     renderOrderItems();
     state.lastSync = new Date().toLocaleTimeString();
     updateStatus();
-    if (goStart) show(els.startScreen);
+    if (goStart) {
+      setStartMessage(`Tisch ${table.name}: Bestellung abgeschickt`, cart);
+      show(els.startScreen);
+    }
   }
 }
 
@@ -638,7 +658,7 @@ function showUnsavedDialog() {
     show(els.startScreen);
   };
   els.confirmActions.querySelector("#send").onclick = async () => {
-    await sendOrder(false, true);
+    await sendOrder(true, true);
     els.confirmModal.classList.add("hidden");
   };
   els.confirmActions.querySelector("#assign").onclick = () => {
@@ -907,13 +927,41 @@ async function changeTableFlow() {
 async function openMenuModal() {
   const data = await api("menu_items", {});
   if (data.menu) {
-    const items = data.menu || [];
+    const items = (data.menu || []).filter(m => {
+      const name = (m.name || "").toLowerCase();
+      return !name.includes("logout") && !name.includes("abmelden");
+    });
     els.menuItems.innerHTML = items.map(m => {
       const link = normalizeMenuLink(m.link || "");
       return `<div><a href="${link}" target="_blank">${m.name}</a></div>`;
     }).join("");
   }
   els.menuModal.classList.remove("hidden");
+}
+
+function setStartMessage(title, cart) {
+  if (!els.startMessageBody) return;
+  const list = (cart || []).map(c => `${c.unitamount}x ${c.name}`).join(", ");
+  els.startMessageBody.textContent = `${title}${list ? ": " + list : ""}`;
+}
+
+function updateTableLabelWidth() {
+  const names = [];
+  (state.rooms?.roomstables || []).forEach(r => r.tables.forEach(t => names.push(t.name || "")));
+  if (names.length === 0) return;
+  const meas = document.createElement("span");
+  meas.style.position = "absolute";
+  meas.style.visibility = "hidden";
+  meas.style.fontWeight = "800";
+  meas.style.fontSize = "16px";
+  document.body.appendChild(meas);
+  let max = 0;
+  names.forEach(n => {
+    meas.textContent = n;
+    max = Math.max(max, meas.getBoundingClientRect().width);
+  });
+  document.body.removeChild(meas);
+  state.maxTableLabelWidth = Math.ceil(max);
 }
 
 function normalizeMenuLink(link) {

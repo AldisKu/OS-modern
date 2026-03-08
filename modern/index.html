@@ -39,13 +39,24 @@
       <div class="order-layout">
         <div class="order-left">
           <div class="order-top">
+            <div class="order-status" id="start-info-bar">
+              <span>Kellner: <b id="status-user">-</b></span>
+              <span>Broker: <b id="status-broker">-</b></span>
+              <span>Online: <b id="status-online">-</b></span>
+              <span>Sync: <b id="status-sync">-</b></span>
+              <span>Printer: <b id="status-printer">-</b></span>
+              <span>TSE: <b id="status-tse">-</b></span>
+            </div>
             <div class="order-top-row">
               <div class="order-menu">
                 <div class="order-menu-left">
                   <button class="menu-btn" data-action="to-go">To Go</button>
                   <button class="menu-btn" data-action="paydesk">Kasse</button>
                 </div>
-                <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+                <div class="order-menu-right">
+                  <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+                  <button class="menu-btn" data-action="logout">Logout</button>
+                </div>
               </div>
             </div>
           </div>
@@ -54,12 +65,10 @@
           </div>
         </div>
         <div class="order-right" id="start-right">
-          <div class="status-item">Kellner: <span id="status-user">-</span></div>
-          <div class="status-item">Broker: <span id="status-broker">-</span></div>
-          <div class="status-item">Online: <span id="status-online">-</span></div>
-          <div class="status-item">Sync: <span id="status-sync">-</span></div>
-          <div class="status-item">Printer: <span id="status-printer">-</span></div>
-          <div class="status-item">TSE: <span id="status-tse">-</span></div>
+          <div class="start-message" id="start-message">
+            <div class="start-message-title">Status</div>
+            <div class="start-message-body" id="start-message-body">Bereit.</div>
+          </div>
         </div>
       </div>
     </section>
@@ -68,6 +77,14 @@
       <div class="order-layout">
         <div class="order-left">
           <div class="order-top">
+            <div class="order-status" id="order-info-bar">
+              <span>Kellner: <b id="order-user">-</b></span>
+              <span>Broker: <b id="order-broker">-</b></span>
+              <span>Online: <b id="order-online">-</b></span>
+              <span>Sync: <b id="order-sync">-</b></span>
+              <span>Printer: <b id="order-printer">-</b></span>
+              <span>TSE: <b id="order-tse">-</b></span>
+            </div>
             <div class="order-top-row">
               <div class="order-title"><span id="order-table-label">Tisch</span></div>
               <div class="order-menu">
@@ -78,16 +95,11 @@
                   <button class="menu-btn" data-action="send">Bestellen</button>
                   <button class="menu-btn" data-action="changetable">Tisch wechseln</button>
                 </div>
-                <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+                <div class="order-menu-right">
+                  <button class="menu-btn menu-btn-right" data-action="menu">Menü</button>
+                  <button class="menu-btn" data-action="logout">Logout</button>
+                </div>
               </div>
-            </div>
-            <div class="order-info" id="order-info-bar">
-              <span>Kellner: <b id="order-user">-</b></span>
-              <span>Broker: <b id="order-broker">-</b></span>
-              <span>Online: <b id="order-online">-</b></span>
-              <span>Sync: <b id="order-sync">-</b></span>
-              <span>Printer: <b id="order-printer">-</b></span>
-              <span>TSE: <b id="order-tse">-</b></span>
             </div>
           </div>
           <div class="order-bottom">
