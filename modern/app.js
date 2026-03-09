@@ -693,24 +693,34 @@ function normalizeExtras(item) {
         if (m) {
           const name = m[2].trim();
           const info = extrasByName.get(name.toLowerCase());
-          return { id: info?.id ?? name, amount: Number(m[1]) || 1, name: info?.name || name, price: info?.price || 0 };
+          const infoId = info && info.id != null ? info.id : null;
+          const infoName = info && info.name ? info.name : null;
+          const infoPrice = info && info.price ? info.price : 0;
+          return { id: infoId !== null ? infoId : name, amount: Number(m[1]) || 1, name: infoName || name, price: infoPrice || 0 };
         }
         const name = String(s).trim();
         const info = extrasByName.get(name.toLowerCase());
-        return { id: info?.id ?? name || "extra", amount: 1, name: info?.name || name || "Extra", price: info?.price || 0 };
+        const infoId = info && info.id != null ? info.id : null;
+        const infoName = info && info.name ? info.name : null;
+        const infoPrice = info && info.price ? info.price : 0;
+        return { id: (infoId !== null ? infoId : name) || "extra", amount: 1, name: infoName || name || "Extra", price: infoPrice || 0 };
       });
     }
     return item.extras.map(e => {
-      const rawId = e.id ?? e.extraid;
+      const rawId = e.id != null ? e.id : e.extraid;
       const nameLookup = e.name ? extrasByName.get(String(e.name).toLowerCase()) : null;
-      const id = rawId !== undefined ? rawId : (nameLookup?.id ?? e.name || "extra");
-      const name = e.name || byId.get(Number(rawId)) || nameLookup?.name || (rawId ? `Extra ${rawId}` : "Extra");
+      let id = rawId;
+      if (id === undefined || id === null) {
+        if (nameLookup && nameLookup.id != null) id = nameLookup.id;
+        else id = e.name || "extra";
+      }
+      const name = e.name || byId.get(Number(rawId)) || (nameLookup && nameLookup.name) || (rawId ? `Extra ${rawId}` : "Extra");
       const info = extrasById.get(Number(rawId)) || nameLookup;
       return {
         id,
         amount: Number(e.amount || 1),
         name,
-        price: info?.price || 0
+        price: info && info.price ? info.price : 0
       };
     });
   }
