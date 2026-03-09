@@ -474,7 +474,11 @@ function renderOrderItems() {
   }
   const existingGroups = groupExistingItems(existing);
   existingGroups.forEach(g => {
-    const extras = (g.item.extras || []).map(e => `<div class="order-extra">+ ${e.name}</div>`).join("");
+    const extraLabels = [];
+    (g.item.extras || []).forEach(e => extraLabels.push(`+ ${e.name}`));
+    if (g.item.togo) extraLabels.push("+ ToGo");
+    if (g.item.pricelevelname) extraLabels.push(`+ ${g.item.pricelevelname}`);
+    const extras = extraLabels.map(t => `<div class="order-extra">${t}</div>`).join("");
     parts.push(`<div class="order-item existing" data-queue="${g.item.id}"><b>${g.item.longname}</b> x${g.count}${extras}</div>`);
   });
   els.orderItems.innerHTML = parts.join("");
@@ -618,7 +622,10 @@ function cartKey(item) {
 
 function existingKey(item) {
   const extras = (item.extras || []).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
-  return [item.prodid, item.orderoption || "", item.togo ? 1 : 0, extras].join("#");
+  const price = Number(item.price || 0);
+  const priceKey = Number.isFinite(price) ? price.toFixed(2) : "";
+  const level = item.pricelevelname || "";
+  return [item.prodid, item.orderoption || "", item.togo ? 1 : 0, priceKey, level, extras].join("#");
 }
 
 function groupCartItems(items) {
@@ -731,6 +738,8 @@ function showExistingItemActions(item) {
       prodid: p.prodid,
       orderoption: p.option,
       togo: p.togo,
+      price: p.price,
+      pricelevelname: p.pricelevelname,
       extras: (p.extrasids || []).map((id, idx) => ({ id, amount: (p.extrasamounts || [])[idx] || 1 }))
     }) === key);
     for (let i = 0; i < Math.min(qty, candidates.length); i++) {
@@ -1036,13 +1045,23 @@ function renderPaydeskItems() {
   els.paydeskOpen.innerHTML = openGroups.map(g => {
     const qty = g.count;
     const line = Number(g.item.price || 0) * qty;
-    return `<div class="paydesk-item open" data-key="${g.key}">${g.item.longname} x${qty} - ${line.toFixed(2)}</div>`;
+    const tags = [];
+    if (g.item.togo) tags.push("[ToGo]");
+    if (g.item.pricelevelname) tags.push(`[${g.item.pricelevelname}]`);
+    (g.item.extras || []).forEach(e => tags.push(`+${e.name}`));
+    const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
+    return `<div class="paydesk-item open" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
   els.paydeskReceipt.innerHTML = receiptGroups.map(g => {
     const qty = g.count;
     const line = Number(g.item.price || 0) * qty;
     total += line;
-    return `<div class="paydesk-item receipt" data-key="${g.key}">${g.item.longname} x${qty} - ${line.toFixed(2)}</div>`;
+    const tags = [];
+    if (g.item.togo) tags.push("[ToGo]");
+    if (g.item.pricelevelname) tags.push(`[${g.item.pricelevelname}]`);
+    (g.item.extras || []).forEach(e => tags.push(`+${e.name}`));
+    const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
+    return `<div class="paydesk-item receipt" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
   els.paydeskTotal.textContent = total.toFixed(2);
   els.paydeskPayments.querySelectorAll("button").forEach(btn => {
