@@ -479,9 +479,11 @@ function renderOrderItems() {
   existingGroups.forEach(g => {
     const extraLabels = [];
     normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
-    if (g.item.togo) extraLabels.push("+ ToGo");
-    const levelLabel = displayPriceLevel(g.item.pricelevelname);
-    if (levelLabel) extraLabels.push(`+ ${levelLabel}`);
+    if (isTogo(g.item)) extraLabels.push("+ ToGo");
+    if (shouldShowPriceLevel(g.item)) {
+      const levelLabel = displayPriceLevel(g.item.pricelevelname);
+      if (levelLabel) extraLabels.push(`+ ${levelLabel}`);
+    }
     const extras = extraLabels.map(t => `<div class="order-extra">${t}</div>`).join("");
     parts.push(`<div class="order-item existing" data-queue="${g.item.id}"><b>${g.item.longname}</b> x${g.count}${extras}</div>`);
   });
@@ -709,12 +711,25 @@ function displayPriceLevel(name) {
   return trimmed;
 }
 
+function isTogo(item) {
+  return Number(item?.togo || 0) === 1;
+}
+
+function shouldShowPriceLevel(item) {
+  if (!item || !item.pricelevelname) return false;
+  const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
+  if (!prod) return true;
+  const base = Number(prod.price || 0);
+  const price = Number(item.price || 0);
+  return Math.abs(base - price) > 0.0001;
+}
+
 function existingKey(item) {
   const extras = normalizeExtras(item).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
   const price = Number(item.price || 0);
   const priceKey = Number.isFinite(price) ? price.toFixed(2) : "";
   const level = item.pricelevelname || "";
-  return [item.prodid, item.orderoption || "", item.togo ? 1 : 0, priceKey, level, extras].join("#");
+  return [item.prodid, item.orderoption || "", isTogo(item) ? 1 : 0, priceKey, level, extras].join("#");
 }
 
 function existingKeyLoose(item) {
@@ -1192,9 +1207,11 @@ function renderPaydeskItems() {
     const qty = g.count;
     const line = Number(g.item.price || 0) * qty;
     const tags = [];
-    if (g.item.togo) tags.push("[ToGo]");
-    const levelLabel = displayPriceLevel(g.item.pricelevelname);
-    if (levelLabel) tags.push(`[${levelLabel}]`);
+    if (isTogo(g.item)) tags.push("[ToGo]");
+    if (shouldShowPriceLevel(g.item)) {
+      const levelLabel = displayPriceLevel(g.item.pricelevelname);
+      if (levelLabel) tags.push(`[${levelLabel}]`);
+    }
     normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item open" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
@@ -1204,9 +1221,11 @@ function renderPaydeskItems() {
     const line = Number(g.item.price || 0) * qty;
     total += line;
     const tags = [];
-    if (g.item.togo) tags.push("[ToGo]");
-    const levelLabel = displayPriceLevel(g.item.pricelevelname);
-    if (levelLabel) tags.push(`[${levelLabel}]`);
+    if (isTogo(g.item)) tags.push("[ToGo]");
+    if (shouldShowPriceLevel(g.item)) {
+      const levelLabel = displayPriceLevel(g.item.pricelevelname);
+      if (levelLabel) tags.push(`[${levelLabel}]`);
+    }
     normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item receipt" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
