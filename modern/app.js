@@ -683,26 +683,34 @@ function cartKey(item) {
 }
 
 function normalizeExtras(item) {
+  const extrasById = new Map((state.menu?.extras || []).map(e => [Number(e.id), { id: Number(e.id), name: e.name, price: Number(e.price || 0) }]));
+  const extrasByName = new Map((state.menu?.extras || []).map(e => [String(e.name || "").toLowerCase(), { id: Number(e.id), name: e.name, price: Number(e.price || 0) }]));
   if (Array.isArray(item.extras) && item.extras.length > 0) {
     const byId = new Map((state.menu?.extras || []).map(e => [Number(e.id), e.name]));
     if (typeof item.extras[0] === "string") {
       return item.extras.map(s => {
         const m = String(s).match(/^\\s*(\\d+)\\s*x\\s*(.+)\\s*$/i);
         if (m) {
-          return { id: m[2].trim(), amount: Number(m[1]) || 1, name: m[2].trim() };
+          const name = m[2].trim();
+          const info = extrasByName.get(name.toLowerCase());
+          return { id: info?.id ?? name, amount: Number(m[1]) || 1, name: info?.name || name, price: info?.price || 0 };
         }
         const name = String(s).trim();
-        return { id: name || "extra", amount: 1, name: name || "Extra" };
+        const info = extrasByName.get(name.toLowerCase());
+        return { id: info?.id ?? name || "extra", amount: 1, name: info?.name || name || "Extra", price: info?.price || 0 };
       });
     }
     return item.extras.map(e => {
       const rawId = e.id ?? e.extraid;
-      const id = rawId !== undefined ? rawId : (e.name || "extra");
-      const name = e.name || byId.get(Number(rawId)) || (rawId ? `Extra ${rawId}` : "Extra");
+      const nameLookup = e.name ? extrasByName.get(String(e.name).toLowerCase()) : null;
+      const id = rawId !== undefined ? rawId : (nameLookup?.id ?? e.name || "extra");
+      const name = e.name || byId.get(Number(rawId)) || nameLookup?.name || (rawId ? `Extra ${rawId}` : "Extra");
+      const info = extrasById.get(Number(rawId)) || nameLookup;
       return {
         id,
         amount: Number(e.amount || 1),
-        name
+        name,
+        price: info?.price || 0
       };
     });
   }
@@ -720,7 +728,8 @@ function normalizeExtras(item) {
   return ids.map((id, idx) => ({
     id: Number(id),
     amount: Number(amounts[idx] || 1),
-    name: byId.get(Number(id)) || `Extra ${id}`
+    name: byId.get(Number(id)) || `Extra ${id}`,
+    price: Number((state.menu?.extras || []).find(e => Number(e.id) === Number(id))?.price || 0)
   }));
 }
 
@@ -756,8 +765,10 @@ function shouldShowPriceLevel(item) {
     return !["A", "B", "C", "1", "2", "3"].includes(trimmed);
   }
   const base = Number(prod.price || 0);
+  const extrasSum = normalizeExtras(item).reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
+  const baseWithExtras = base + extrasSum;
   const price = Number(item.price || 0);
-  return Math.abs(base - price) > 0.0001;
+  return Math.abs(baseWithExtras - price) > 0.0001;
 }
 
 function existingKey(item) {
@@ -860,7 +871,9 @@ function showExistingItemActions(item) {
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
       const extras = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
-      const changed = shouldShowPriceLevel(item) ? Number(item.price || 0).toFixed(2) : "NO";
+      const extrasSum = normalizeExtras(item).reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
+      const baseNoExtras = Number(item.price || 0) - extrasSum;
+      const changed = shouldShowPriceLevel(item) ? Math.max(0, baseNoExtras).toFixed(2) : "NO";
       addToCartCustom(prod, sanitizeExtras(extras), item.orderoption || "", qty, isTogo(item), changed);
     }
     els.confirmModal.classList.add("hidden");
