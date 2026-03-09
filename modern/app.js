@@ -619,6 +619,33 @@ function addToCart(prod, extras, option, qty, forceTogo) {
   renderOrderItems();
 }
 
+function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
+  const tableId = state.selectedTable.id;
+  const item = {
+    _id: Date.now(),
+    prodid: prod.id,
+    name: prod.longname || prod.name,
+    price: Number(prod.price || 0),
+    unit: Number(prod.unit || 0),
+    unitamount: qty,
+    togo: togo ? 1 : 0,
+    option: option || "",
+    extras: sanitizeExtras(extras),
+    changedPrice: changedPrice || "NO"
+  };
+  state.cartByTable[tableId] = state.cartByTable[tableId] || [];
+  const cart = state.cartByTable[tableId];
+  const key = cartKey(item);
+  const idx = cart.findIndex(c => cartKey(c) === key);
+  if (idx >= 0) {
+    cart[idx].unitamount += item.unitamount;
+  } else {
+    cart.push(item);
+  }
+  saveCart(tableId);
+  renderOrderItems();
+}
+
 function resetClientState() {
   try { localStorage.clear(); } catch (_) {}
   state.user = null;
@@ -774,46 +801,58 @@ function showExistingItemActions(item) {
   els.confirmActions.classList.add("actions-3");
   const key = existingKey(item);
   const groupCount = (state.orderExisting || []).filter(p => existingKey(p) === key).reduce((s, p) => s + Number(p.unitamount || 1), 0);
-  els.confirmTitle.textContent = item.longname;
+  const titleExtras = [];
+  normalizeExtras(item).forEach(e => titleExtras.push(`+ ${e.name}`));
+  if (isTogo(item)) titleExtras.push("+ ToGo");
+  if (shouldShowPriceLevel(item)) {
+    const levelLabel = displayPriceLevel(item.pricelevelname);
+    if (levelLabel) titleExtras.push(`+ ${levelLabel}`);
+  }
+  if (item.orderoption) titleExtras.push(`+ ${item.orderoption}`);
+  els.confirmTitle.textContent = `${item.longname} (${groupCount})`;
   const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" />` : "";
   els.confirmBody.innerHTML = `
-    <div class="edit-row"><b>${item.longname}</b> (aktuell: ${groupCount})</div>
+    ${titleExtras.length ? `<div class="edit-row">${titleExtras.join("<br>")}</div>` : ""}
     <div class="edit-row"><b>Anzahl</b></div>
     <div class="edit-qty-row">
       <div class="edit-qty compact">
       <button class="ghost" id="qty-dec">-1</button>
-      <input type="number" id="qty-val" class="qty-small" value="1" min="1" max="${groupCount}" />
+      <input type="number" id="qty-val" class="qty-small" value="1" min="1" max="99" />
       <button class="ghost" id="qty-inc">+1</button>
       </div>
       ${codeField}
     </div>
   `;
   els.confirmActions.innerHTML = `
-    <button class="ghost" id="cancel">Abbrechen</button>
-    <button class="ghost" id="reorder">Nachbestellen</button>
-    <button class="primary" id="remove">Entfernen</button>
+    <button class="ghost confirm-action" id="cancel">Abbrechen</button>
+    <button class="ghost confirm-action" id="reorder">Nachbestellen</button>
+    <button class="ghost confirm-action" id="remove">Entfernen</button>
   `;
   els.confirmModal.classList.remove("hidden");
 
   const qtyVal = els.confirmBody.querySelector("#qty-val");
+  const removeBtn = els.confirmActions.querySelector("#remove");
   const updateQtyButtons = () => {
     const q = Number(qtyVal.value || 1);
     els.confirmBody.querySelector("#qty-dec").disabled = q <= 1;
-    els.confirmBody.querySelector("#qty-inc").disabled = q >= groupCount;
+    els.confirmBody.querySelector("#qty-inc").disabled = q >= 99;
+    removeBtn.disabled = q > groupCount;
   };
   updateQtyButtons();
   els.confirmBody.querySelector("#qty-dec").onclick = () => { qtyVal.value = Math.max(1, Number(qtyVal.value) - 1); updateQtyButtons(); };
-  els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(groupCount, Number(qtyVal.value) + 1); updateQtyButtons(); };
+  els.confirmBody.querySelector("#qty-inc").onclick = () => { qtyVal.value = Math.min(99, Number(qtyVal.value) + 1); updateQtyButtons(); };
+  qtyVal.oninput = updateQtyButtons;
 
   els.confirmActions.querySelector("#cancel").onclick = () => {
     els.confirmModal.classList.add("hidden");
   };
   els.confirmActions.querySelector("#reorder").onclick = () => {
-    const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
+    const qty = Math.max(1, Number(qtyVal.value || 1));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
       const extras = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
-      addToCart(prod, sanitizeExtras(extras), item.orderoption || "", qty, item.togo ? 1 : 0);
+      const changed = shouldShowPriceLevel(item) ? Number(item.price || 0).toFixed(2) : "NO";
+      addToCartCustom(prod, sanitizeExtras(extras), item.orderoption || "", qty, isTogo(item), changed);
     }
     els.confirmModal.classList.add("hidden");
   };

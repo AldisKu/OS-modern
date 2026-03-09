@@ -642,3 +642,16 @@ body {
 }
 
 .modal-footer.actions-3 button { width: 100%; }
+
+.confirm-action {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 700;
+}
+
+.confirm-action:disabled {
+  background: #fff;
+  color: #000;
+  border-color: var(--border);
+}
