@@ -650,11 +650,26 @@ function cartKey(item) {
 function normalizeExtras(item) {
   if (Array.isArray(item.extras) && item.extras.length > 0) {
     const byId = new Map((state.menu?.extras || []).map(e => [Number(e.id), e.name]));
-    return item.extras.map(e => ({
-      id: Number(e.id ?? e.extraid),
-      amount: Number(e.amount || 1),
-      name: e.name || byId.get(Number(e.id)) || `Extra ${e.id}`
-    }));
+    if (typeof item.extras[0] === "string") {
+      return item.extras.map(s => {
+        const m = String(s).match(/^\\s*(\\d+)\\s*x\\s*(.+)\\s*$/i);
+        if (m) {
+          return { id: m[2].trim(), amount: Number(m[1]) || 1, name: m[2].trim() };
+        }
+        const name = String(s).trim();
+        return { id: name || "extra", amount: 1, name: name || "Extra" };
+      });
+    }
+    return item.extras.map(e => {
+      const rawId = e.id ?? e.extraid;
+      const id = rawId !== undefined ? rawId : (e.name || "extra");
+      const name = e.name || byId.get(Number(rawId)) || (rawId ? `Extra ${rawId}` : "Extra");
+      return {
+        id,
+        amount: Number(e.amount || 1),
+        name
+      };
+    });
   }
   const parseList = (val) => {
     if (Array.isArray(val)) return val;
@@ -1002,13 +1017,13 @@ async function handleMenuAction(action, btn) {
     if (state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
       if (cart.length > 0) {
-        showUnsavedDialog();
+        showUnsavedDialog(async () => {
+          await doLogout();
+        });
         return;
       }
     }
-    await api("logout", {});
-    resetClientState();
-    show(els.loginScreen);
+    await doLogout();
   } else if (action === "order") {
     if (state.paydeskTable) {
       openOrderForTable({ id: state.paydeskTable.id, name: state.paydeskTable.name });
@@ -1067,7 +1082,13 @@ async function sendOrder(workprint, goStart) {
   }
 }
 
-function showUnsavedDialog() {
+async function doLogout() {
+  await api("logout", {});
+  resetClientState();
+  show(els.loginScreen);
+}
+
+function showUnsavedDialog(onDone) {
   resetConfirmActionsLayout();
   els.confirmTitle.textContent = "Offene Bestellung";
   els.confirmBody.innerHTML = "Was soll mit den offenen Produkten passieren?";
@@ -1077,32 +1098,43 @@ function showUnsavedDialog() {
     <button class="primary" id="send">Abschicken</button>
   `;
   els.confirmModal.classList.remove("hidden");
-  els.confirmActions.querySelector("#discard").onclick = () => {
+  els.confirmActions.querySelector("#discard").onclick = async () => {
     state.cartByTable[state.selectedTable.id] = [];
     saveCart(state.selectedTable.id);
     els.confirmModal.classList.add("hidden");
+    if (onDone) {
+      await onDone();
+      return;
+    }
     state.typeStack = [];
     state.selectedType = topLevelTypes()[0]?.id || null;
     renderCategories();
     show(els.startScreen);
   };
   els.confirmActions.querySelector("#send").onclick = async () => {
-    await sendOrder(true, true);
+    await sendOrder(true, !onDone);
     els.confirmModal.classList.add("hidden");
+    if (onDone) {
+      await onDone();
+    }
   };
   els.confirmActions.querySelector("#assign").onclick = () => {
     els.confirmBody.innerHTML = "Ziel‑Tisch wählen";
     const list = (state.rooms?.roomstables || []).flatMap(r => r.tables).map(t => `<button class="ghost" data-id="${t.id}">${t.name}</button>`).join("");
     els.confirmActions.innerHTML = list;
     els.confirmActions.querySelectorAll("button").forEach(b => {
-      b.onclick = () => {
+      b.onclick = async () => {
         const to = Number(b.dataset.id);
         state.cartByTable[to] = (state.cartByTable[to] || []).concat(state.cartByTable[state.selectedTable.id]);
         saveCart(to);
         state.cartByTable[state.selectedTable.id] = [];
         saveCart(state.selectedTable.id);
-        openOrderForTable({ id: to, name: b.textContent });
         els.confirmModal.classList.add("hidden");
+        if (onDone) {
+          await onDone();
+          return;
+        }
+        openOrderForTable({ id: to, name: b.textContent });
       };
     });
   };
