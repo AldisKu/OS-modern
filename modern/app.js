@@ -446,8 +446,28 @@ function renderOrderItems() {
   const parts = [];
   const cartGroups = groupCartItems(cart);
   cartGroups.forEach(g => {
-    const extras = (g.item.extras || []).map(e => `<div class="order-extra">+ ${e.name}</div>`).join("");
-    parts.push(`<div class="order-item new" data-cart="${g.item._id}"><b>${g.item.name}</b> x${g.count}${extras}</div>`);
+    const extraLabels = [];
+    (g.item.extras || []).forEach(e => extraLabels.push(`+ ${e.name}`));
+    if (g.item.togo) extraLabels.push("+ ToGo");
+    const changed = Number(g.item.changedPrice || 0);
+    const base = Number(g.item.price || 0);
+    if (changed && base > 0 && Math.abs(changed - base) > 0.0001) {
+      const pct = Math.max(0, Math.round(((base - changed) / base) * 1000) / 10);
+      extraLabels.push(`+ Rabatt ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`);
+    }
+    const extras = extraLabels.map(t => `<div class="order-extra">${t}</div>`).join("");
+    const key = encodeURIComponent(cartKey(g.item));
+    parts.push(`
+      <div class="order-item new" data-cart="${g.item._id}">
+        <div class="order-title"><b>${g.item.name}</b></div>
+        ${extras}
+        <div class="order-qty" data-key="${key}">
+          <button type="button" class="mini" data-act="dec">-</button>
+          <span class="order-count">${g.count}</span>
+          <button type="button" class="mini" data-act="inc">+</button>
+        </div>
+      </div>
+    `);
   });
   if (cartGroups.length > 0 && existing.length > 0) {
     parts.push(`<div class="order-separator"></div>`);
@@ -458,6 +478,16 @@ function renderOrderItems() {
     parts.push(`<div class="order-item existing" data-queue="${g.item.id}"><b>${g.item.longname}</b> x${g.count}${extras}</div>`);
   });
   els.orderItems.innerHTML = parts.join("");
+  els.orderItems.querySelectorAll(".order-qty button").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const wrap = btn.closest(".order-qty");
+      const key = decodeURIComponent(wrap.dataset.key || "");
+      if (!key) return;
+      const delta = btn.dataset.act === "inc" ? 1 : -1;
+      adjustCartGroup(key, delta);
+    });
+  });
   els.orderItems.querySelectorAll(".order-item.new").forEach(el => {
     el.addEventListener("click", () => {
       const id = Number(el.dataset.cart);
@@ -471,6 +501,28 @@ function renderOrderItems() {
       if (item) showExistingItemActions(item);
     });
   });
+}
+
+function adjustCartGroup(key, delta) {
+  if (!state.selectedTable) return;
+  const cart = state.cartByTable[state.selectedTable.id] || [];
+  if (delta > 0) {
+    const idx = cart.findIndex(c => cartKey(c) === key);
+    if (idx >= 0) {
+      const clone = { ...cart[idx], _id: Date.now(), unitamount: 1 };
+      cart.push(clone);
+    }
+  } else {
+    for (let i = cart.length - 1; i >= 0; i--) {
+      if (cartKey(cart[i]) !== key) continue;
+      cart[i].unitamount = Number(cart[i].unitamount || 1) - 1;
+      if (cart[i].unitamount <= 0) cart.splice(i, 1);
+      break;
+    }
+  }
+  state.cartByTable[state.selectedTable.id] = cart;
+  saveCart(state.selectedTable.id);
+  renderOrderItems();
 }
 
 function openProductModal(prod) {
@@ -559,7 +611,9 @@ function resetClientState() {
 
 function cartKey(item) {
   const extras = (item.extras || []).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
-  return [item.prodid, item.option || "", item.togo ? 1 : 0, extras].join("#");
+  const changed = Number(item.changedPrice);
+  const priceKey = Number.isFinite(changed) ? `cp:${changed.toFixed(2)}` : "cp:-";
+  return [item.prodid, item.option || "", item.togo ? 1 : 0, priceKey, extras].join("#");
 }
 
 function existingKey(item) {
@@ -612,25 +666,32 @@ function groupExistingItems(items) {
   return list;
 }
 
+function resetConfirmActionsLayout() {
+  els.confirmActions.classList.remove("actions-3");
+}
+
 function showExistingItemActions(item) {
+  resetConfirmActionsLayout();
+  els.confirmActions.classList.add("actions-3");
   const key = existingKey(item);
   const groupCount = (state.orderExisting || []).filter(p => existingKey(p) === key).reduce((s, p) => s + Number(p.unitamount || 1), 0);
   els.confirmTitle.textContent = item.longname;
-  const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" placeholder="Stornocode" />` : "";
+  const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" />` : "";
   els.confirmBody.innerHTML = `
     <div class="edit-row"><b>${item.longname}</b> (aktuell: ${groupCount})</div>
-    <div class="edit-row"><button class="ghost" id="reorder">Nachbestellen</button></div>
     <div class="edit-row"><b>Anzahl</b></div>
-    <div class="edit-qty">
+    <div class="edit-qty-row">
+      <div class="edit-qty compact">
       <button class="ghost" id="qty-dec">-1</button>
-      <input type="number" id="qty-val" value="1" min="1" max="${groupCount}" />
+      <input type="number" id="qty-val" class="qty-small" value="1" min="1" max="${groupCount}" />
       <button class="ghost" id="qty-inc">+1</button>
-      <span class="edit-qty-max">/ ${groupCount}</span>
+      </div>
+      ${codeField}
     </div>
-    ${codeField}
   `;
   els.confirmActions.innerHTML = `
     <button class="ghost" id="cancel">Abbrechen</button>
+    <button class="ghost" id="reorder">Nachbestellen</button>
     <button class="primary" id="remove">Entfernen</button>
   `;
   els.confirmModal.classList.remove("hidden");
@@ -648,7 +709,7 @@ function showExistingItemActions(item) {
   els.confirmActions.querySelector("#cancel").onclick = () => {
     els.confirmModal.classList.add("hidden");
   };
-  els.confirmBody.querySelector("#reorder").onclick = () => {
+  els.confirmActions.querySelector("#reorder").onclick = () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
@@ -684,6 +745,7 @@ function showExistingItemActions(item) {
 }
 
 function editCartItem(id) {
+  resetConfirmActionsLayout();
   const cart = state.cartByTable[state.selectedTable.id] || [];
   const item = cart.find(c => c._id === id);
   if (!item) return;
@@ -883,6 +945,7 @@ async function sendOrder(workprint, goStart) {
 }
 
 function showUnsavedDialog() {
+  resetConfirmActionsLayout();
   els.confirmTitle.textContent = "Offene Bestellung";
   els.confirmBody.innerHTML = "Was soll mit den offenen Produkten passieren?";
   els.confirmActions.innerHTML = `
@@ -1100,6 +1163,7 @@ async function paydeskPay(paymentId, print) {
 }
 
 async function openPaydeskPicker(origin) {
+  resetConfirmActionsLayout();
   const data = await api("refresh_tables", {});
   if (data.status !== "OK") return;
   state.rooms = data.rooms;
@@ -1146,6 +1210,7 @@ els.paydeskHost?.addEventListener("click", () => {
 });
 
 async function changeTableFlow() {
+  resetConfirmActionsLayout();
   const table = state.selectedTable;
   if (!table) return;
   const data = await api("table_open_items", { tableid: table.id });
