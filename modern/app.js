@@ -621,6 +621,12 @@ function addToCart(prod, extras, option, qty, forceTogo) {
 
 function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
   const tableId = state.selectedTable.id;
+  let normalizedChanged = changedPrice || "NO";
+  const base = Number(prod.price || 0);
+  const cp = Number(normalizedChanged);
+  if (Number.isFinite(cp) && Math.abs(cp - base) <= 0.0001) {
+    normalizedChanged = "NO";
+  }
   const item = {
     _id: Date.now(),
     prodid: prod.id,
@@ -631,7 +637,7 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
     togo: togo ? 1 : 0,
     option: option || "",
     extras: sanitizeExtras(extras),
-    changedPrice: changedPrice || "NO"
+    changedPrice: normalizedChanged
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
@@ -745,7 +751,10 @@ function isTogo(item) {
 function shouldShowPriceLevel(item) {
   if (!item || !item.pricelevelname) return false;
   const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
-  if (!prod) return true;
+  const trimmed = String(item.pricelevelname).trim();
+  if (!prod) {
+    return !["A", "B", "C", "1", "2", "3"].includes(trimmed);
+  }
   const base = Number(prod.price || 0);
   const price = Number(item.price || 0);
   return Math.abs(base - price) > 0.0001;
