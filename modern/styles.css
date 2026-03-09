@@ -603,6 +603,27 @@ body {
 
 .section-title { font-size: 12px; color: var(--muted); text-transform: uppercase; }
 
+.modal-extras {
+  display: grid;
+  gap: 8px;
+}
+
+.extra-btn {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-weight: 700;
+}
+
+.extra-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .modal-footer {
   margin-top: 12px;
   display: flex;
