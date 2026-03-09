@@ -475,7 +475,7 @@ function renderOrderItems() {
   const existingGroups = groupExistingItems(existing);
   existingGroups.forEach(g => {
     const extraLabels = [];
-    (g.item.extras || []).forEach(e => extraLabels.push(`+ ${e.name}`));
+    normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
     if (g.item.togo) extraLabels.push("+ ToGo");
     if (g.item.pricelevelname) extraLabels.push(`+ ${g.item.pricelevelname}`);
     const extras = extraLabels.map(t => `<div class="order-extra">${t}</div>`).join("");
@@ -620,8 +620,23 @@ function cartKey(item) {
   return [item.prodid, item.option || "", item.togo ? 1 : 0, priceKey, extras].join("#");
 }
 
+function normalizeExtras(item) {
+  if (Array.isArray(item.extras) && item.extras.length > 0) {
+    return item.extras.map(e => ({ id: Number(e.id), amount: Number(e.amount || 1), name: e.name || "" }));
+  }
+  const ids = Array.isArray(item.extrasids) ? item.extrasids : [];
+  const amounts = Array.isArray(item.extrasamounts) ? item.extrasamounts : [];
+  if (ids.length === 0) return [];
+  const byId = new Map((state.menu?.extras || []).map(e => [Number(e.id), e.name]));
+  return ids.map((id, idx) => ({
+    id: Number(id),
+    amount: Number(amounts[idx] || 1),
+    name: byId.get(Number(id)) || `Extra ${id}`
+  }));
+}
+
 function existingKey(item) {
-  const extras = (item.extras || []).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
+  const extras = normalizeExtras(item).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
   const price = Number(item.price || 0);
   const priceKey = Number.isFinite(price) ? price.toFixed(2) : "";
   const level = item.pricelevelname || "";
@@ -740,7 +755,8 @@ function showExistingItemActions(item) {
       togo: p.togo,
       price: p.price,
       pricelevelname: p.pricelevelname,
-      extras: (p.extrasids || []).map((id, idx) => ({ id, amount: (p.extrasamounts || [])[idx] || 1 }))
+      extrasids: p.extrasids,
+      extrasamounts: p.extrasamounts
     }) === key);
     for (let i = 0; i < Math.min(qty, candidates.length); i++) {
       const c = candidates[i];
@@ -1048,7 +1064,7 @@ function renderPaydeskItems() {
     const tags = [];
     if (g.item.togo) tags.push("[ToGo]");
     if (g.item.pricelevelname) tags.push(`[${g.item.pricelevelname}]`);
-    (g.item.extras || []).forEach(e => tags.push(`+${e.name}`));
+    normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item open" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
@@ -1059,7 +1075,7 @@ function renderPaydeskItems() {
     const tags = [];
     if (g.item.togo) tags.push("[ToGo]");
     if (g.item.pricelevelname) tags.push(`[${g.item.pricelevelname}]`);
-    (g.item.extras || []).forEach(e => tags.push(`+${e.name}`));
+    normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item receipt" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
@@ -1093,7 +1109,7 @@ function movePaydeskItemByKey(key, direction) {
 }
 
 function paydeskKey(item) {
-  const extras = (item.extras || []).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
+  const extras = normalizeExtras(item).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
   return [item.prodid, item.togo ? 1 : 0, item.price, item.pricelevelname || "", extras].join("#");
 }
 
