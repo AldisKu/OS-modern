@@ -651,13 +651,20 @@ function normalizeExtras(item) {
   if (Array.isArray(item.extras) && item.extras.length > 0) {
     const byId = new Map((state.menu?.extras || []).map(e => [Number(e.id), e.name]));
     return item.extras.map(e => ({
-      id: Number(e.id),
+      id: Number(e.id ?? e.extraid),
       amount: Number(e.amount || 1),
       name: e.name || byId.get(Number(e.id)) || `Extra ${e.id}`
     }));
   }
-  const ids = Array.isArray(item.extrasids) ? item.extrasids : [];
-  const amounts = Array.isArray(item.extrasamounts) ? item.extrasamounts : [];
+  const parseList = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === "string") {
+      return val.split(/[;,|]/).map(v => v.trim()).filter(Boolean);
+    }
+    return [];
+  };
+  const ids = parseList(item.extrasids);
+  const amounts = parseList(item.extrasamounts);
   if (ids.length === 0) return [];
   const byId = new Map((state.menu?.extras || []).map(e => [Number(e.id), e.name]));
   return ids.map((id, idx) => ({
@@ -682,6 +689,13 @@ function existingKey(item) {
   const priceKey = Number.isFinite(price) ? price.toFixed(2) : "";
   const level = item.pricelevelname || "";
   return [item.prodid, item.orderoption || "", item.togo ? 1 : 0, priceKey, level, extras].join("#");
+}
+
+function existingKeyLoose(item) {
+  const extras = normalizeExtras(item).map(e => `${e.id}:${e.amount || 1}`).sort().join("|");
+  const price = Number(item.price || 0);
+  const priceKey = Number.isFinite(price) ? price.toFixed(2) : "";
+  return [item.prodid, item.orderoption || "", item.togo ? 1 : 0, priceKey, "", extras].join("#");
 }
 
 function groupCartItems(items) {
@@ -771,15 +785,36 @@ function showExistingItemActions(item) {
         return;
       }
     }
-    const candidates = (state.notDelivered || []).filter(p => existingKey({
-      prodid: p.prodid,
-      orderoption: p.option,
-      togo: p.togo,
-      price: p.price,
-      pricelevelname: p.pricelevelname,
-      extrasids: p.extrasids,
-      extrasamounts: p.extrasamounts
-    }) === key);
+    const keyLoose = existingKeyLoose(item);
+    const candidates = (state.notDelivered || []).filter(p => {
+      const k = existingKey({
+        prodid: p.prodid,
+        orderoption: p.option,
+        togo: p.togo,
+        price: p.price,
+        pricelevelname: p.pricelevelname || "",
+        extrasids: p.extrasids,
+        extrasamounts: p.extrasamounts
+      });
+      if (k === key || k === keyLoose) return true;
+      const kl = existingKeyLoose({
+        prodid: p.prodid,
+        orderoption: p.option,
+        togo: p.togo,
+        price: p.price,
+        extrasids: p.extrasids,
+        extrasamounts: p.extrasamounts
+      });
+      return kl === key || kl === keyLoose;
+    });
+    if (candidates.length === 0 && item.id) {
+      await api("remove_product", { queueid: item.id, isPaid: item.isPaid, isCooking: item.isCooking, isReady: item.isready });
+      await fetchNotDelivered();
+      await fetchExistingOrders();
+      renderOrderItems();
+      els.confirmModal.classList.add("hidden");
+      return;
+    }
     for (let i = 0; i < Math.min(qty, candidates.length); i++) {
       const c = candidates[i];
       await api("remove_product", { queueid: c.id, isPaid: c.isPaid, isCooking: c.isCooking, isReady: c.isready });
