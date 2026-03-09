@@ -558,7 +558,7 @@ function openProductModal(prod) {
         const name = btn.dataset.name;
         const price = Number(btn.dataset.price || 0);
         if (extrasList.length === 1) {
-          addToCart(prod, [{ id, name, price, amount: 1 }], "", 1);
+          addToCart(prod, sanitizeExtras([{ id, name, price, amount: 1 }]), "", 1);
           els.productModal.classList.add("hidden");
           renderOrderItems();
           return;
@@ -586,7 +586,7 @@ function addProductToCart() {
   if (!prod) return;
   const qty = 1;
   const extras = Array.isArray(state.modalExtrasSelected) ? state.modalExtrasSelected : [];
-  addToCart(prod, extras, "", qty);
+  addToCart(prod, sanitizeExtras(extras), "", qty);
   els.productModal.classList.add("hidden");
   renderOrderItems();
 }
@@ -602,7 +602,7 @@ function addToCart(prod, extras, option, qty, forceTogo) {
     unitamount: qty,
     togo: typeof forceTogo === "number" ? forceTogo : (state.selectedTable?.id === 0 ? 1 : 0),
     option: option || "",
-    extras: extras || []
+    extras: sanitizeExtras(extras)
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
@@ -672,6 +672,17 @@ function normalizeExtras(item) {
     amount: Number(amounts[idx] || 1),
     name: byId.get(Number(id)) || `Extra ${id}`
   }));
+}
+
+function sanitizeExtras(extras) {
+  return (extras || [])
+    .map(e => ({
+      id: Number(e.id ?? e.extraid),
+      name: e.name || "",
+      price: Number(e.price || 0),
+      amount: Number(e.amount || 1)
+    }))
+    .filter(e => Number.isFinite(e.id) && e.id > 0);
 }
 
 function displayPriceLevel(name) {
@@ -772,7 +783,7 @@ function showExistingItemActions(item) {
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
       const extras = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
-      addToCart(prod, extras, item.orderoption || "", qty, item.togo ? 1 : 0);
+      addToCart(prod, sanitizeExtras(extras), item.orderoption || "", qty, item.togo ? 1 : 0);
     }
     els.confirmModal.classList.add("hidden");
   };
@@ -1031,7 +1042,7 @@ async function sendOrder(workprint, goStart) {
   const prods = cart.map(c => ({
     name: c.name,
     option: c.option || "",
-    extras: c.extras.map(e => ({ id: e.id, name: e.name, amount: e.amount })),
+    extras: sanitizeExtras(c.extras).map(e => ({ id: e.id, name: e.name, amount: e.amount })),
     prodid: c.prodid,
     price: c.price,
     changedPrice: c.changedPrice || "NO",
