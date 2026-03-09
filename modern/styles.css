@@ -632,6 +632,10 @@ body {
   flex-wrap: wrap;
 }
 
+.modal-footer.fullwidth button {
+  width: 100%;
+}
+
 .modal-footer.actions-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;

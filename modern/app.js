@@ -450,7 +450,7 @@ function renderOrderItems() {
   const cartGroups = groupCartItems(cart);
   cartGroups.forEach(g => {
     const extraLabels = [];
-    (g.item.extras || []).forEach(e => extraLabels.push(`+ ${e.name}`));
+    normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
     if (g.item.togo) extraLabels.push("+ ToGo");
     const changed = Number(g.item.changedPrice || 0);
     const base = Number(g.item.price || 0);
@@ -538,7 +538,6 @@ function openProductModal(prod) {
   els.modalTitle.textContent = prod.longname || prod.name;
   if (els.modalQty) els.modalQty.value = 1;
   if (els.modalNote) els.modalNote.value = "";
-  els.modalTogo.checked = state.selectedTable?.id === 0;
   const extrasList = (prod.extras || []).map(e => ({
     id: Number(e.extraid || e.id),
     name: e.name,
@@ -559,7 +558,7 @@ function openProductModal(prod) {
         const name = btn.dataset.name;
         const price = Number(btn.dataset.price || 0);
         if (extrasList.length === 1) {
-          addToCart(prod, [{ id, name, price, amount: 1 }], "", 1, els.modalTogo.checked ? 1 : 0);
+          addToCart(prod, [{ id, name, price, amount: 1 }], "", 1);
           els.productModal.classList.add("hidden");
           renderOrderItems();
           return;
@@ -587,7 +586,7 @@ function addProductToCart() {
   if (!prod) return;
   const qty = 1;
   const extras = Array.isArray(state.modalExtrasSelected) ? state.modalExtrasSelected : [];
-  addToCart(prod, extras, "", qty, els.modalTogo.checked ? 1 : 0);
+  addToCart(prod, extras, "", qty);
   els.productModal.classList.add("hidden");
   renderOrderItems();
 }
@@ -758,7 +757,7 @@ function showExistingItemActions(item) {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
-      const extras = (item.extras || []).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
+      const extras = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
       addToCart(prod, extras, item.orderoption || "", qty, item.togo ? 1 : 0);
     }
     els.confirmModal.classList.add("hidden");
