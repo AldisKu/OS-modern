@@ -392,6 +392,7 @@ function renderTables() {
       const cols = Number(roomLayout.cols || 4);
       cards.push(`<div class="room-title">${room.name}</div>`);
       cards.push(`<div class="tables-room-grid" style="grid-template-columns: repeat(${cols}, 1fr);">`);
+      const extraTables = [];
       room.tables.forEach(t => {
         const code = getTableCode(t, roomLayout.tables);
         const pos = roomLayout.tables[String(t.id)] || roomLayout.tables[code] || {};
@@ -400,14 +401,24 @@ function renderTables() {
         const col = Number(pos.col || 0);
         const style = row > 0 && col > 0 ? `style="grid-row:${row};grid-column:${col};"` : "";
         const unpaid = Number(t.unpaidprodcount || 0) > 0 ? "unpaid" : "";
-        cards.push(`
+        const card = `
           <div class="table-card ${unpaid}" data-id="${t.id}" data-name="${t.name}" ${style}>
             <div class="name">${t.name}</div>
             <div class="meta">${sum}</div>
           </div>
-        `);
+        `;
+        if (row > 0 && col > 0) {
+          cards.push(card);
+        } else {
+          extraTables.push(card);
+        }
       });
       cards.push(`</div>`);
+      if (extraTables.length > 0) {
+        cards.push(`<div class="tables-room-list">`);
+        cards.push(extraTables.join(""));
+        cards.push(`</div>`);
+      }
     } else {
       cards.push(`<div class="room-title">${room.name}</div>`);
       cards.push(`<div class="tables-room-list">`);
@@ -913,7 +924,6 @@ function showExistingItemActions(item) {
   `;
   els.confirmActions.innerHTML = `
     <button class="ghost confirm-action" id="cancel">Abbrechen</button>
-    <button class="ghost confirm-action" id="reorder">Nachbestellen</button>
     <button class="ghost confirm-action" id="remove">Entfernen</button>
   `;
   els.confirmModal.classList.remove("hidden");
@@ -932,19 +942,6 @@ function showExistingItemActions(item) {
   qtyVal.oninput = updateQtyButtons;
 
   els.confirmActions.querySelector("#cancel").onclick = () => {
-    els.confirmModal.classList.add("hidden");
-  };
-  els.confirmActions.querySelector("#reorder").onclick = () => {
-    const qty = Math.max(1, Number(qtyVal.value || 1));
-    const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
-    if (prod) {
-      const extrasRaw = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
-      const extras = mapExtrasToMenuIds(extrasRaw);
-      const extrasSum = normalizeExtras(item).reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
-      const baseNoExtras = Number(item.price || 0) - extrasSum;
-      const changed = shouldShowPriceLevel(item) ? Math.max(0, baseNoExtras).toFixed(2) : "NO";
-      addToCartCustom(prod, sanitizeExtras(extras), item.orderoption || "", qty, isTogo(item), changed);
-    }
     els.confirmModal.classList.add("hidden");
   };
   els.confirmActions.querySelector("#remove").onclick = async () => {
