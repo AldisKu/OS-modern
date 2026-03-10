@@ -1208,6 +1208,13 @@ async function sendOrder(workprint, goStart) {
       setStartMessage(`Tisch ${table.name}: Bestellung abgeschickt`, cart);
       show(els.startScreen);
     }
+  } else {
+    const msg = res.msg || "Bestellung fehlgeschlagen";
+    if (goStart) {
+      setStartMessage(`Fehler: ${msg}`, []);
+      show(els.startScreen);
+    }
+    alert(msg);
   }
 }
 
