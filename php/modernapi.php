@@ -56,7 +56,7 @@ function safeRoomsAndTables($pdo) {
 	$roomstables = array();
 
 	foreach ($rooms as $room) {
-		$tablesSql = "select R.id as id,R.tableno as name,R.sorting as sorting
+		$tablesSql = "select R.id as id,R.tableno as name,R.sorting as sorting,R.code as code
 			from %resttables% R
 			where R.removed is null and active='1' and R.roomid=?
 			order by R.sorting";
@@ -114,6 +114,36 @@ function safeRoomsAndTables($pdo) {
 		"takeawayprodready" => 0,
 		"takeawayReadyQueueIds" => array()
 	);
+}
+
+function attachTableCodes($pdo, $rooms) {
+	$all = array();
+	if (isset($rooms["roomstables"])) {
+		foreach ($rooms["roomstables"] as $r) {
+			foreach ($r["tables"] as $t) {
+				$all[] = $t["id"];
+			}
+		}
+	}
+	if (count($all) == 0) return $rooms;
+	$placeholders = implode(",", array_fill(0, count($all), "?"));
+	$sql = "SELECT id, code FROM %resttables% WHERE id IN ($placeholders)";
+	$rows = CommonUtils::fetchSqlAll($pdo, $sql, $all);
+	$map = array();
+	foreach ($rows as $row) {
+		$map[intval($row["id"])] = $row["code"];
+	}
+	if (isset($rooms["roomstables"])) {
+		foreach ($rooms["roomstables"] as &$r) {
+			foreach ($r["tables"] as &$t) {
+				$id = intval($t["id"]);
+				if (array_key_exists($id, $map)) {
+					$t["code"] = $map[$id];
+				}
+			}
+		}
+	}
+	return $rooms;
 }
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -320,6 +350,7 @@ switch ($cmd) {
 			$rooms = captureJson(function() use ($roomtables) {
 				$roomtables->showAllRooms();
 			});
+			$rooms = attachTableCodes($pdo, $rooms);
 		} else {
 			$rooms = safeRoomsAndTables($pdo);
 		}
@@ -341,9 +372,11 @@ switch ($cmd) {
 		$pdo = DbUtils::openDbAndReturnPdoStatic();
 		$hasPayAll = tableColumnExists($pdo, "%roles%", "right_payallorders");
 		if ($hasPayAll) {
-			$response = array("status" => "OK", "rooms" => captureJson(function() use ($roomtables) {
+			$rooms = captureJson(function() use ($roomtables) {
 				$roomtables->showAllRooms();
-			}));
+			});
+			$rooms = attachTableCodes($pdo, $rooms);
+			$response = array("status" => "OK", "rooms" => $rooms);
 		} else {
 			$response = array("status" => "OK", "rooms" => safeRoomsAndTables($pdo));
 		}

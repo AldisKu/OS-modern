@@ -1686,6 +1686,8 @@ async function loadTableLayout() {
 
 function getTableCode(table, mapping) {
   if (!mapping) return null;
+  const code = String(table.code || "").trim();
+  if (code && mapping[code]) return code;
   const name = String(table.name || "");
   if (mapping[name]) return name;
   const keys = Object.keys(mapping);
