@@ -795,6 +795,18 @@ function sanitizeExtras(extras) {
     .filter(e => Number.isFinite(e.id) && e.id > 0);
 }
 
+function mapExtrasToMenuIds(extras) {
+  const byName = new Map((state.menu?.extras || []).map(e => [String(e.name || "").toLowerCase(), Number(e.id)]));
+  return (extras || []).map(e => {
+    let id = Number(e.id ?? e.extraid);
+    if (!Number.isFinite(id)) {
+      const mapped = byName.get(String(e.name || "").toLowerCase());
+      if (Number.isFinite(mapped)) id = mapped;
+    }
+    return { ...e, id };
+  });
+}
+
 function displayPriceLevel(name) {
   if (!name) return "";
   const trimmed = String(name).trim();
@@ -816,9 +828,13 @@ function shouldShowPriceLevel(item) {
     return !["A", "B", "C", "1", "2", "3"].includes(trimmed);
   }
   const base = Number(prod.price || 0);
-  const extrasSum = normalizeExtras(item).reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
+  const extrasList = normalizeExtras(item);
+  const extrasSum = extrasList.reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
   const baseWithExtras = base + extrasSum;
   const price = Number(item.price || 0);
+  if (["A", "B", "C", "1", "2", "3"].includes(trimmed) && extrasList.length > 0) {
+    return false;
+  }
   return Math.abs(baseWithExtras - price) > 0.0001;
 }
 
@@ -921,7 +937,8 @@ function showExistingItemActions(item) {
     const qty = Math.max(1, Number(qtyVal.value || 1));
     const prod = state.menu?.prods?.find(p => Number(p.id) === Number(item.prodid));
     if (prod) {
-      const extras = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
+      const extrasRaw = normalizeExtras(item).map(e => ({ id: e.id, name: e.name, price: Number(e.price || 0), amount: e.amount || 1 }));
+      const extras = mapExtrasToMenuIds(extrasRaw);
       const extrasSum = normalizeExtras(item).reduce((sum, e) => sum + Number(e.price || 0) * Number(e.amount || 1), 0);
       const baseNoExtras = Number(item.price || 0) - extrasSum;
       const changed = shouldShowPriceLevel(item) ? Math.max(0, baseNoExtras).toFixed(2) : "NO";
@@ -939,7 +956,9 @@ function showExistingItemActions(item) {
       }
     }
     const keyLoose = existingKeyLoose(item);
-    const candidates = (state.notDelivered || []).filter(p => {
+    const openItems = await api("table_open_items", { tableid: state.selectedTable.id });
+    const source = (openItems && openItems.status === "OK" && Array.isArray(openItems.msg)) ? openItems.msg : (state.notDelivered || []);
+    const candidates = source.filter(p => {
       const k = existingKey({
         prodid: p.prodid,
         orderoption: p.option,
@@ -947,7 +966,8 @@ function showExistingItemActions(item) {
         price: p.price,
         pricelevelname: p.pricelevelname || "",
         extrasids: p.extrasids,
-        extrasamounts: p.extrasamounts
+        extrasamounts: p.extrasamounts,
+        extras: p.extras
       });
       if (k === key || k === keyLoose) return true;
       const kl = existingKeyLoose({
@@ -956,7 +976,8 @@ function showExistingItemActions(item) {
         togo: p.togo,
         price: p.price,
         extrasids: p.extrasids,
-        extrasamounts: p.extrasamounts
+        extrasamounts: p.extrasamounts,
+        extras: p.extras
       });
       return kl === key || kl === keyLoose;
     });
@@ -970,7 +991,12 @@ function showExistingItemActions(item) {
     }
     for (let i = 0; i < Math.min(qty, candidates.length); i++) {
       const c = candidates[i];
-      await api("remove_product", { queueid: c.id, isPaid: c.isPaid, isCooking: c.isCooking, isReady: c.isready });
+      await api("remove_product", {
+        queueid: c.id,
+        isPaid: c.isPaid || c.ispaid || 0,
+        isCooking: c.isCooking || c.iscooking || 0,
+        isReady: c.isready || c.isReady || 0
+      });
     }
     await fetchNotDelivered();
     await fetchExistingOrders();
