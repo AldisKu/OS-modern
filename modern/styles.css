@@ -134,9 +134,14 @@ body {
 }
 
 .tables-grid {
+  display: block;
+}
+
+.tables-room-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 10px;
+  margin-bottom: 10px;
 }
 
 .table-card {
@@ -171,13 +176,13 @@ body {
 
 .order-title {
   font-weight: 800;
-  font-size: 16px;
+  font-size: 20px;
 }
 
 .order-menu {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   width: 100%;
 }
@@ -186,11 +191,16 @@ body {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.order-menu-right {
+  align-self: flex-start;
 }
 
 .order-top-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
@@ -225,6 +235,7 @@ body {
   border: 1px solid var(--border);
   background: #fff;
   font-weight: 600;
+  font-size: 16px;
 }
 
 .category-btn.up {
@@ -411,10 +422,47 @@ body {
   margin-top: 6px;
 }
 .order-qty .mini {
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: 6px 12px;
+  font-size: 16px;
 }
 .order-count { min-width: 2ch; text-align: center; }
+
+.togo-line {
+  margin-top: 6px;
+}
+
+.togo-btn {
+  font-size: 18px;
+  padding: 8px 12px;
+}
+
+.tables-room-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.room-title {
+  font-weight: 700;
+  margin: 8px 0;
+}
+
+.room-sep {
+  border-top: 1px solid var(--border);
+  margin: 10px 0;
+}
+
+.table-card.unpaid .name {
+  color: #c00;
+}
+
+.product-img {
+  width: 100%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
 
 .order-item.new { background: #e8f6ff; font-weight: 700; }
 .order-extra { font-size: 12px; color: var(--muted); margin-left: 10px; }

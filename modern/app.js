@@ -102,7 +102,8 @@ const state = {
   lastSync: "-",
   cancelUnpaidCode: "",
   discounts: { d1: 0, d2: 0, d3: 0, n1: "Rabatt 1", n2: "Rabatt 2", n3: "Rabatt 3" },
-  modalExtrasSelected: []
+  modalExtrasSelected: [],
+  localConfig: { singleExtraImmediate: true, tableLayout: null }
 };
 
 function show(screen) {
@@ -247,6 +248,7 @@ async function bootstrap() {
   state.config = data.config;
   state.menu = data.menu;
   state.rooms = data.rooms;
+  state.localConfig = loadLocalConfig();
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
   state.cancelUnpaidCode = state.config?.cancelunpaidcode || "";
@@ -307,11 +309,11 @@ function renderCategories() {
     const top = state.menu?.types?.find(t => Number(t.id) === Number(topId));
     const current = state.menu?.types?.find(t => Number(t.id) === Number(currentId));
 
-    btns.push(`<button class="category-btn up" data-cat="start">Start</button>`);
+    btns.push(`<button class="category-btn up" data-cat="start">Kategorien</button>`);
     if (top) {
       btns.push(`<button class="category-btn up" data-cat="${top.id}">${top.name}</button>`);
     }
-    if (current) {
+    if (current && (!top || Number(top.id) !== Number(current.id))) {
       btns.push(`<button class="category-btn current" data-cat="current">${current.name}</button>`);
     }
 
@@ -351,8 +353,10 @@ function renderCategories() {
 function renderProducts() {
   if (!state.menu?.prods) return;
   const prods = state.menu.prods.filter(p => Number(p.ref) === Number(state.selectedType));
+  const showImages = Number(state.config?.preferimgmobile || 0) === 1;
   els.productsGrid.innerHTML = prods.map(p => `
     <div class="product-card" data-id="${p.id}">
+      ${showImages && Number(p.prodimageid || 0) > 0 ? `<img class="product-img" src="../php/contenthandler.php?module=products&command=getprodimage&prodid=${p.id}&size=l" alt="">` : ""}
       <div><b>${p.longname || p.name}</b></div>
       <div>${p.price}</div>
     </div>
@@ -377,16 +381,44 @@ function renderProducts() {
 function renderTables() {
   if (!state.rooms?.roomstables) return;
   const cards = [];
+  const layout = state.localConfig?.tableLayout;
   state.rooms.roomstables.forEach(room => {
-    room.tables.forEach(t => {
-      const sum = t.pricesum || "0.00";
-      cards.push(`
-        <div class="table-card" data-id="${t.id}" data-name="${t.name}">
-          <div class="name">${t.name}</div>
-          <div class="meta">${sum}</div>
-        </div>
-      `);
-    });
+    const roomLayout = layout && layout.rooms && layout.rooms[String(room.id)];
+    if (roomLayout && roomLayout.tables) {
+      const cols = Number(roomLayout.cols || 4);
+      cards.push(`<div class="room-title">${room.name}</div>`);
+      cards.push(`<div class="tables-room-grid" style="grid-template-columns: repeat(${cols}, 1fr);">`);
+      room.tables.forEach(t => {
+        const pos = roomLayout.tables[String(t.id)] || {};
+        const sum = t.pricesum || "0.00";
+        const row = Number(pos.row || 0);
+        const col = Number(pos.col || 0);
+        const style = row > 0 && col > 0 ? `style="grid-row:${row};grid-column:${col};"` : "";
+        const unpaid = Number(t.unpaidprodcount || 0) > 0 ? "unpaid" : "";
+        cards.push(`
+          <div class="table-card ${unpaid}" data-id="${t.id}" data-name="${t.name}" ${style}>
+            <div class="name">${t.name}</div>
+            <div class="meta">${sum}</div>
+          </div>
+        `);
+      });
+      cards.push(`</div>`);
+    } else {
+      cards.push(`<div class="room-title">${room.name}</div>`);
+      cards.push(`<div class="tables-room-list">`);
+      room.tables.forEach(t => {
+        const sum = t.pricesum || "0.00";
+        const unpaid = Number(t.unpaidprodcount || 0) > 0 ? "unpaid" : "";
+        cards.push(`
+          <div class="table-card ${unpaid}" data-id="${t.id}" data-name="${t.name}">
+            <div class="name">${t.name}</div>
+            <div class="meta">${sum}</div>
+          </div>
+        `);
+      });
+      cards.push(`</div>`);
+      cards.push(`<div class="room-sep"></div>`);
+    }
   });
   els.tablesGrid.innerHTML = cards.join("");
   els.tablesGrid.querySelectorAll(".table-card").forEach(el => {
@@ -559,7 +591,7 @@ function openProductModal(prod) {
         const id = Number(btn.dataset.id);
         const name = btn.dataset.name;
         const price = Number(btn.dataset.price || 0);
-        if (extrasList.length === 1) {
+        if (extrasList.length === 1 && state.localConfig?.singleExtraImmediate) {
           addToCart(prod, sanitizeExtras([{ id, name, price, amount: 1 }]), "", 1);
           els.productModal.classList.add("hidden");
           renderOrderItems();
@@ -653,7 +685,11 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
 }
 
 function resetClientState() {
-  try { localStorage.clear(); } catch (_) {}
+  try {
+    Object.keys(localStorage).forEach(k => {
+      if (k.startsWith("cart_")) localStorage.removeItem(k);
+    });
+  } catch (_) {}
   state.user = null;
   state.config = null;
   state.menu = null;
@@ -958,9 +994,11 @@ function editCartItem(id) {
     <div class="edit-row"><b>${item.name}</b> (aktuell: ${groupCount})</div>
     <div class="edit-row"><b>Einzelpreis</b></div>
     <div id="price-val" class="price-display">${basePrice.toFixed(2)}</div>
+    <div class="edit-row togo-line">
+      <button type="button" class="ghost togo-btn" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
+    </div>
     <div class="edit-row"><b>Aktion</b></div>
     <div class="edit-actions">
-      <button type="button" class="ghost" id="act-togo">${item.togo ? "ToGo ✓" : "ToGo"}</button>
       <button type="button" class="ghost" id="disc1">${discName1} ${formatPct(disc1)}%</button>
       <button type="button" class="ghost" id="disc2">${discName2} ${formatPct(disc2)}%</button>
       <button type="button" class="ghost" id="disc3">${discName3} ${formatPct(disc3)}%</button>
@@ -1118,7 +1156,7 @@ async function handleMenuAction(action, btn) {
     if (state.selectedTable) {
       const cart = state.cartByTable[state.selectedTable.id] || [];
       if (cart.length > 0) {
-        await sendOrder(true, true);
+        showUnsavedDialog();
         return;
       }
     }
@@ -1557,21 +1595,68 @@ async function openMenuModal() {
       const name = (m.name || "").toLowerCase();
       return !name.includes("logout") && !name.includes("abmelden");
     });
-    els.menuItems.innerHTML = items.map(m => {
+    const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
+    els.menuItems.innerHTML = localBtn + items.map(m => {
       const link = normalizeMenuLink(m.link || "");
       return `<button class="menu-link-btn" data-link="${link}">${m.name}</button>`;
     }).join("");
     els.menuItems.querySelectorAll("button").forEach(b => {
-      b.onclick = () => window.open(b.dataset.link, "_blank");
+      if (b.dataset.local) {
+        b.onclick = () => openLocalConfigModal();
+      } else {
+        b.onclick = () => window.open(b.dataset.link, "_blank");
+      }
     });
   }
   els.menuModal.classList.remove("hidden");
+}
+
+function openLocalConfigModal() {
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Lokale Konfiguration";
+  els.confirmBody.innerHTML = `
+    <label class="toggle">
+      <input type="checkbox" id="local-single-extra" ${state.localConfig?.singleExtraImmediate ? "checked" : ""} />
+      <span>Ein extra sofort bestellen</span>
+    </label>
+  `;
+  els.confirmActions.innerHTML = `
+    <button class="ghost confirm-action" id="local-close">Schließen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  els.confirmBody.querySelector("#local-single-extra").onchange = (e) => {
+    state.localConfig.singleExtraImmediate = !!e.target.checked;
+    saveLocalConfig();
+  };
+  els.confirmActions.querySelector("#local-close").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+  };
 }
 
 function setStartMessage(title, cart) {
   if (!els.startMessageBody) return;
   const list = (cart || []).map(c => `${c.unitamount}x ${c.name}`).join(", ");
   els.startMessageBody.textContent = `${title}${list ? ": " + list : ""}`;
+}
+
+function loadLocalConfig() {
+  try {
+    const raw = localStorage.getItem("modern_local_config");
+    if (!raw) return { singleExtraImmediate: true, tableLayout: null };
+    const parsed = JSON.parse(raw);
+    return {
+      singleExtraImmediate: parsed.singleExtraImmediate !== false,
+      tableLayout: parsed.tableLayout || null
+    };
+  } catch (_) {
+    return { singleExtraImmediate: true, tableLayout: null };
+  }
+}
+
+function saveLocalConfig() {
+  try {
+    localStorage.setItem("modern_local_config", JSON.stringify(state.localConfig || { singleExtraImmediate: true, tableLayout: null }));
+  } catch (_) {}
 }
 
 function updateTableLabelWidth() {
@@ -1582,7 +1667,7 @@ function updateTableLabelWidth() {
   meas.style.position = "absolute";
   meas.style.visibility = "hidden";
   meas.style.fontWeight = "800";
-  meas.style.fontSize = "16px";
+  meas.style.fontSize = "20px";
   document.body.appendChild(meas);
   let max = 0;
   names.forEach(n => {
@@ -1590,7 +1675,7 @@ function updateTableLabelWidth() {
     max = Math.max(max, meas.getBoundingClientRect().width);
   });
   document.body.removeChild(meas);
-  state.maxTableLabelWidth = Math.ceil(max);
+  state.maxTableLabelWidth = Math.min(Math.ceil(max) + 20, 260);
 }
 
 function normalizeMenuLink(link) {
