@@ -228,6 +228,9 @@ switch ($cmd) {
 				"cancelunpaidcode" => CommonUtils::getConfigValue($pdo, "cancelunpaidcode", "")
 			);
 		}
+		$userprefs = array(
+			"preferimgmobile" => Admin::getUserValueAllowNull("preferimgmobile")
+		);
 		$menu = captureJson(function() use ($products) {
 			$products->handleCommand("getAllTypesAndAvailProds");
 		});
@@ -239,6 +242,7 @@ switch ($cmd) {
 			"status" => "OK",
 			"user" => sessionUserInfo(),
 			"config" => $config,
+			"userprefs" => $userprefs,
 			"menu" => $menu,
 			"rooms" => $rooms
 		);

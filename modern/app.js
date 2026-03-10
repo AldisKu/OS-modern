@@ -103,7 +103,8 @@ const state = {
   cancelUnpaidCode: "",
   discounts: { d1: 0, d2: 0, d3: 0, n1: "Rabatt 1", n2: "Rabatt 2", n3: "Rabatt 3" },
   modalExtrasSelected: [],
-  localConfig: { singleExtraImmediate: true, tableLayout: null }
+  localConfig: { singleExtraImmediate: true, tableLayout: null },
+  userPrefs: { preferimgmobile: 0 }
 };
 
 function show(screen) {
@@ -246,6 +247,7 @@ async function bootstrap() {
   if (data.status !== "OK") return;
   state.user = data.user;
   state.config = data.config;
+  state.userPrefs = data.userprefs || { preferimgmobile: 0 };
   state.menu = data.menu;
   state.rooms = data.rooms;
   state.localConfig = loadLocalConfig();
@@ -353,7 +355,7 @@ function renderCategories() {
 function renderProducts() {
   if (!state.menu?.prods) return;
   const prods = state.menu.prods.filter(p => Number(p.ref) === Number(state.selectedType));
-  const showImages = Number(state.config?.preferimgmobile || 0) === 1;
+  const showImages = Number(state.userPrefs?.preferimgmobile || state.config?.preferimgmobile || 0) === 1;
   els.productsGrid.innerHTML = prods.map(p => `
     <div class="product-card" data-id="${p.id}">
       ${showImages && Number(p.prodimageid || 0) > 0 ? `<img class="product-img" src="../php/contenthandler.php?module=products&command=getprodimage&prodid=${p.id}&size=l" alt="">` : ""}
