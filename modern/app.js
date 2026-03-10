@@ -387,7 +387,7 @@ function renderTables() {
   const cards = [];
   const layout = state.tableLayout;
   state.rooms.roomstables.forEach(room => {
-    const roomLayout = layout && layout.rooms && layout.rooms[String(room.id)];
+    const roomLayout = (layout && layout.rooms && (layout.rooms[String(room.id)] || layout.rooms["default"])) || null;
     if (roomLayout && roomLayout.tables) {
       const cols = Number(roomLayout.cols || 4);
       cards.push(`<div class="room-title">${room.name}</div>`);
@@ -796,11 +796,12 @@ function sanitizeExtras(extras) {
 }
 
 function mapExtrasToMenuIds(extras) {
-  const byName = new Map((state.menu?.extras || []).map(e => [String(e.name || "").toLowerCase(), Number(e.id)]));
+  const norm = (v) => String(v || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const byName = new Map((state.menu?.extras || []).map(e => [norm(e.name), Number(e.id)]));
   return (extras || []).map(e => {
     let id = Number(e.id ?? e.extraid);
     if (!Number.isFinite(id)) {
-      const mapped = byName.get(String(e.name || "").toLowerCase());
+      const mapped = byName.get(norm(e.name));
       if (Number.isFinite(mapped)) id = mapped;
     }
     return { ...e, id };
@@ -956,27 +957,22 @@ function showExistingItemActions(item) {
       }
     }
     const keyLoose = existingKeyLoose(item);
-    const openItems = await api("table_open_items", { tableid: state.selectedTable.id });
-    const source = (openItems && openItems.status === "OK" && Array.isArray(openItems.msg)) ? openItems.msg : (state.notDelivered || []);
+    const source = state.orderExisting || [];
     const candidates = source.filter(p => {
       const k = existingKey({
         prodid: p.prodid,
-        orderoption: p.option,
+        orderoption: p.orderoption,
         togo: p.togo,
         price: p.price,
         pricelevelname: p.pricelevelname || "",
-        extrasids: p.extrasids,
-        extrasamounts: p.extrasamounts,
         extras: p.extras
       });
       if (k === key || k === keyLoose) return true;
       const kl = existingKeyLoose({
         prodid: p.prodid,
-        orderoption: p.option,
+        orderoption: p.orderoption,
         togo: p.togo,
         price: p.price,
-        extrasids: p.extrasids,
-        extrasamounts: p.extrasamounts,
         extras: p.extras
       });
       return kl === key || kl === keyLoose;

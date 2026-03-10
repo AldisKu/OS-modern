@@ -1,6 +1,6 @@
 {
   "rooms": {
-    "1": {
+    "default": {
       "cols": 7,
       "tables": {
         "M1": { "row": 1, "col": 4 },
