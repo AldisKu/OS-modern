@@ -34,6 +34,87 @@ ini_set('display_errors', '0');
 error_reporting(E_ALL);
 
 header("Content-Type: application/json; charset=utf-8");
+
+function tableColumnExists($pdo, $table, $col) {
+	try {
+		$sql = "SHOW COLUMNS FROM $table LIKE ?";
+		$stmt = $pdo->prepare(Dbutils::substTableAlias($sql));
+		$stmt->execute(array($col));
+		return $stmt->rowCount() > 0;
+	} catch (Exception $e) {
+		return false;
+	}
+}
+
+function safeRoomsAndTables($pdo) {
+	$roomsSql = "select R.id as id,roomname from %room% R
+		left join %resttables% T on R.id=T.roomid
+		where R.removed is null and T.active='1' and (T.removed is null or T.removed='0')
+		group by T.roomid
+		order by R.sorting";
+	$rooms = CommonUtils::fetchSqlAll($pdo, $roomsSql);
+	$roomstables = array();
+
+	foreach ($rooms as $room) {
+		$tablesSql = "select R.id as id,R.tableno as name,R.sorting as sorting
+			from %resttables% R
+			where R.removed is null and active='1' and R.roomid=?
+			order by R.sorting";
+		$tables = CommonUtils::fetchSqlAll($pdo, $tablesSql, array($room["id"]));
+
+		$ids = array_map(function($t){ return $t["id"]; }, $tables);
+		$stats = array();
+		if (count($ids) > 0) {
+			$placeholders = implode(",", array_fill(0, count($ids), "?"));
+			$sql = "SELECT Q.tablenr,
+				SUM(Q.price) as pricesum,
+				COUNT(Q.id) as prodcount,
+				SUM(CASE WHEN Q.isready='1' THEN 1 ELSE 0 END) as prodready,
+				SUM(CASE WHEN Q.paidtime is null AND (Q.toremove is null OR Q.toremove='0') THEN 1 ELSE 0 END) as unpaidprodcount
+				FROM %queue% Q
+				LEFT JOIN %bill% B ON Q.billid=B.id
+				WHERE Q.clsid IS NULL
+				AND (Q.toremove is null OR Q.toremove='0')
+				AND Q.tablenr IN ($placeholders)
+				AND Q.billid is null
+				AND (B.paymentid is null OR B.paymentid <> '8')
+				GROUP BY Q.tablenr";
+			$statsRows = CommonUtils::fetchSqlAll($pdo, $sql, $ids);
+			foreach ($statsRows as $row) {
+				$stats[intval($row["tablenr"])] = $row;
+			}
+		}
+
+		foreach ($tables as &$t) {
+			$tid = intval($t["id"]);
+			$row = array_key_exists($tid, $stats) ? $stats[$tid] : null;
+			$t["pricesum"] = $row ? $row["pricesum"] : "0.00";
+			$t["unpaidprodcount"] = $row ? intval($row["unpaidprodcount"]) : 0;
+			$t["prodcount"] = $row ? intval($row["prodcount"]) : 0;
+			$t["prodready"] = $row ? intval($row["prodready"]) : 0;
+			$t["readyQueueIds"] = array();
+			$t["reservations"] = "";
+		}
+
+		$roomstables[] = array(
+			"id" => $room["id"],
+			"name" => $room["roomname"],
+			"tables" => $tables
+		);
+	}
+
+	$queue = new QueueContent();
+	$takeawayunpaid = $queue->numberOfUnpaidProductsForTable($pdo, null);
+
+	return array(
+		"roomstables" => $roomstables,
+		"takeawayprice" => array("pricesum" => "0.00", "prodcount" => "0"),
+		"takeawayunpaidprodcount" => $takeawayunpaid,
+		"takeawayprodcount" => 0,
+		"takeawayprodready" => 0,
+		"takeawayReadyQueueIds" => array()
+	);
+}
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -234,9 +315,14 @@ switch ($cmd) {
 		$menu = captureJson(function() use ($products) {
 			$products->handleCommand("getAllTypesAndAvailProds");
 		});
-		$rooms = captureJson(function() use ($roomtables) {
-			$roomtables->showAllRooms();
-		});
+		$hasPayAll = tableColumnExists($pdo, "%roles%", "right_payallorders");
+		if ($hasPayAll) {
+			$rooms = captureJson(function() use ($roomtables) {
+				$roomtables->showAllRooms();
+			});
+		} else {
+			$rooms = safeRoomsAndTables($pdo);
+		}
 
 		$response = array(
 			"status" => "OK",
@@ -252,9 +338,15 @@ switch ($cmd) {
 
 	case "refresh_tables":
 		$roomtables = new Roomtables();
-		$response = array("status" => "OK", "rooms" => captureJson(function() use ($roomtables) {
-			$roomtables->showAllRooms();
-		}));
+		$pdo = DbUtils::openDbAndReturnPdoStatic();
+		$hasPayAll = tableColumnExists($pdo, "%roles%", "right_payallorders");
+		if ($hasPayAll) {
+			$response = array("status" => "OK", "rooms" => captureJson(function() use ($roomtables) {
+				$roomtables->showAllRooms();
+			}));
+		} else {
+			$response = array("status" => "OK", "rooms" => safeRoomsAndTables($pdo));
+		}
 		echo json_encode($response);
 		logApi($cmd, $requestForLog, $response);
 		return;
