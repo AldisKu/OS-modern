@@ -103,8 +103,9 @@ const state = {
   cancelUnpaidCode: "",
   discounts: { d1: 0, d2: 0, d3: 0, n1: "Rabatt 1", n2: "Rabatt 2", n3: "Rabatt 3" },
   modalExtrasSelected: [],
-  localConfig: { singleExtraImmediate: true, tableLayout: null },
-  userPrefs: { preferimgmobile: 0 }
+  localConfig: { singleExtraImmediate: true },
+  userPrefs: { preferimgmobile: 0 },
+  tableLayout: null
 };
 
 function show(screen) {
@@ -251,6 +252,7 @@ async function bootstrap() {
   state.menu = data.menu;
   state.rooms = data.rooms;
   state.localConfig = loadLocalConfig();
+  state.tableLayout = await loadTableLayout() || state.localConfig?.tableLayout || null;
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
   state.cancelUnpaidCode = state.config?.cancelunpaidcode || "";
@@ -383,7 +385,7 @@ function renderProducts() {
 function renderTables() {
   if (!state.rooms?.roomstables) return;
   const cards = [];
-  const layout = state.localConfig?.tableLayout;
+  const layout = state.tableLayout;
   state.rooms.roomstables.forEach(room => {
     const roomLayout = layout && layout.rooms && layout.rooms[String(room.id)];
     if (roomLayout && roomLayout.tables) {
@@ -391,7 +393,8 @@ function renderTables() {
       cards.push(`<div class="room-title">${room.name}</div>`);
       cards.push(`<div class="tables-room-grid" style="grid-template-columns: repeat(${cols}, 1fr);">`);
       room.tables.forEach(t => {
-        const pos = roomLayout.tables[String(t.id)] || {};
+        const code = getTableCode(t, roomLayout.tables);
+        const pos = roomLayout.tables[String(t.id)] || roomLayout.tables[code] || {};
         const sum = t.pricesum || "0.00";
         const row = Number(pos.row || 0);
         const col = Number(pos.col || 0);
@@ -1639,6 +1642,28 @@ function setStartMessage(title, cart) {
   if (!els.startMessageBody) return;
   const list = (cart || []).map(c => `${c.unitamount}x ${c.name}`).join(", ");
   els.startMessageBody.textContent = `${title}${list ? ": " + list : ""}`;
+}
+
+async function loadTableLayout() {
+  try {
+    const res = await fetch("./table-layout.json", { cache: "no-store" });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data;
+  } catch (_) {
+    return null;
+  }
+}
+
+function getTableCode(table, mapping) {
+  if (!mapping) return null;
+  const name = String(table.name || "");
+  if (mapping[name]) return name;
+  const keys = Object.keys(mapping);
+  for (const k of keys) {
+    if (k && name.includes(k)) return k;
+  }
+  return null;
 }
 
 function loadLocalConfig() {
