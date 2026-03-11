@@ -68,11 +68,7 @@ const els = {
   menuItems: document.getElementById("menu-items"),
   menuClose: document.getElementById("menu-close"),
   startMessageBody: document.getElementById("start-message-body"),
-
-  kbdRow1: document.getElementById("kbd-row-1"),
-  kbdRow2: document.getElementById("kbd-row-2"),
-  kbdRow3: document.getElementById("kbd-row-3"),
-  kbdRow4: document.getElementById("kbd-row-4")
+  keyboard: document.getElementById("keyboard")
 };
 
 const state = {
@@ -200,6 +196,11 @@ if (els.modalClose) {
 }
 els.modalAdd.addEventListener("click", addProductToCart);
   els.menuClose.addEventListener("click", () => els.menuModal.classList.add("hidden"));
+  [els.productModal, els.confirmModal, els.menuModal].filter(Boolean).forEach(modal => {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.add("hidden");
+    });
+  });
 }
 
 async function loadServerConfig() {
@@ -213,7 +214,32 @@ async function loadUsers() {
   const data = await api("users", {});
   if (data.users) {
     state.users = data.users;
+    renderLoginUsers();
   }
+}
+
+function renderLoginUsers() {
+  if (!els.loginUser || els.loginUser.tagName !== "SELECT") return;
+  const select = els.loginUser;
+  select.innerHTML = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Benutzer wählen";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+  const list = (state.users || []).map((u) => {
+    const id = u.id ?? u.userid ?? u.user_id ?? u.uid ?? u[0];
+    const name = u.name ?? u.username ?? u.user ?? u[1];
+    return { id, name };
+  }).filter(u => u.id !== undefined && u.id !== null && u.name);
+  list.sort((a, b) => String(a.name).localeCompare(String(b.name), "de"));
+  list.forEach(u => {
+    const opt = document.createElement("option");
+    opt.value = String(u.id);
+    opt.textContent = u.name;
+    select.appendChild(opt);
+  });
 }
 
 async function checkSession() {
@@ -1748,37 +1774,80 @@ function buildKeyboard() {
 }
 
 function renderKeyboard() {
-  const num = ["1","2","3","4","5","6","7","8","9","0"];
-  const alpha1 = ["Q","W","E","R","T","Y","U","I","O","P"];
-  const alpha2 = ["A","S","D","F","G","H","J","K","L"];
-  const alpha3 = ["Z","X","C","V","B","N","M"];
+  if (!els.keyboard) return;
+  const mode = state.keyboardMode;
+  const rows = [];
+  const pushRow = (labels, rowMode) => {
+    rows.push(labels.map(label => {
+      let key = label;
+      if (rowMode === "num") {
+        if (label === "a") key = "SWITCH_ALPHA";
+        if (label === "#") key = "SWITCH_SYM";
+      }
+      if (rowMode === "alpha") {
+        if (label === "ABC") key = "SWITCH_ABC";
+        if (label === "#") key = "SWITCH_SYM";
+      }
+      if (rowMode === "sym") {
+        if (label === "a") key = "SWITCH_ALPHA";
+      }
+      return { label, key };
+    }));
+  };
 
-  if (state.keyboardMode === "num") {
-    els.kbdRow1.innerHTML = num.map(k => `<button data-k="${k}">${k}</button>`).join("");
-    els.kbdRow2.innerHTML = `<button data-k="ABC">ABC</button>`;
-    els.kbdRow3.innerHTML = `<button data-k="BKSP">←</button>`;
-    els.kbdRow4.innerHTML = ``;
+  if (mode === "num") {
+    pushRow(["1", "2", "3"], "num");
+    pushRow(["4", "5", "6"], "num");
+    pushRow(["7", "8", "9"], "num");
+    pushRow(["0", "a", "#"], "num");
+  } else if (mode === "sym") {
+    pushRow(["§", "!", "$", "+"], "sym");
+    pushRow(["%", "&", "/", "-"], "sym");
+    pushRow(["(", ")", "=", "#"], "sym");
+    pushRow(["?", "_", "1", "a"], "sym");
   } else {
-    els.kbdRow1.innerHTML = alpha1.map(k => `<button data-k="${k}">${k}</button>`).join("");
-    els.kbdRow2.innerHTML = alpha2.map(k => `<button data-k="${k}">${k}</button>`).join("");
-    els.kbdRow3.innerHTML = alpha3.map(k => `<button data-k="${k}">${k}</button>`).join("") + `<button data-k="NUM">123</button>`;
-    els.kbdRow4.innerHTML = `<button data-k="BKSP">←</button>`;
+    const upper = mode === "alpha-upper";
+    const letters = "abcdefghijklmnopqrstuvwxyz".split("");
+    const alpha = upper ? letters.map(l => l.toUpperCase()) : letters;
+    const full = alpha.concat(["1", "#"]);
+    for (let i = 0; i < full.length; i += 4) {
+      pushRow(full.slice(i, i + 4), "alpha");
+    }
+    pushRow(["ABC"], "alpha");
   }
 
-  document.querySelectorAll(".keyboard button").forEach(btn => {
+  els.keyboard.innerHTML = "";
+  rows.forEach(row => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "keyboard-row";
+    row.forEach(k => {
+      const btn = document.createElement("button");
+      btn.dataset.k = k.key;
+      btn.textContent = k.label;
+      rowEl.appendChild(btn);
+    });
+    els.keyboard.appendChild(rowEl);
+  });
+
+  els.keyboard.querySelectorAll("button").forEach(btn => {
     btn.onclick = () => {
       const key = btn.dataset.k;
-      if (key === "BKSP") {
-        els.loginPass.value = els.loginPass.value.slice(0, -1);
-      } else if (key === "ABC") {
-        state.keyboardMode = "alpha";
+      if (key === "SWITCH_ALPHA") {
+        state.keyboardMode = "alpha-lower";
         renderKeyboard();
-      } else if (key === "NUM") {
-        state.keyboardMode = "num";
-        renderKeyboard();
-      } else {
-        els.loginPass.value += key;
+        return;
       }
+      if (key === "SWITCH_SYM") {
+        state.keyboardMode = "sym";
+        renderKeyboard();
+        return;
+      }
+      if (key === "SWITCH_ABC") {
+        state.keyboardMode = state.keyboardMode === "alpha-upper" ? "alpha-lower" : "alpha-upper";
+        renderKeyboard();
+        return;
+      }
+      els.loginPass.value += key;
     };
   });
 }

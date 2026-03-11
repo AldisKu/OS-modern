@@ -14,19 +14,14 @@
       <div class="login-card">
         <h1>Login</h1>
         <label>
-          <span>Benutzer-ID</span>
-          <input type="number" id="login-user" inputmode="numeric" />
+          <span>Benutzer</span>
+          <select id="login-user"></select>
         </label>
         <label>
           <span>Passwort</span>
-          <input type="password" id="login-pass" readonly inputmode="none" autocomplete="off" />
+          <input type="password" id="login-pass" autocomplete="off" />
         </label>
-        <div class="keyboard">
-          <div class="keyboard-row" id="kbd-row-1"></div>
-          <div class="keyboard-row" id="kbd-row-2"></div>
-          <div class="keyboard-row" id="kbd-row-3"></div>
-          <div class="keyboard-row" id="kbd-row-4"></div>
-        </div>
+        <div class="keyboard" id="keyboard"></div>
         <div class="login-actions">
           <button class="primary" id="login-btn">Login</button>
           <button class="ghost" id="login-clear">Löschen</button>
