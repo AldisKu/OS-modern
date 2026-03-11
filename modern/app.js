@@ -233,7 +233,7 @@ function renderLoginUsers() {
   }
   const list = (state.users || []).map((u) => {
     const id = u.id ?? u.userid ?? u.user_id ?? u.uid ?? u[0];
-    const username = u.username ?? u.login ?? u.loginname ?? u.user ?? u.useridname;
+    const username = u.username ?? u.user ?? u.login ?? u.loginname ?? u.useridname;
     const name = username || u.name || u.fullname || u[1];
     return { id, name };
   }).filter(u => u.id !== undefined && u.id !== null && u.name);
@@ -539,12 +539,16 @@ function renderOrderItems() {
   const parts = [];
   const cartGroups = groupCartItems(cart);
   cartGroups.forEach(g => {
-    const extraLabels = [];
+  const extraLabels = [];
     normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
     if (g.item.togo) extraLabels.push("+ ToGo");
-    const changed = Number(g.item.changedPrice || 0);
     const base = Number(g.item.price || 0);
-    if (changed && base > 0 && Math.abs(changed - base) > 0.0001) {
+    const changed = Number(g.item.changedPrice || 0);
+    if (g.item.discountPct && Number(g.item.discountPct) > 0) {
+      const pct = Number(g.item.discountPct);
+      const label = g.item.discountName ? `${g.item.discountName} ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%` : `Rabatt ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`;
+      extraLabels.push(`+ ${label}`);
+    } else if (changed && base > 0 && Math.abs(changed - base) > 0.0001) {
       const pct = Math.max(0, Math.round(((base - changed) / base) * 1000) / 10);
       extraLabels.push(`+ Rabatt ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`);
     }
@@ -1096,16 +1100,20 @@ function editCartItem(id) {
 
   const priceVal = els.confirmBody.querySelector("#price-val");
   let currentPrice = basePrice;
+  let selectedDiscountPct = null;
+  let selectedDiscountName = "";
   const setPrice = (val) => {
     currentPrice = Number(val);
     priceVal.textContent = currentPrice.toFixed(2);
   };
-  const applyDiscount = (pct) => {
+  const applyDiscount = (pct, name) => {
     setPrice(basePrice - basePrice * pct / 100);
+    selectedDiscountPct = pct;
+    selectedDiscountName = name || "";
   };
-  els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1); };
-  els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2); };
-  els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); applyDiscount(disc3); };
+  els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1, discName1); };
+  els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2, discName2); };
+  els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); applyDiscount(disc3, discName3); };
 
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {
@@ -1119,6 +1127,8 @@ function editCartItem(id) {
     const newNote = els.confirmBody.querySelector("#note-val").value.trim();
     const newPrice = Number(currentPrice || basePrice);
     const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
+    const discountPct = changedPrice !== "NO" && selectedDiscountPct ? Number(selectedDiscountPct) : null;
+    const discountName = discountPct ? (selectedDiscountName || "") : "";
     const newKey = cartKey({ ...item, option: newNote, togo: togoVal, changedPrice });
     const currentKey = cartKey(item);
     const hasChanges = newKey !== currentKey;
@@ -1139,6 +1149,13 @@ function editCartItem(id) {
       const existingIdx = cart.findIndex(c => cartKey(c) === newKey);
       if (existingIdx >= 0) {
         cart[existingIdx].unitamount += qty;
+        if (discountPct) {
+          cart[existingIdx].discountPct = discountPct;
+          cart[existingIdx].discountName = discountName;
+        } else {
+          cart[existingIdx].discountPct = null;
+          cart[existingIdx].discountName = "";
+        }
         const [moved] = cart.splice(existingIdx, 1);
         cart.unshift(moved);
       } else {
@@ -1148,7 +1165,9 @@ function editCartItem(id) {
           unitamount: qty,
           option: newNote,
           togo: togoVal,
-          changedPrice
+          changedPrice,
+          discountPct,
+          discountName
         };
         cart.unshift(newItem);
       }
@@ -1163,6 +1182,13 @@ function editCartItem(id) {
       const existingIdx = cart.findIndex(c => cartKey(c) === newKey);
       if (existingIdx >= 0) {
         cart[existingIdx].unitamount += total;
+        if (discountPct) {
+          cart[existingIdx].discountPct = discountPct;
+          cart[existingIdx].discountName = discountName;
+        } else {
+          cart[existingIdx].discountPct = null;
+          cart[existingIdx].discountName = "";
+        }
         const [moved] = cart.splice(existingIdx, 1);
         cart.unshift(moved);
       } else {
@@ -1172,7 +1198,9 @@ function editCartItem(id) {
           unitamount: total,
           option: newNote,
           togo: togoVal,
-          changedPrice
+          changedPrice,
+          discountPct,
+          discountName
         };
         cart.unshift(newItem);
       }
