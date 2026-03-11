@@ -228,9 +228,13 @@ function renderLoginUsers() {
   placeholder.disabled = true;
   placeholder.selected = true;
   select.appendChild(placeholder);
+  if (state.users && state.users[0]) {
+    console.info("Login users fields:", Object.keys(state.users[0]));
+  }
   const list = (state.users || []).map((u) => {
     const id = u.id ?? u.userid ?? u.user_id ?? u.uid ?? u[0];
-    const name = u.name ?? u.username ?? u.user ?? u[1];
+    const username = u.username ?? u.login ?? u.loginname ?? u.user ?? u.useridname;
+    const name = username || u.name || u.fullname || u[1];
     return { id, name };
   }).filter(u => u.id !== undefined && u.id !== null && u.name);
   list.sort((a, b) => String(a.name).localeCompare(String(b.name), "de"));
@@ -273,7 +277,7 @@ async function bootstrap() {
   const data = await api("bootstrap", {});
   if (data.status !== "OK") return;
   state.user = data.user;
-  state.config = data.config;
+  state.config = normalizeConfig(data.config);
   state.userPrefs = data.userprefs || { preferimgmobile: 0 };
   state.menu = data.menu;
   state.rooms = data.rooms;
@@ -314,6 +318,18 @@ function updateStatus() {
     const txt = state.tseStatus ? "OK" : "DOWN";
     [els.statusTse, els.orderTse].filter(Boolean).forEach(el => el.textContent = txt);
   }
+}
+
+function normalizeConfig(raw) {
+  if (!raw) return {};
+  if (typeof raw === "object") return raw;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch (_) {}
+  }
+  return {};
 }
 
 function topLevelTypes() {
