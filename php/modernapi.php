@@ -290,19 +290,21 @@ if ($cmd == "printer_status") {
 	return;
 }
 
+if ($cmd == "users") {
+	$admin = new Admin();
+	$response = captureJson(function() use ($admin) {
+		$admin->getUserList();
+	});
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
+	return;
+}
+
 if (!requireLogin()) {
 	return;
 }
 
 switch ($cmd) {
-	case "users":
-		$admin = new Admin();
-		$response = captureJson(function() use ($admin) {
-			$admin->getUserList();
-		});
-		echo json_encode($response);
-		logApi($cmd, $requestForLog, $response);
-		return;
 	case "menu_items":
 		$admin = new Admin();
 		$response = captureJson(function() use ($admin) {
