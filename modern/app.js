@@ -1109,9 +1109,9 @@ function editCartItem(id) {
     </div>
     <div class="edit-row"><b>Aktion</b></div>
     <div class="edit-actions">
-      <button type="button" class="ghost" id="disc1">${discName1} ${formatPct(disc1)}%</button>
-      <button type="button" class="ghost" id="disc2">${discName2} ${formatPct(disc2)}%</button>
-      <button type="button" class="ghost" id="disc3">${discName3} ${formatPct(disc3)}%</button>
+      <button type="button" class="ghost disc-btn" id="disc1">${discName1} ${formatPct(disc1)}%</button>
+      <button type="button" class="ghost disc-btn" id="disc2">${discName2} ${formatPct(disc2)}%</button>
+      <button type="button" class="ghost disc-btn" id="disc3">${discName3} ${formatPct(disc3)}%</button>
     </div>
     <div class="edit-qty">
       <button class="ghost" id="qty-dec">-1</button>
@@ -1147,9 +1147,19 @@ function editCartItem(id) {
     priceVal.textContent = currentPrice.toFixed(2);
   };
   const applyDiscount = (pct, name) => {
+    if (selectedDiscountPct === pct) {
+      selectedDiscountPct = null;
+      selectedDiscountName = "";
+      setPrice(basePrice);
+      els.confirmBody.querySelectorAll(".disc-btn").forEach(b => b.classList.remove("active"));
+      return;
+    }
     setPrice(basePrice - basePrice * pct / 100);
     selectedDiscountPct = pct;
     selectedDiscountName = name || "";
+    els.confirmBody.querySelectorAll(".disc-btn").forEach(b => b.classList.remove("active"));
+    const btn = els.confirmBody.querySelector(`#disc${pct === disc1 ? "1" : pct === disc2 ? "2" : "3"}`);
+    if (btn) btn.classList.add("active");
   };
   els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1, discName1); };
   els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2, discName2); };
@@ -1167,7 +1177,7 @@ function editCartItem(id) {
     const newNote = els.confirmBody.querySelector("#note-val").value.trim();
     const newPrice = Number(currentPrice || basePrice);
     const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
-    const discountPct = changedPrice !== "NO" && selectedDiscountPct ? Number(selectedDiscountPct) : null;
+    const discountPct = selectedDiscountPct ? Number(selectedDiscountPct) : null;
     const discountName = discountPct ? (selectedDiscountName || "") : "";
     const newKey = cartKey({ ...item, option: newNote, togo: togoVal, changedPrice });
     const currentKey = cartKey(item);
@@ -1381,11 +1391,15 @@ function buildDisplayOrder() {
   const items = groups.map(g => {
     const base = Number(g.item.price || 0);
     const changed = Number(g.item.changedPrice || 0);
+    const extrasList = normalizeExtras(g.item);
+    const extrasSum = extrasList.reduce((s, e) => s + (Number(e.price || 0) * Number(e.amount || 1)), 0);
     const price = (changed && Math.abs(changed - base) > 0.0001) ? changed : base;
+    const unit = Number(price || 0) + extrasSum;
     return {
       name: g.item.name,
       qty: g.count,
-      price: Number(price || 0)
+      price: Number(unit || 0),
+      extras: extrasList.map(e => `${e.amount || 1}x ${e.name}`)
     };
   });
   const sum = items.reduce((s, i) => s + (i.price * i.qty), 0);
@@ -1398,13 +1412,15 @@ function buildDisplayPaydesk() {
   const bonItems = receiptGroups.map(g => ({
     name: g.item.longname,
     qty: g.count,
-    price: Number(g.item.price || 0)
+    price: Number(g.item.price || 0),
+    extras: normalizeExtras(g.item).map(e => `${e.amount || 1}x ${e.name}`),
+    extrasSum: normalizeExtras(g.item).reduce((s, e) => s + (Number(e.price || 0) * Number(e.amount || 1)), 0)
   }));
   const openItems = openGroups.map(g => ({
     name: g.item.longname,
     qty: g.count
   }));
-  const sum = bonItems.reduce((s, i) => s + (i.price * i.qty), 0);
+  const sum = bonItems.reduce((s, i) => s + ((Number(i.price || 0) + Number(i.extrasSum || 0)) * i.qty), 0);
   return { bonItems, openItems, sum: sum.toFixed(2) };
 }
 

@@ -124,39 +124,42 @@ function subscribeToPos(posId) {
     state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId }));
   }
   show(els.displayScreen);
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
   showIdle();
 }
 
 function handleDisplayUpdate(msg) {
   clearIdleTimer();
   els.displayQr.classList.add("hidden");
-  if (msg.mode === "order") {
-    state.lastMode = "order";
-    const payload = msg.payload || { items: [], sum: "0.00" };
-    els.displaySum.textContent = payload.sum || "0.00";
-    els.displayBonTitle.textContent = "Bestellung";
-    els.displayBonList.innerHTML = (payload.items || []).map(i => `
-      <div class="display-bon-item">
-        <span>${i.qty}x ${i.name}</span>
+    if (msg.mode === "order") {
+      state.lastMode = "order";
+      const payload = msg.payload || { items: [], sum: "0.00" };
+      els.displaySum.textContent = payload.sum || "0.00";
+      els.displayBonTitle.textContent = "Bestellung";
+      els.displayBonList.innerHTML = (payload.items || []).map(i => `
+        <div class="display-bon-item">
+        <span>${i.qty}x ${i.name}${(i.extras && i.extras.length) ? " (" + i.extras.join(", ") + ")" : ""}</span>
         <span>${Number(i.price || 0).toFixed(2)}</span>
-      </div>
-    `).join("");
+        </div>
+      `).join("");
     els.displayOrderTitle.textContent = "";
     els.displayOrderList.innerHTML = "";
     hideIdle();
     return;
   }
-  if (msg.mode === "paydesk") {
-    state.lastMode = "paydesk";
-    const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
-    els.displaySum.textContent = payload.sum || "0.00";
-    els.displayBonTitle.textContent = "Bon";
-    els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
-      <div class="display-bon-item">
-        <span>${i.qty}x ${i.name}</span>
-        <span>${Number(i.price || 0).toFixed(2)}</span>
-      </div>
-    `).join("");
+    if (msg.mode === "paydesk") {
+      state.lastMode = "paydesk";
+      const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
+      els.displaySum.textContent = payload.sum || "0.00";
+      els.displayBonTitle.textContent = "Bon";
+      els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
+        <div class="display-bon-item">
+        <span>${i.qty}x ${i.name}${(i.extras && i.extras.length) ? " (" + i.extras.join(", ") + ")" : ""}</span>
+        <span>${(Number(i.price || 0) + Number(i.extrasSum || 0)).toFixed(2)}</span>
+        </div>
+      `).join("");
     els.displayOrderTitle.textContent = "Bestellt";
     els.displayOrderList.innerHTML = (payload.openItems || []).map(i => `
       <span class="display-order-item">${i.qty}x ${i.name}</span>

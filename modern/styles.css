@@ -342,6 +342,12 @@ body {
   cursor: pointer;
 }
 
+.edit-actions .disc-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
 .price-display {
   font-weight: 700;
   padding: 6px 0;
