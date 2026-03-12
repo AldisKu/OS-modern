@@ -614,7 +614,13 @@ function renderOrderItems() {
     const extraLabels = [];
     normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
     if (isTogo(g.item)) extraLabels.push("+ ToGo");
-    if (shouldShowPriceLevel(g.item)) {
+    const basePrice = getMenuBasePrice(g.item.prodid);
+    const itemPrice = Number(g.item.price || 0);
+    if (basePrice > 0 && itemPrice < basePrice - 0.0001) {
+      const pct = Math.max(0, Math.round(((basePrice - itemPrice) / basePrice) * 1000) / 10);
+      const label = matchDiscountName(pct);
+      extraLabels.push(`+ ${label} ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`);
+    } else if (shouldShowPriceLevel(g.item)) {
       const levelLabel = displayPriceLevel(g.item.pricelevelname);
       if (levelLabel) extraLabels.push(`+ ${levelLabel}`);
     }
@@ -646,6 +652,26 @@ function renderOrderItems() {
     });
   });
   scheduleDisplayUpdate();
+}
+
+function getMenuBasePrice(prodid) {
+  const prod = (state.menu?.prods || []).find(p => Number(p.id) === Number(prodid));
+  if (!prod) return 0;
+  return Number(String(prod.price || "0").replace(",", ".")) || 0;
+}
+
+function matchDiscountName(pct) {
+  const candidates = [
+    { pct: Number(state.discounts.d1 || 0), name: state.discounts.n1 || "Rabatt 1" },
+    { pct: Number(state.discounts.d2 || 0), name: state.discounts.n2 || "Rabatt 2" },
+    { pct: Number(state.discounts.d3 || 0), name: state.discounts.n3 || "Rabatt 3" }
+  ].filter(c => c.pct > 0);
+  let best = null;
+  candidates.forEach(c => {
+    const diff = Math.abs(c.pct - pct);
+    if (diff <= 0.5 && (!best || diff < best.diff)) best = { ...c, diff };
+  });
+  return best ? best.name : "Rabatt";
 }
 
 function adjustCartGroup(key, delta) {
@@ -1092,6 +1118,7 @@ function editCartItem(id) {
   if (!item) return;
   const groupCount = cart.filter(c => cartKey(c) === cartKey(item)).reduce((sum, c) => sum + Number(c.unitamount || 1), 0);
   const basePrice = Number(item.price || 0);
+  const existingChanged = item.changedPrice !== undefined && item.changedPrice !== null && item.changedPrice !== "NO";
   const disc1 = state.discounts.d1;
   const disc2 = state.discounts.d2;
   const disc3 = state.discounts.d3;
@@ -1143,10 +1170,25 @@ function editCartItem(id) {
   let currentPrice = basePrice;
   let selectedDiscountPct = null;
   let selectedDiscountName = "";
+  if (item.discountPct) {
+    selectedDiscountPct = Number(item.discountPct);
+    selectedDiscountName = item.discountName || "";
+  } else if (existingChanged && basePrice > 0) {
+    const changed = Number(item.changedPrice || 0);
+    const pct = Math.max(0, Math.round(((basePrice - changed) / basePrice) * 1000) / 10);
+    if (pct > 0) {
+      selectedDiscountPct = pct;
+      selectedDiscountName = matchDiscountName(pct);
+    }
+  }
   const setPrice = (val) => {
     currentPrice = Number(val);
     priceVal.textContent = currentPrice.toFixed(2);
   };
+  if (existingChanged) {
+    const val = Number(item.changedPrice || 0);
+    if (!Number.isNaN(val)) setPrice(val);
+  }
   const applyDiscount = (pct, name) => {
     if (selectedDiscountPct === pct) {
       selectedDiscountPct = null;
@@ -1165,6 +1207,13 @@ function editCartItem(id) {
   els.confirmBody.querySelector("#disc1").onclick = (e) => { e.preventDefault(); applyDiscount(disc1, discName1); };
   els.confirmBody.querySelector("#disc2").onclick = (e) => { e.preventDefault(); applyDiscount(disc2, discName2); };
   els.confirmBody.querySelector("#disc3").onclick = (e) => { e.preventDefault(); applyDiscount(disc3, discName3); };
+  if (selectedDiscountPct) {
+    let btn = null;
+    if (Math.abs(selectedDiscountPct - disc1) <= 0.01) btn = els.confirmBody.querySelector("#disc1");
+    else if (Math.abs(selectedDiscountPct - disc2) <= 0.01) btn = els.confirmBody.querySelector("#disc2");
+    else if (Math.abs(selectedDiscountPct - disc3) <= 0.01) btn = els.confirmBody.querySelector("#disc3");
+    if (btn) btn.classList.add("active");
+  }
 
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {
