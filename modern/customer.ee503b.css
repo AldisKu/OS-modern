@@ -149,6 +149,8 @@ body {
   margin-top: 10px;
   display: grid;
   gap: 8px;
+  flex: 1 1 auto;
+  overflow: auto;
 }
 
 .display-order-list {

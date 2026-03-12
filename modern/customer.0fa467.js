@@ -170,23 +170,30 @@ function handleDisplayUpdate(msg) {
       const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
       els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
       els.displayBonTitle.textContent = "Sie bezahlen:";
-      els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
+      const bonItems = (payload.bonItems || []).map(i => ({
+        ...i,
+        extras: (i.extras || []).filter(e => e && e.name)
+      }));
+      const bonHtml = bonItems.map(i => `
         <div class="display-bon-item">
         <span>${i.qty}x ${i.name}</span>
         <span>${(Number(i.price || 0) + Number(i.extrasSum || 0)).toFixed(2)}</span>
         ${(i.extras && i.extras.length) ? i.extras.map(e => `<div class="display-extra">+ ${e.amount}x ${e.name}${(e.price && e.price > 0) ? " (" + Number(e.price).toFixed(2) + ")" : ""}</div>`).join("") : ""}
         </div>
       `).join("");
+      els.displayBonList.innerHTML = bonHtml;
     els.displayOrderTitle.textContent = "Ihre Bestellung:";
     els.displayOrderList.innerHTML = (payload.openItems || []).map(i => `
       <span class="display-order-item">${i.qty}x ${i.name}</span>
     `).join("");
     hideIdle();
-    if (els.displayWrap) {
-      const bonList = els.displayBonList;
-      const isFull = bonList && bonList.scrollHeight > bonList.clientHeight + 2;
-      els.displayWrap.classList.toggle("bon-full", !!isFull);
-    }
+    requestAnimationFrame(() => {
+      if (els.displayWrap) {
+        const bonList = els.displayBonList;
+        const isFull = bonList && bonList.scrollHeight > bonList.clientHeight + 2;
+        els.displayWrap.classList.toggle("bon-full", !!isFull);
+      }
+    });
   }
 }
 
