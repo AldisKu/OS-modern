@@ -191,7 +191,7 @@ function handleDisplayUpdate(msg) {
         <div class="display-bon-item">
         <span>${i.qty}x ${i.name}</span>
         <span>${(Number(i.price || 0) + Number(i.extrasSum || 0)).toFixed(2)}</span>
-        ${(i.extras && i.extras.length) ? i.extras.map(e => `<div class="display-extra">+ ${e.amount}x ${e.name}${(e.price && e.price > 0) ? " (" + Number(e.price).toFixed(2) + ")" : ""}</div>`).join("") : (i.extrasSum > 0 ? `<div class="display-extra">+ Extras ${Number(i.extrasSum).toFixed(2)}</div>` : "")
+        ${(i.extras && i.extras.length) ? i.extras.map(e => `<div class="display-extra">+ ${e.amount}x ${e.name}${(e.price && e.price > 0) ? " (" + Number(e.price).toFixed(2) + ")" : ""}</div>`).join("") : (i.extrasSum > 0 ? `<div class="display-extra">+ Extras ${Number(i.extrasSum).toFixed(2)}</div>` : "")}
         </div>
       `).join("");
       els.displayBonList.innerHTML = bonHtml;
