@@ -22,7 +22,8 @@ const state = {
   selectedPosId: null,
   idleTimer: null,
   lastMode: null,
-  qrActiveUntil: 0
+  qrActiveUntil: 0,
+  qrTimer: null
 };
 
 function show(screen) {
@@ -133,14 +134,14 @@ function subscribeToPos(posId) {
 
 function handleDisplayUpdate(msg) {
   if (state.qrActiveUntil && Date.now() < state.qrActiveUntil) {
-    return;
+    clearQrLock();
   }
   clearIdleTimer();
   els.displayQr.classList.add("hidden");
     if (msg.mode === "order") {
       state.lastMode = "order";
       const payload = msg.payload || { items: [], sum: "0.00" };
-      els.displaySum.textContent = payload.sum || "0.00";
+      els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
       els.displayBonTitle.textContent = "Bestellung";
       els.displayBonList.innerHTML = (payload.items || []).map(i => `
         <div class="display-bon-item">
@@ -156,7 +157,7 @@ function handleDisplayUpdate(msg) {
     if (msg.mode === "paydesk") {
       state.lastMode = "paydesk";
       const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
-      els.displaySum.textContent = payload.sum || "0.00";
+      els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
       els.displayBonTitle.textContent = "Bon";
       els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
         <div class="display-bon-item">
@@ -183,11 +184,19 @@ function handleEbon(msg) {
   hideIdle();
   state.qrActiveUntil = Date.now() + 30000;
   clearIdleTimer();
-  setTimeout(() => {
+  if (state.qrTimer) clearTimeout(state.qrTimer);
+  state.qrTimer = setTimeout(() => {
     showIdle();
     els.displayQr.classList.add("hidden");
     state.qrActiveUntil = 0;
   }, 30000);
+}
+
+function clearQrLock() {
+  state.qrActiveUntil = 0;
+  if (state.qrTimer) clearTimeout(state.qrTimer);
+  state.qrTimer = null;
+  els.displayQr.classList.add("hidden");
 }
 
 function showIdle() {

@@ -116,6 +116,24 @@ body {
   font-weight: 800;
   letter-spacing: 1px;
   text-align: right;
+  white-space: nowrap;
+}
+
+.display-sum-label {
+  font-size: 28px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.display-sum-value {
+  font-size: 64px;
+  font-weight: 800;
+}
+
+.display-sum-currency {
+  font-size: 36px;
+  font-weight: 700;
+  margin-left: 4px;
 }
 
 .display-bon-title,
