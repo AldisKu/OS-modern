@@ -680,8 +680,7 @@ function adjustCartGroup(key, delta) {
   if (delta > 0) {
     const idx = cart.findIndex(c => cartKey(c) === key);
     if (idx >= 0) {
-      const clone = { ...cart[idx], _id: Date.now(), unitamount: 1, ts: cart[idx].ts || 0 };
-      cart.push(clone);
+      cart[idx].unitamount = Number(cart[idx].unitamount || 1) + 1;
     }
   } else {
     for (let i = cart.length - 1; i >= 0; i--) {
@@ -771,20 +770,7 @@ function addToCart(prod, extras, option, qty, forceTogo) {
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
-  const key = cartKey(item);
-  const matches = cart.map((c, i) => ({ c, i })).filter(x => cartKey(x.c) === key);
-  if (matches.length > 0) {
-    let newest = matches[0];
-    matches.forEach(m => {
-      if ((m.c.ts || 0) > (newest.c.ts || 0)) newest = m;
-    });
-    const totalQty = matches.reduce((s, m) => s + Number(m.c.unitamount || 1), 0) + item.unitamount;
-    newest.c.unitamount = totalQty;
-    newest.c.ts = nowTs;
-    matches.filter(m => m.i !== newest.i).sort((a, b) => b.i - a.i).forEach(m => cart.splice(m.i, 1));
-  } else {
-    cart.push(item);
-  }
+  cart.push(item);
   saveCart(tableId);
   renderOrderItems();
 }
@@ -813,23 +799,7 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
-  const key = cartKey(item);
-  const matches = cart.map((c, i) => ({ c, i })).filter(x => cartKey(x.c) === key);
-  if (matches.length > 0) {
-    let newest = matches[0];
-    matches.forEach(m => {
-      if ((m.c.ts || 0) > (newest.c.ts || 0)) newest = m;
-    });
-    const totalQty = matches.reduce((s, m) => s + Number(m.c.unitamount || 1), 0) + item.unitamount;
-    newest.c.unitamount = totalQty;
-    newest.c.ts = nowTs;
-    newest.c.changedPrice = item.changedPrice;
-    newest.c.discountPct = item.discountPct ?? newest.c.discountPct ?? null;
-    newest.c.discountName = item.discountName ?? newest.c.discountName ?? "";
-    matches.filter(m => m.i !== newest.i).sort((a, b) => b.i - a.i).forEach(m => cart.splice(m.i, 1));
-  } else {
-    cart.push(item);
-  }
+  cart.push(item);
   saveCart(tableId);
   renderOrderItems();
 }
@@ -1003,20 +973,18 @@ function existingKeyLoose(item) {
 }
 
 function groupCartItems(items) {
-  const groups = new Map();
-  items.forEach((it, idx) => {
+  const sorted = items.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const groups = [];
+  sorted.forEach((it, idx) => {
     const key = cartKey(it);
-    if (!groups.has(key)) {
-      groups.set(key, { key, item: it, count: 0, first: idx, newestTs: it.ts || 0 });
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) {
+      last.count += Number(it.unitamount || 1);
+    } else {
+      groups.push({ key, item: it, count: Number(it.unitamount || 1), first: idx });
     }
-    const g = groups.get(key);
-    g.count += Number(it.unitamount || 1);
-    g.newestTs = Math.max(g.newestTs || 0, it.ts || 0);
   });
-  return Array.from(groups.values()).sort((a, b) => {
-    if (b.newestTs !== a.newestTs) return b.newestTs - a.newestTs;
-    return a.first - b.first;
-  });
+  return groups;
 }
 
 function groupExistingItems(items) {
@@ -1268,7 +1236,7 @@ function editCartItem(id) {
     const hasChanges = newKey !== currentKey;
 
     if (qty < groupCount) {
-      // reduce original group by qty, create/merge new item for changed subset
+      // reduce original group by qty, create new item for changed subset
       let remaining = qty;
       for (let i = 0; i < cart.length && remaining > 0; i++) {
         if (cartKey(cart[i]) !== currentKey) continue;
@@ -1280,31 +1248,18 @@ function editCartItem(id) {
           i--;
         }
       }
-      const existingIdx = cart.findIndex(c => cartKey(c) === newKey);
-      if (existingIdx >= 0) {
-        cart[existingIdx].unitamount += qty;
-        if (discountPct) {
-          cart[existingIdx].discountPct = discountPct;
-          cart[existingIdx].discountName = discountName;
-        } else {
-          cart[existingIdx].discountPct = null;
-          cart[existingIdx].discountName = "";
-        }
-        const [moved] = cart.splice(existingIdx, 1);
-        cart.unshift(moved);
-      } else {
-        const newItem = {
-          ...item,
-          _id: Date.now(),
-          unitamount: qty,
-          option: newNote,
-          togo: togoVal,
-          changedPrice,
-          discountPct,
-          discountName
-        };
-        cart.unshift(newItem);
-      }
+      const newItem = {
+        ...item,
+        _id: Date.now(),
+        unitamount: qty,
+        option: newNote,
+        togo: togoVal,
+        changedPrice,
+        discountPct,
+        discountName,
+        ts: Date.now()
+      };
+      cart.unshift(newItem);
     } else if (hasChanges) {
       // replace entire group and move to top
       let total = 0;
@@ -1313,31 +1268,18 @@ function editCartItem(id) {
         total += Number(cart[i].unitamount || 1);
         cart.splice(i, 1);
       }
-      const existingIdx = cart.findIndex(c => cartKey(c) === newKey);
-      if (existingIdx >= 0) {
-        cart[existingIdx].unitamount += total;
-        if (discountPct) {
-          cart[existingIdx].discountPct = discountPct;
-          cart[existingIdx].discountName = discountName;
-        } else {
-          cart[existingIdx].discountPct = null;
-          cart[existingIdx].discountName = "";
-        }
-        const [moved] = cart.splice(existingIdx, 1);
-        cart.unshift(moved);
-      } else {
-        const newItem = {
-          ...item,
-          _id: Date.now(),
-          unitamount: total,
-          option: newNote,
-          togo: togoVal,
-          changedPrice,
-          discountPct,
-          discountName
-        };
-        cart.unshift(newItem);
-      }
+      const newItem = {
+        ...item,
+        _id: Date.now(),
+        unitamount: total,
+        option: newNote,
+        togo: togoVal,
+        changedPrice,
+        discountPct,
+        discountName,
+        ts: Date.now()
+      };
+      cart.unshift(newItem);
     }
     state.cartByTable[state.selectedTable.id] = cart;
     saveCart(state.selectedTable.id);
