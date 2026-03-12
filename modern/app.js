@@ -583,11 +583,12 @@ function renderOrderItems() {
     if (g.item.togo) extraLabels.push("+ ToGo");
     const base = Number(g.item.price || 0);
     const changed = Number(g.item.changedPrice || 0);
+    const hasChangedPrice = g.item.changedPrice !== undefined && g.item.changedPrice !== null && g.item.changedPrice !== "NO";
     if (g.item.discountPct && Number(g.item.discountPct) > 0) {
       const pct = Number(g.item.discountPct);
       const label = g.item.discountName ? `${g.item.discountName} ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%` : `Rabatt ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`;
       extraLabels.push(`+ ${label}`);
-    } else if (changed && base > 0 && Math.abs(changed - base) > 0.0001) {
+    } else if (hasChangedPrice && base > 0 && Math.abs(changed - base) > 0.0001) {
       const pct = Math.max(0, Math.round(((base - changed) / base) * 1000) / 10);
       extraLabels.push(`+ Rabatt ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`);
     }
