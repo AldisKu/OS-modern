@@ -942,7 +942,10 @@ function displayPriceLevel(name) {
 }
 
 function isTogo(item) {
-  return Number(item?.togo || 0) === 1;
+  const v = item?.togo;
+  if (v === true) return true;
+  if (v === "true" || v === "yes") return true;
+  return Number(v || 0) === 1;
 }
 
 function shouldShowPriceLevel(item) {
@@ -1441,9 +1444,10 @@ function buildDisplayOrder() {
   const items = groups.map(g => {
     const base = Number(g.item.price || 0);
     const changed = Number(g.item.changedPrice || 0);
+    const hasChangedPrice = g.item.changedPrice !== undefined && g.item.changedPrice !== null && g.item.changedPrice !== "NO";
     const extrasList = normalizeExtras(g.item);
     const extrasSum = extrasList.reduce((s, e) => s + (Number(e.price || 0) * Number(e.amount || 1)), 0);
-    const price = (changed && Math.abs(changed - base) > 0.0001) ? changed : base;
+    const price = (hasChangedPrice && Math.abs(changed - base) > 0.0001) ? changed : base;
     const unit = Number(price || 0) + extrasSum;
     return {
       name: g.item.name,
@@ -1595,7 +1599,13 @@ function renderPaydeskItems() {
     const line = Number(g.item.price || 0) * qty;
     const tags = [];
     if (isTogo(g.item)) tags.push("[ToGo]");
-    if (shouldShowPriceLevel(g.item)) {
+    const base = getMenuBasePrice(g.item.prodid);
+    const itemPrice = Number(g.item.price || 0);
+    if (base > 0 && itemPrice < base - 0.0001) {
+      const pct = Math.max(0, Math.round(((base - itemPrice) / base) * 1000) / 10);
+      const label = matchDiscountName(pct);
+      tags.push(`[${label} ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%]`);
+    } else if (shouldShowPriceLevel(g.item)) {
       const levelLabel = displayPriceLevel(g.item.pricelevelname);
       if (levelLabel) tags.push(`[${levelLabel}]`);
     }
@@ -1609,7 +1619,13 @@ function renderPaydeskItems() {
     total += line;
     const tags = [];
     if (isTogo(g.item)) tags.push("[ToGo]");
-    if (shouldShowPriceLevel(g.item)) {
+    const base = getMenuBasePrice(g.item.prodid);
+    const itemPrice = Number(g.item.price || 0);
+    if (base > 0 && itemPrice < base - 0.0001) {
+      const pct = Math.max(0, Math.round(((base - itemPrice) / base) * 1000) / 10);
+      const label = matchDiscountName(pct);
+      tags.push(`[${label} ${Number.isInteger(pct) ? pct : pct.toFixed(1)}%]`);
+    } else if (shouldShowPriceLevel(g.item)) {
       const levelLabel = displayPriceLevel(g.item.pricelevelname);
       if (levelLabel) tags.push(`[${levelLabel}]`);
     }
