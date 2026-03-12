@@ -47,6 +47,7 @@ async function api(cmd, body) {
 }
 
 async function init() {
+  show(els.pairScreen);
   await loadServerConfig();
   connectBroker();
 }
@@ -55,7 +56,10 @@ async function loadServerConfig() {
   const data = await api("config", {});
   if (data.status === "OK") {
     state.brokerUrl = data.broker_ws || null;
+  } else {
+    show(els.pairScreen);
   }
+}
 }
 
 
@@ -65,6 +69,12 @@ function connectBroker() {
   state.ws = ws;
   ws.onopen = () => {
     ws.send(JSON.stringify({ type: "REGISTER", role: "display" }));
+  };
+  ws.onclose = () => {
+    show(els.pairScreen);
+  };
+  ws.onerror = () => {
+    show(els.pairScreen);
   };
   ws.onmessage = (evt) => {
     let msg = null;

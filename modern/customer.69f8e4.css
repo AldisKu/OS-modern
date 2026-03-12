@@ -238,4 +238,14 @@ body {
   backdrop-filter: blur(6px);
 }
 
-.display-hash{font-size:12px;text-align:center;color:#6b5b4d;padding-top:6px;}
+.display-hash{
+  font-size:12px;
+  text-align:center;
+  color:#6b5b4d;
+  position: fixed;
+  top: 4px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: none;
+}
