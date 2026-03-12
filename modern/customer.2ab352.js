@@ -60,8 +60,6 @@ async function loadServerConfig() {
     show(els.pairScreen);
   }
 }
-}
-
 
 function connectBroker() {
   if (!state.brokerUrl) return;
