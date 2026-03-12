@@ -182,7 +182,12 @@ function handleEbon(msg) {
   els.displayQr.classList.remove("hidden");
   hideIdle();
   state.qrActiveUntil = Date.now() + 30000;
-  startIdleTimer();
+  clearIdleTimer();
+  setTimeout(() => {
+    showIdle();
+    els.displayQr.classList.add("hidden");
+    state.qrActiveUntil = 0;
+  }, 30000);
 }
 
 function showIdle() {
@@ -196,6 +201,7 @@ function hideIdle() {
 function startIdleTimer() {
   clearIdleTimer();
   state.idleTimer = setTimeout(() => {
+    if (state.qrActiveUntil && Date.now() < state.qrActiveUntil) return;
     showIdle();
     els.displayQr.classList.add("hidden");
     state.qrActiveUntil = 0;
