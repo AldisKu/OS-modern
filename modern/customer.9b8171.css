@@ -237,3 +237,5 @@ body {
   letter-spacing: 2px;
   backdrop-filter: blur(6px);
 }
+
+.display-hash{font-size:12px;text-align:center;color:#6b5b4d;padding-top:6px;}

@@ -1,3 +1,8 @@
+
+function showHash() {
+  const el = document.getElementById("display-hash");
+  if (el) el.textContent = "hash: 8385d3";
+}
 const API = "../php/modernapi.php";
 
 const els = {
@@ -246,4 +251,5 @@ function clearIdleTimer() {
   state.idleTimer = null;
 }
 
+showHash();
 init();
