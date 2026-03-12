@@ -21,7 +21,8 @@ const state = {
   ws: null,
   selectedPosId: null,
   idleTimer: null,
-  lastMode: null
+  lastMode: null,
+  qrActiveUntil: 0
 };
 
 function show(screen) {
@@ -131,6 +132,9 @@ function subscribeToPos(posId) {
 }
 
 function handleDisplayUpdate(msg) {
+  if (state.qrActiveUntil && Date.now() < state.qrActiveUntil) {
+    return;
+  }
   clearIdleTimer();
   els.displayQr.classList.add("hidden");
     if (msg.mode === "order") {
@@ -177,6 +181,7 @@ function handleEbon(msg) {
   els.displayQrLink.textContent = link;
   els.displayQr.classList.remove("hidden");
   hideIdle();
+  state.qrActiveUntil = Date.now() + 30000;
   startIdleTimer();
 }
 
@@ -193,6 +198,7 @@ function startIdleTimer() {
   state.idleTimer = setTimeout(() => {
     showIdle();
     els.displayQr.classList.add("hidden");
+    state.qrActiveUntil = 0;
   }, 30000);
 }
 

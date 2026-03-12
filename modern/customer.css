@@ -1,6 +1,14 @@
+@font-face {
+  font-family: "Koblenz";
+  src: url("./Koblenz-Book.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 body {
   margin: 0;
-  font-family: "Avenir Next", "Avenir", "Helvetica Neue", sans-serif;
+  font-family: "Koblenz", "Avenir Next", "Avenir", "Helvetica Neue", sans-serif;
   background: #f7f3ee;
   color: #1a1a1a;
 }

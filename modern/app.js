@@ -1175,7 +1175,7 @@ function editCartItem(id) {
   els.confirmActions.querySelector("#apply").onclick = () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     const newNote = els.confirmBody.querySelector("#note-val").value.trim();
-    const newPrice = Number(currentPrice || basePrice);
+    const newPrice = Number.isFinite(currentPrice) ? Number(currentPrice) : Number(basePrice || 0);
     const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
     const discountPct = selectedDiscountPct ? Number(selectedDiscountPct) : null;
     const discountName = discountPct ? (selectedDiscountName || "") : "";
