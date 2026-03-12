@@ -680,7 +680,7 @@ function adjustCartGroup(key, delta) {
   if (delta > 0) {
     const idx = cart.findIndex(c => cartKey(c) === key);
     if (idx >= 0) {
-      const clone = { ...cart[idx], _id: Date.now(), unitamount: 1 };
+      const clone = { ...cart[idx], _id: Date.now(), unitamount: 1, ts: cart[idx].ts || 0 };
       cart.push(clone);
     }
   } else {
@@ -756,6 +756,7 @@ function addProductToCart() {
 
 function addToCart(prod, extras, option, qty, forceTogo) {
   const tableId = state.selectedTable.id;
+  const nowTs = Date.now();
   const item = {
     _id: Date.now(),
     prodid: prod.id,
@@ -765,14 +766,22 @@ function addToCart(prod, extras, option, qty, forceTogo) {
     unitamount: qty,
     togo: typeof forceTogo === "number" ? forceTogo : (state.selectedTable?.id === 0 ? 1 : 0),
     option: option || "",
-    extras: sanitizeExtras(extras)
+    extras: sanitizeExtras(extras),
+    ts: nowTs
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
   const key = cartKey(item);
-  const idx = cart.findIndex(c => cartKey(c) === key);
-  if (idx >= 0) {
-    cart[idx].unitamount += item.unitamount;
+  const matches = cart.map((c, i) => ({ c, i })).filter(x => cartKey(x.c) === key);
+  if (matches.length > 0) {
+    let newest = matches[0];
+    matches.forEach(m => {
+      if ((m.c.ts || 0) > (newest.c.ts || 0)) newest = m;
+    });
+    const totalQty = matches.reduce((s, m) => s + Number(m.c.unitamount || 1), 0) + item.unitamount;
+    newest.c.unitamount = totalQty;
+    newest.c.ts = nowTs;
+    matches.filter(m => m.i !== newest.i).sort((a, b) => b.i - a.i).forEach(m => cart.splice(m.i, 1));
   } else {
     cart.push(item);
   }
@@ -782,6 +791,7 @@ function addToCart(prod, extras, option, qty, forceTogo) {
 
 function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
   const tableId = state.selectedTable.id;
+  const nowTs = Date.now();
   let normalizedChanged = changedPrice || "NO";
   const base = Number(prod.price || 0);
   const cp = Number(normalizedChanged);
@@ -798,14 +808,25 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice) {
     togo: togo ? 1 : 0,
     option: option || "",
     extras: sanitizeExtras(extras),
-    changedPrice: normalizedChanged
+    changedPrice: normalizedChanged,
+    ts: nowTs
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
   const key = cartKey(item);
-  const idx = cart.findIndex(c => cartKey(c) === key);
-  if (idx >= 0) {
-    cart[idx].unitamount += item.unitamount;
+  const matches = cart.map((c, i) => ({ c, i })).filter(x => cartKey(x.c) === key);
+  if (matches.length > 0) {
+    let newest = matches[0];
+    matches.forEach(m => {
+      if ((m.c.ts || 0) > (newest.c.ts || 0)) newest = m;
+    });
+    const totalQty = matches.reduce((s, m) => s + Number(m.c.unitamount || 1), 0) + item.unitamount;
+    newest.c.unitamount = totalQty;
+    newest.c.ts = nowTs;
+    newest.c.changedPrice = item.changedPrice;
+    newest.c.discountPct = item.discountPct ?? newest.c.discountPct ?? null;
+    newest.c.discountName = item.discountName ?? newest.c.discountName ?? "";
+    matches.filter(m => m.i !== newest.i).sort((a, b) => b.i - a.i).forEach(m => cart.splice(m.i, 1));
   } else {
     cart.push(item);
   }
@@ -986,12 +1007,16 @@ function groupCartItems(items) {
   items.forEach((it, idx) => {
     const key = cartKey(it);
     if (!groups.has(key)) {
-      groups.set(key, { key, item: it, count: 0, first: idx });
+      groups.set(key, { key, item: it, count: 0, first: idx, newestTs: it.ts || 0 });
     }
     const g = groups.get(key);
     g.count += Number(it.unitamount || 1);
+    g.newestTs = Math.max(g.newestTs || 0, it.ts || 0);
   });
-  return Array.from(groups.values()).sort((a, b) => a.first - b.first);
+  return Array.from(groups.values()).sort((a, b) => {
+    if (b.newestTs !== a.newestTs) return b.newestTs - a.newestTs;
+    return a.first - b.first;
+  });
 }
 
 function groupExistingItems(items) {
@@ -1004,7 +1029,13 @@ function groupExistingItems(items) {
     const g = groups.get(key);
     g.count += Number(it.unitamount || 1);
   });
-  return Array.from(groups.values()).sort((a, b) => a.first - b.first);
+  return Array.from(groups.values()).sort((a, b) => {
+    const an = String(a.item.longname || a.item.name || "").toLowerCase();
+    const bn = String(b.item.longname || b.item.name || "").toLowerCase();
+    if (an < bn) return -1;
+    if (an > bn) return 1;
+    return a.first - b.first;
+  });
 }
 
 function resetConfirmActionsLayout() {
@@ -1678,7 +1709,13 @@ function groupPaydeskItems(items) {
     const g = groups.get(key);
     g.count += Number(it.unitamount || 1);
   });
-  return Array.from(groups.values()).sort((a, b) => a.first - b.first);
+  return Array.from(groups.values()).sort((a, b) => {
+    const an = String(a.item.longname || a.item.name || "").toLowerCase();
+    const bn = String(b.item.longname || b.item.name || "").toLowerCase();
+    if (an < bn) return -1;
+    if (an > bn) return 1;
+    return a.first - b.first;
+  });
 }
 
 els.paydeskAddAll?.addEventListener("click", () => {
