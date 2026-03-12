@@ -7,12 +7,38 @@ const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd
 const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
 const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
 const clients = new Set();
+let nextId = 1;
 
 function sendAll(msg) {
   const data = JSON.stringify(msg);
   for (const ws of clients) {
     if (ws.readyState === ws.OPEN) {
       ws.send(data);
+    }
+  }
+}
+
+function getPosList() {
+  const list = [];
+  for (const ws of clients) {
+    if (ws.meta && ws.meta.role === "pos") {
+      list.push({
+        id: ws.meta.id,
+        deviceId: ws.meta.deviceId || "",
+        userId: ws.meta.userId || "",
+        userName: ws.meta.userName || ""
+      });
+    }
+  }
+  return list;
+}
+
+function sendPosListToDisplays() {
+  const list = getPosList();
+  const payload = JSON.stringify({ type: "POS_LIST", list, ts: Date.now() });
+  for (const ws of clients) {
+    if (ws.readyState === ws.OPEN && ws.meta && ws.meta.role === "display") {
+      ws.send(payload);
     }
   }
 }
@@ -61,10 +87,47 @@ const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws) => {
   clients.add(ws);
+  ws.meta = { role: "unknown", id: nextId++ };
   ws.send(JSON.stringify({ type: "HELLO", ts: Date.now() }));
 
-  ws.on("close", () => clients.delete(ws));
-  ws.on("error", () => clients.delete(ws));
+  ws.on("message", (raw) => {
+    let msg = null;
+    try { msg = JSON.parse(raw.toString()); } catch (_) { msg = null; }
+    if (!msg || !msg.type) return;
+    if (msg.type === "REGISTER") {
+      ws.meta.role = msg.role || "unknown";
+      ws.meta.deviceId = msg.deviceId || "";
+      ws.meta.userId = msg.userId || "";
+      ws.meta.userName = msg.userName || "";
+      ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, list: getPosList(), ts: Date.now() }));
+      sendPosListToDisplays();
+      return;
+    }
+    if (msg.type === "SUBSCRIBE" && ws.meta.role === "display") {
+      ws.meta.targetPosId = msg.posId || null;
+      return;
+    }
+    if (msg.type === "DISPLAY_UPDATE" || msg.type === "DISPLAY_IDLE" || msg.type === "DISPLAY_EBON") {
+      const posId = msg.posId || (ws.meta ? ws.meta.id : null);
+      if (!posId) return;
+      const data = JSON.stringify({ ...msg, posId, ts: Date.now() });
+      for (const client of clients) {
+        if (client.readyState !== client.OPEN) continue;
+        if (!client.meta || client.meta.role !== "display") continue;
+        if (client.meta.targetPosId !== posId) continue;
+        client.send(data);
+      }
+    }
+  });
+
+  ws.on("close", () => {
+    clients.delete(ws);
+    sendPosListToDisplays();
+  });
+  ws.on("error", () => {
+    clients.delete(ws);
+    sendPosListToDisplays();
+  });
 });
 
 server.listen(PORT, () => {

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>OrderSprinter Kundendisplay</title>
+  <link rel="stylesheet" href="./customer.css" />
+</head>
+<body>
+  <div id="app">
+    <section class="login-screen" id="login-screen">
+      <div class="login-card">
+        <h1>Kundendisplay Login</h1>
+        <label>
+          <span>Benutzer</span>
+          <select id="login-user"></select>
+        </label>
+        <label>
+          <span>Passwort</span>
+          <input type="password" id="login-pass" autocomplete="off" />
+        </label>
+        <div class="login-actions">
+          <button class="primary" id="login-btn">Login</button>
+          <button class="ghost" id="login-clear">Löschen</button>
+        </div>
+        <div class="login-hint" id="login-hint"></div>
+      </div>
+    </section>
+
+    <section class="pair-screen hidden" id="pair-screen">
+      <div class="pair-card">
+        <h1>Kasse wählen</h1>
+        <div id="pair-list"></div>
+      </div>
+    </section>
+
+    <section class="display-screen hidden" id="display-screen">
+      <div class="display-wrap" id="display-wrap">
+        <div class="display-top">
+          <div class="display-sum" id="display-sum">0.00</div>
+          <div class="display-bon-title" id="display-bon-title">Bon</div>
+          <div class="display-bon-list" id="display-bon-list"></div>
+        </div>
+        <div class="display-bottom">
+          <div class="display-order-title" id="display-order-title">Bestellung</div>
+          <div class="display-order-list" id="display-order-list"></div>
+        </div>
+        <div class="display-qr hidden" id="display-qr">
+          <div class="display-qr-title">Elektronischer Kassenbon</div>
+          <img id="display-qr-img" alt="QR" />
+          <div class="display-qr-link" id="display-qr-link"></div>
+        </div>
+        <div class="display-idle hidden" id="display-idle">
+          <div class="display-idle-text">Bereit</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./customer.js"></script>
+</body>
+</html>

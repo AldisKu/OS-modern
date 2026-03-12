@@ -101,7 +101,11 @@ const state = {
   modalExtrasSelected: [],
   localConfig: { singleExtraImmediate: true },
   userPrefs: { preferimgmobile: 0 },
-  tableLayout: null
+  tableLayout: null,
+  brokerWs: null,
+  brokerId: null,
+  deviceId: null,
+  displayUpdateTimer: null
 };
 
 function show(screen) {
@@ -112,6 +116,9 @@ function show(screen) {
   }
   if (screen === els.startScreen && els.startMessageBody && els.startMessageBody.textContent.trim() === "") {
     els.startMessageBody.textContent = "Bereit.";
+  }
+  if (screen === els.startScreen) {
+    sendDisplayIdle();
   }
 }
 
@@ -152,8 +159,10 @@ function initBroker() {
   if (!brokerUrl) return;
   try {
     const ws = new WebSocket(brokerUrl);
+    state.brokerWs = ws;
     ws.onopen = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OK");
+      registerBrokerClient();
     };
     ws.onclose = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
@@ -164,6 +173,12 @@ function initBroker() {
     ws.onmessage = (evt) => {
       let payload = null;
       try { payload = JSON.parse(evt.data); } catch (_) { return; }
+      if (payload && payload.type === "REGISTERED") {
+        state.brokerId = payload.id || null;
+        const label = payload.id ? `broker${payload.id}` : "OK";
+        [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = label);
+        return;
+      }
       if (payload && payload.type === "STATUS_UPDATE" && payload.status) {
         if (payload.status.printer !== undefined) state.printerStatus = payload.status.printer;
         if (payload.status.tse !== undefined) state.tseStatus = payload.status.tse;
@@ -171,6 +186,28 @@ function initBroker() {
       }
     };
   } catch (_) {}
+}
+
+function registerBrokerClient() {
+  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  if (!state.user) return;
+  if (!state.deviceId) {
+    const existing = localStorage.getItem("modern_device_id");
+    if (existing) state.deviceId = existing;
+    else {
+      const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+      state.deviceId = `POS-${rnd}`;
+      localStorage.setItem("modern_device_id", state.deviceId);
+    }
+  }
+  const payload = {
+    type: "REGISTER",
+    role: "pos",
+    deviceId: state.deviceId,
+    userId: state.user?.id || "",
+    userName: state.user?.name || ""
+  };
+  state.brokerWs.send(JSON.stringify(payload));
 }
 
 function bindMenuButtons() {
@@ -268,6 +305,7 @@ async function doLogin() {
     els.loginHint.textContent = "";
     resetClientState();
     await bootstrap();
+    registerBrokerClient();
   } else {
     els.loginHint.textContent = "Login fehlgeschlagen";
   }
@@ -302,6 +340,7 @@ async function bootstrap() {
   renderTables();
   renderCategories();
   show(els.startScreen);
+  registerBrokerClient();
 }
 
 function updateStatus() {
@@ -605,6 +644,7 @@ function renderOrderItems() {
       if (item) showExistingItemActions(item);
     });
   });
+  scheduleDisplayUpdate();
 }
 
 function adjustCartGroup(key, delta) {
@@ -1307,6 +1347,77 @@ async function sendOrder(workprint, goStart) {
   }
 }
 
+function scheduleDisplayUpdate() {
+  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  if (state.displayUpdateTimer) clearTimeout(state.displayUpdateTimer);
+  state.displayUpdateTimer = setTimeout(() => {
+    sendDisplaySnapshot();
+  }, 150);
+}
+
+function sendDisplaySnapshot() {
+  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  if (els.paydeskScreen && !els.paydeskScreen.classList.contains("hidden")) {
+    const payload = buildDisplayPaydesk();
+    if (!payload) return;
+    state.brokerWs.send(JSON.stringify({ type: "DISPLAY_UPDATE", mode: "paydesk", payload }));
+    return;
+  }
+  if (els.orderScreen && !els.orderScreen.classList.contains("hidden")) {
+    const payload = buildDisplayOrder();
+    if (!payload) return;
+    if (payload.items.length === 0) {
+      sendDisplayIdle();
+    } else {
+      state.brokerWs.send(JSON.stringify({ type: "DISPLAY_UPDATE", mode: "order", payload }));
+    }
+  }
+}
+
+function buildDisplayOrder() {
+  if (!state.selectedTable) return null;
+  const cart = state.cartByTable[state.selectedTable.id] || [];
+  const groups = groupCartItems(cart);
+  const items = groups.map(g => {
+    const base = Number(g.item.price || 0);
+    const changed = Number(g.item.changedPrice || 0);
+    const price = (changed && Math.abs(changed - base) > 0.0001) ? changed : base;
+    return {
+      name: g.item.name,
+      qty: g.count,
+      price: Number(price || 0)
+    };
+  });
+  const sum = items.reduce((s, i) => s + (i.price * i.qty), 0);
+  return { items, sum: sum.toFixed(2) };
+}
+
+function buildDisplayPaydesk() {
+  const receiptGroups = groupPaydeskItems(state.paydeskReceipt || []);
+  const openGroups = groupPaydeskItems(state.paydeskOpen || []);
+  const bonItems = receiptGroups.map(g => ({
+    name: g.item.longname,
+    qty: g.count,
+    price: Number(g.item.price || 0)
+  }));
+  const openItems = openGroups.map(g => ({
+    name: g.item.longname,
+    qty: g.count
+  }));
+  const sum = bonItems.reduce((s, i) => s + (i.price * i.qty), 0);
+  return { bonItems, openItems, sum: sum.toFixed(2) };
+}
+
+function sendDisplayIdle() {
+  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  state.brokerWs.send(JSON.stringify({ type: "DISPLAY_IDLE" }));
+}
+
+function sendDisplayEbon(ebonUrl, ebonRef) {
+  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  state.brokerWs.send(JSON.stringify({ type: "DISPLAY_EBON", ebonUrl, ebonRef }));
+}
+
 async function doLogout() {
   await api("logout", {});
   resetClientState();
@@ -1450,6 +1561,7 @@ function renderPaydeskItems() {
   els.paydeskReceipt.querySelectorAll(".paydesk-item.receipt").forEach(el => {
     el.onclick = () => movePaydeskItemByKey(el.dataset.key, "to-open");
   });
+  scheduleDisplayUpdate();
 }
 
 function movePaydeskItemByKey(key, direction) {
@@ -1536,6 +1648,9 @@ async function paydeskPay(paymentId, print) {
     await selectPaydeskTable(state.paydeskTable.id, state.paydeskTable.name);
     els.paydeskReceipt.innerHTML = "";
     els.paydeskTotal.textContent = "0.00";
+    if (res.msg && res.msg.ebonurl && res.msg.ebonref) {
+      sendDisplayEbon(res.msg.ebonurl, res.msg.ebonref);
+    }
     if (print && res.msg && res.msg.billid) {
       await fetch("../php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
         method: "POST",
