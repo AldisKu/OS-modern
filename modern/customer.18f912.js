@@ -158,14 +158,14 @@ function handleDisplayUpdate(msg) {
       state.lastMode = "paydesk";
       const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
       els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
-      els.displayBonTitle.textContent = "Bon";
+      els.displayBonTitle.textContent = "Sie bezahlen:";
       els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
         <div class="display-bon-item">
         <span>${i.qty}x ${i.name}${(i.extras && i.extras.length) ? " (" + i.extras.join(", ") + ")" : ""}</span>
         <span>${(Number(i.price || 0) + Number(i.extrasSum || 0)).toFixed(2)}</span>
         </div>
       `).join("");
-    els.displayOrderTitle.textContent = "Bestellt";
+    els.displayOrderTitle.textContent = "Ihre Bestellung:";
     els.displayOrderList.innerHTML = (payload.openItems || []).map(i => `
       <span class="display-order-item">${i.qty}x ${i.name}</span>
     `).join("");
