@@ -9,6 +9,7 @@ const els = {
   loginBtn: document.getElementById("login-btn"),
   loginClear: document.getElementById("login-clear"),
   loginHint: document.getElementById("login-hint"),
+  keyboard: document.getElementById("keyboard"),
   pairList: document.getElementById("pair-list"),
   displaySum: document.getElementById("display-sum"),
   displayBonTitle: document.getElementById("display-bon-title"),
@@ -27,7 +28,8 @@ const state = {
   ws: null,
   selectedPosId: null,
   idleTimer: null,
-  lastMode: null
+  lastMode: null,
+  keyboardMode: "num"
 };
 
 function show(screen) {
@@ -47,9 +49,19 @@ async function api(cmd, body) {
 async function init() {
   els.loginBtn.onclick = doLogin;
   els.loginClear.onclick = () => { els.loginPass.value = ""; };
+  buildKeyboard();
   await loadServerConfig();
   await loadUsers();
-  show(els.loginScreen);
+  await checkSession();
+}
+
+async function checkSession() {
+  const data = await api("session", {});
+  if (data.loggedIn) {
+    connectBroker();
+  } else {
+    show(els.loginScreen);
+  }
 }
 
 async function loadServerConfig() {
@@ -104,6 +116,89 @@ async function doLogin() {
   } else {
     els.loginHint.textContent = "Login fehlgeschlagen";
   }
+}
+
+function buildKeyboard() {
+  renderKeyboard();
+}
+
+function renderKeyboard() {
+  if (!els.keyboard) return;
+  const mode = state.keyboardMode;
+  const rows = [];
+  const pushRow = (labels, rowMode) => {
+    rows.push(labels.map(label => {
+      let key = label;
+      if (rowMode === "num") {
+        if (label === "a") key = "SWITCH_ALPHA";
+        if (label === "#") key = "SWITCH_SYM";
+      }
+      if (rowMode === "alpha") {
+        if (label === "ABC") key = "SWITCH_ABC";
+        if (label === "#") key = "SWITCH_SYM";
+      }
+      if (rowMode === "sym") {
+        if (label === "a") key = "SWITCH_ALPHA";
+      }
+      return { label, key };
+    }));
+  };
+
+  if (mode === "num") {
+    pushRow(["1", "2", "3"], "num");
+    pushRow(["4", "5", "6"], "num");
+    pushRow(["7", "8", "9"], "num");
+    pushRow(["0", "a", "#"], "num");
+  } else if (mode === "sym") {
+    pushRow(["§", "!", "$", "+"], "sym");
+    pushRow(["%", "&", "/", "-"], "sym");
+    pushRow(["(", ")", "=", "#"], "sym");
+    pushRow(["?", "_", "1", "a"], "sym");
+  } else {
+    const upper = mode === "alpha-upper";
+    const letters = "abcdefghijklmnopqrstuvwxyz".split("");
+    const alpha = upper ? letters.map(l => l.toUpperCase()) : letters;
+    const full = alpha.concat(["1", "#"]);
+    for (let i = 0; i < full.length; i += 4) {
+      pushRow(full.slice(i, i + 4), "alpha");
+    }
+    pushRow(["ABC"], "alpha");
+  }
+
+  els.keyboard.innerHTML = "";
+  rows.forEach(row => {
+    const rowEl = document.createElement("div");
+    rowEl.className = "keyboard-row";
+    row.forEach(k => {
+      const btn = document.createElement("button");
+      btn.dataset.k = k.key;
+      btn.textContent = k.label;
+      rowEl.appendChild(btn);
+    });
+    els.keyboard.appendChild(rowEl);
+  });
+
+  els.keyboard.querySelectorAll("button").forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.k;
+      if (key === "SWITCH_ALPHA") {
+        state.keyboardMode = "alpha-lower";
+        renderKeyboard();
+        return;
+      }
+      if (key === "SWITCH_SYM") {
+        state.keyboardMode = "sym";
+        renderKeyboard();
+        return;
+      }
+      if (key === "SWITCH_ABC") {
+        state.keyboardMode = state.keyboardMode === "alpha-upper" ? "alpha-lower" : "alpha-upper";
+        renderKeyboard();
+        return;
+      }
+      els.loginPass.value += key;
+    };
+  });
 }
 
 function connectBroker() {

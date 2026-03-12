@@ -43,6 +43,24 @@ body {
   border: 1px solid #d9d3cc;
 }
 
+.keyboard {
+  display: grid;
+  gap: 6px;
+}
+
+.keyboard-row {
+  display: flex;
+  gap: 6px;
+}
+
+.keyboard button {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 6px;
+  border: 1px solid #d9d3cc;
+  background: #faf7f3;
+}
+
 .login-actions {
   display: flex;
   gap: 8px;
