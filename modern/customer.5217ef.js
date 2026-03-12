@@ -10,6 +10,7 @@ const els = {
   displayBonList: document.getElementById("display-bon-list"),
   displayOrderTitle: document.getElementById("display-order-title"),
   displayOrderList: document.getElementById("display-order-list"),
+  displayWrap: document.getElementById("display-wrap"),
   displayQr: document.getElementById("display-qr"),
   displayQrImg: document.getElementById("display-qr-img"),
   displayQrLink: document.getElementById("display-qr-link"),
@@ -140,13 +141,19 @@ function handleDisplayUpdate(msg) {
   els.displayQr.classList.add("hidden");
     if (msg.mode === "order") {
       state.lastMode = "order";
+      if (els.displayWrap) {
+        els.displayWrap.classList.add("mode-order");
+        els.displayWrap.classList.remove("mode-paydesk");
+        els.displayWrap.classList.remove("bon-full");
+      }
       const payload = msg.payload || { items: [], sum: "0.00" };
       els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
       els.displayBonTitle.textContent = "Bestellung";
       els.displayBonList.innerHTML = (payload.items || []).map(i => `
         <div class="display-bon-item">
-        <span>${i.qty}x ${i.name}${(i.extras && i.extras.length) ? " (" + i.extras.join(", ") + ")" : ""}</span>
+        <span>${i.qty}x ${i.name}</span>
         <span>${Number(i.price || 0).toFixed(2)}</span>
+        ${(i.extras && i.extras.length) ? i.extras.map(e => `<div class="display-extra">+ ${e}</div>`).join("") : ""}
         </div>
       `).join("");
     els.displayOrderTitle.textContent = "";
@@ -156,13 +163,18 @@ function handleDisplayUpdate(msg) {
   }
     if (msg.mode === "paydesk") {
       state.lastMode = "paydesk";
+      if (els.displayWrap) {
+        els.displayWrap.classList.add("mode-paydesk");
+        els.displayWrap.classList.remove("mode-order");
+      }
       const payload = msg.payload || { bonItems: [], openItems: [], sum: "0.00" };
       els.displaySum.innerHTML = `<span class="display-sum-label">Summe</span>&nbsp;&nbsp;<span class="display-sum-value">${payload.sum || "0.00"}</span>&nbsp;<span class="display-sum-currency">€</span>`;
       els.displayBonTitle.textContent = "Sie bezahlen:";
       els.displayBonList.innerHTML = (payload.bonItems || []).map(i => `
         <div class="display-bon-item">
-        <span>${i.qty}x ${i.name}${(i.extras && i.extras.length) ? " (" + i.extras.join(", ") + ")" : ""}</span>
+        <span>${i.qty}x ${i.name}</span>
         <span>${(Number(i.price || 0) + Number(i.extrasSum || 0)).toFixed(2)}</span>
+        ${(i.extras && i.extras.length) ? i.extras.map(e => `<div class="display-extra">+ ${e.amount}x ${e.name}${(e.price && e.price > 0) ? " (" + Number(e.price).toFixed(2) + ")" : ""}</div>`).join("") : ""}
         </div>
       `).join("");
     els.displayOrderTitle.textContent = "Ihre Bestellung:";
@@ -170,6 +182,11 @@ function handleDisplayUpdate(msg) {
       <span class="display-order-item">${i.qty}x ${i.name}</span>
     `).join("");
     hideIdle();
+    if (els.displayWrap) {
+      const bonList = els.displayBonList;
+      const isFull = bonList && bonList.scrollHeight > bonList.clientHeight + 2;
+      els.displayWrap.classList.toggle("bon-full", !!isFull);
+    }
   }
 }
 

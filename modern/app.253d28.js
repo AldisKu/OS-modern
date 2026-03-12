@@ -1440,7 +1440,7 @@ function buildDisplayPaydesk() {
     name: g.item.longname,
     qty: g.count,
     price: Number(g.item.price || 0),
-    extras: normalizeExtras(g.item).map(e => `${e.amount || 1}x ${e.name}`),
+    extras: normalizeExtras(g.item).map(e => ({ name: e.name, amount: Number(e.amount || 1), price: Number(e.price || 0) })),
     extrasSum: normalizeExtras(g.item).reduce((s, e) => s + (Number(e.price || 0) * Number(e.amount || 1)), 0)
   }));
   const openItems = openGroups.map(g => ({
