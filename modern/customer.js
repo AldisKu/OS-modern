@@ -169,7 +169,7 @@ function handleEbon(msg) {
   const ebonUrl = msg.ebonUrl || "";
   const ebonRef = msg.ebonRef || "";
   if (!ebonUrl || !ebonRef) return;
-  const link = `${ebonUrl.replace(/\\/$/, "")}/index.php?ebonref=${encodeURIComponent(ebonRef)}`;
+  const link = `${ebonUrl.replace(/\/$/, "")}/index.php?ebonref=${encodeURIComponent(ebonRef)}`;
   els.displayQrImg.src = `../php/utilities/osqrcode.php?cmd=link&arg=${encodeURIComponent(link)}`;
   els.displayQrLink.textContent = link;
   els.displayQr.classList.remove("hidden");
