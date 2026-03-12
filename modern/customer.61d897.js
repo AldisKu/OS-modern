@@ -185,7 +185,7 @@ function handleDisplayUpdate(msg) {
       els.displayBonTitle.textContent = "Sie bezahlen:";
       const bonItems = (payload.bonItems || []).map(i => ({
         ...i,
-        extras: (i.extras || []).filter(e => e && e.name)
+        extras: (i.extras || []).filter(e => e && e.name).map(e => ({...e, name: String(e.name).replace(/^\s*\d+\s*x\s*/i, "") }))
       }));
       const bonHtml = bonItems.map(i => `
         <div class="display-bon-item">

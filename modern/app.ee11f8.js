@@ -1582,7 +1582,7 @@ function renderPaydeskItems() {
       const levelLabel = displayPriceLevel(g.item.pricelevelname);
       if (levelLabel) tags.push(`[${levelLabel}]`);
     }
-    normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
+    normalizeExtras(g.item).forEach(e => tags.push(`+ ${e.amount || 1} ${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item open" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
@@ -1602,7 +1602,7 @@ function renderPaydeskItems() {
       const levelLabel = displayPriceLevel(g.item.pricelevelname);
       if (levelLabel) tags.push(`[${levelLabel}]`);
     }
-    normalizeExtras(g.item).forEach(e => tags.push(`+${e.name}`));
+    normalizeExtras(g.item).forEach(e => tags.push(`+ ${e.amount || 1} ${e.name}`));
     const label = `${g.item.longname}${tags.length ? " " + tags.join(" ") : ""}`;
     return `<div class="paydesk-item receipt" data-key="${g.key}">${label} x${qty} - ${line.toFixed(2)}</div>`;
   }).join("");
