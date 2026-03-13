@@ -103,6 +103,10 @@ wss.on("connection", (ws) => {
       sendPosListToDisplays();
       return;
     }
+    if (msg.type === "REQUEST_POS_LIST") {
+      ws.send(JSON.stringify({ type: "POS_LIST", list: getPosList(), ts: Date.now() }));
+      return;
+    }
     if (msg.type === "SUBSCRIBE" && ws.meta.role === "display") {
       ws.meta.targetPosId = msg.posId || null;
       return;
