@@ -348,7 +348,15 @@ switch ($cmd) {
 				"discountname1" => CommonUtils::getConfigValue($pdo, "discountname1", ""),
 				"discountname2" => CommonUtils::getConfigValue($pdo, "discountname2", ""),
 				"discountname3" => CommonUtils::getConfigValue($pdo, "discountname3", ""),
-				"cancelunpaidcode" => CommonUtils::getConfigValue($pdo, "cancelunpaidcode", "")
+				"cancelunpaidcode" => CommonUtils::getConfigValue($pdo, "cancelunpaidcode", ""),
+				"showpayments" => CommonUtils::getConfigValue($pdo, "showpayments", 1),
+				"showpayment2" => CommonUtils::getConfigValue($pdo, "showpayment2", 1),
+				"showpayment3" => CommonUtils::getConfigValue($pdo, "showpayment3", 1),
+				"showpayment4" => CommonUtils::getConfigValue($pdo, "showpayment4", 0),
+				"showpayment5" => CommonUtils::getConfigValue($pdo, "showpayment5", 0),
+				"showpayment6" => CommonUtils::getConfigValue($pdo, "showpayment6", 0),
+				"showpayment7" => CommonUtils::getConfigValue($pdo, "showpayment7", 0),
+				"showpayment8" => CommonUtils::getConfigValue($pdo, "showpayment8", 0)
 			);
 		}
 		$userprefs = array(
