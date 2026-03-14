@@ -268,12 +268,22 @@ if ($cmd == "config") {
 	$wsScheme = ($scheme === 'https') ? 'wss' : 'ws';
 	$brokerWs = $wsScheme . '://' . $host . ':3077';
 	$brokerHttp = 'http://' . $host . ':3077/event';
+	$clientPollMs = 120000;
+	$cfgFile = __DIR__ . '/../modern/config.json';
+	if (file_exists($cfgFile)) {
+		$rawCfg = file_get_contents($cfgFile);
+		$cfg = json_decode($rawCfg, true);
+		if (is_array($cfg) && isset($cfg['client_poll_interval_ms'])) {
+			$clientPollMs = intval($cfg['client_poll_interval_ms']);
+		}
+	}
 	$response = array(
 		"status" => "OK",
 		"server_ip" => $serverAddr,
 		"host" => $host,
 		"broker_ws" => $brokerWs,
-		"broker_http" => $brokerHttp
+		"broker_http" => $brokerHttp,
+		"client_poll_interval_ms" => $clientPollMs
 	);
 	echo json_encode($response);
 	logApi($cmd, $requestForLog, $response);
@@ -382,6 +392,13 @@ switch ($cmd) {
 		} else {
 			$response = array("status" => "OK", "rooms" => safeRoomsAndTables($pdo));
 		}
+		echo json_encode($response);
+		logApi($cmd, $requestForLog, $response);
+		return;
+	case "log_client":
+		$level = $requestForLog["level"] ?? "INFO";
+		$msg = $requestForLog["msg"] ?? "";
+		$response = array("status" => "OK");
 		echo json_encode($response);
 		logApi($cmd, $requestForLog, $response);
 		return;
