@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>OrderSprinter Modern</title>
-  <link rel="stylesheet" href="./styles.128dcc.css" />
+  <link rel="stylesheet" href="./styles.389f14.css" />
 </head>
 <body>
   <div id="app">
@@ -162,6 +162,38 @@
       </div>
     </div>
 
+    <div class="modal hidden" id="price-modal">
+      <div class="modal-content price-modal-content">
+        <div class="modal-header">
+          <h2 id="price-title">Preis</h2>
+        </div>
+        <div class="modal-body">
+          <div class="price-row">
+            <div class="price-label">Preis</div>
+            <div class="price-value" id="price-value">0.00</div>
+          </div>
+          <div class="price-keypad" id="price-keypad">
+            <button type="button" data-key="1">1</button>
+            <button type="button" data-key="2">2</button>
+            <button type="button" data-key="3">3</button>
+            <button type="button" data-key="4">4</button>
+            <button type="button" data-key="5">5</button>
+            <button type="button" data-key="6">6</button>
+            <button type="button" data-key="7">7</button>
+            <button type="button" data-key="8">8</button>
+            <button type="button" data-key="9">9</button>
+            <button type="button" data-key="0">0</button>
+            <button type="button" data-key="neg">-</button>
+            <button type="button" data-key="back">Back</button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="ghost" id="price-cancel">Abbrechen</button>
+          <button class="primary" id="price-confirm">Bestellen</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modal hidden" id="confirm-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -192,6 +224,6 @@
     </div>
   </div>
 
-  <script type="module" src="./app.6aaaf5.js"></script>
+  <script type="module" src="./app.7ee6eb.js"></script>
 </body>
 </html>
