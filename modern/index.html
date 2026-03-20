@@ -173,19 +173,29 @@
             <div class="price-value" id="price-value">0.00</div>
           </div>
           <div class="price-keypad" id="price-keypad">
-            <button type="button" data-key="1">1</button>
-            <button type="button" data-key="2">2</button>
-            <button type="button" data-key="3">3</button>
-            <button type="button" data-key="4">4</button>
-            <button type="button" data-key="5">5</button>
-            <button type="button" data-key="6">6</button>
-            <button type="button" data-key="7">7</button>
-            <button type="button" data-key="8">8</button>
-            <button type="button" data-key="9">9</button>
-            <button type="button" data-key="0">0</button>
-            <button type="button" data-key="comma">,</button>
-            <button type="button" data-key="neg">-</button>
-            <button type="button" data-key="back" class="key-wide">Back</button>
+            <div class="keyboard-row">
+              <button type="button" onclick="priceKeyPress('1')">1</button>
+              <button type="button" onclick="priceKeyPress('2')">2</button>
+              <button type="button" onclick="priceKeyPress('3')">3</button>
+            </div>
+            <div class="keyboard-row">
+              <button type="button" onclick="priceKeyPress('4')">4</button>
+              <button type="button" onclick="priceKeyPress('5')">5</button>
+              <button type="button" onclick="priceKeyPress('6')">6</button>
+            </div>
+            <div class="keyboard-row">
+              <button type="button" onclick="priceKeyPress('7')">7</button>
+              <button type="button" onclick="priceKeyPress('8')">8</button>
+              <button type="button" onclick="priceKeyPress('9')">9</button>
+            </div>
+            <div class="keyboard-row">
+              <button type="button" onclick="priceKeyPress('0')">0</button>
+              <button type="button" onclick="priceKeyPress(',')">,</button>
+              <button type="button" onclick="priceKeyPress('-')">-</button>
+            </div>
+            <div class="keyboard-row">
+              <button type="button" class="key-wide" onclick="priceKeyPress('Back')">Back</button>
+            </div>
           </div>
         </div>
         <div class="modal-footer">
@@ -225,6 +235,6 @@
     </div>
   </div>
 
-  <script type="module" src="./app.6b081e.js"></script>
+  <script type="module" src="./app.25e376.js"></script>
 </body>
 </html>
