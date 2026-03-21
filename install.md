@@ -6,8 +6,8 @@ Dieses Dokument beschreibt die Komponenten, Installationsschritte und Konfigurat
 
 Server (Linux):
 - Webserver: Apache2 (oder kompatibel)
-- PHP (inkl. bestehender OrderSprinter‑Installation)
-- Node.js (für WebSocket‑Broker)
+- PHP (bestehende OrderSprinter‑Installation, gleiche Version wie Legacy)
+- Node.js 18+ (LTS, inkl. npm)
 - systemd (für Broker‑Service)
 
 Client (iPad / Browser):
@@ -22,7 +22,8 @@ Zusätzliche Assets (optional):
 
 - Webroot OrderSprinter: `/var/www/webapp` (Beispiel)
 - Modern UI: `/var/www/webapp/modern/`
-- Broker: `/home/aldis/ordersprinter/broker/`
+- Broker (deployt): `/var/www/webapp/broker/`
+- Broker (Repo): `/home/aldis/ordersprinter/broker/`
 - PHP API Wrapper: `/var/www/webapp/php/modernapi.php`
 - Tischlayout: `/var/www/webapp/modern/table-layout.json`
 
@@ -34,7 +35,21 @@ cd /home/aldis/ordersprinter
 # git pull (oder Ihre Update‑Routine)
 ```
 
-### 3.2 Modern-Deployment (ohne Legacy im Git)
+### 3.2 Runtime‑Setup (empfohlen)
+Einmalig auf dem Server:
+```bash
+cd /home/aldis/ordersprinter
+chmod +x setup-runtime.sh
+sudo WEBROOT=/var/www/webapp ./setup-runtime.sh
+```
+
+Dieses Skript:
+- installiert Node.js + npm + rsync (falls fehlt)
+- deployt Modern UI + Broker + API
+- legt Logpfad an
+- installiert/aktiviert den Broker‑Service
+
+### 3.3 Modern-Deployment (ohne Legacy im Git)
 Für die Option A (nur Modern-Komponenten per Git, Legacy bleibt lokal):
 
 ```bash
@@ -49,18 +64,18 @@ Falls nötig, kann der Webroot explizit gesetzt werden:
 sudo WEBROOT=/var/www/webapp ./deploy-modern.sh
 ```
 
-### 3.2 Modern UI bereitstellen
+### 3.4 Modern UI bereitstellen
 Stelle sicher, dass der Webserver `modern/` ausliefert (z. B. via Apache Alias oder direkt im Webroot). Beispiel URL:
 - `http://<SERVER-IP>/modern/`
 - Kundendisplay: `http://<SERVER-IP>/modern/customer.html`
 
-### 3.3 PHP Wrapper aktiv
+### 3.5 PHP Wrapper aktiv
 Datei vorhanden:
 - `/var/www/webapp/php/modernapi.php`
 
 Diese Datei ist die zentrale API für Modern UI.
 
-### 3.4 Broker installieren
+### 3.6 Broker installieren
 Broker ist ein Node‑WebSocket‑Server.
 
 Beispiel systemd‑Service (bereits vorhanden):
@@ -83,7 +98,7 @@ Broker nutzt Umgebungsvariablen (systemd oder `.env`):
 - `PORT` (Default: 3077)
 - `POLL_URL` (Default: `http://127.0.0.1/php/modernapi.php?cmd=state`)
 - `POLL_INTERVAL_MS` (Default: 4000)
-- `PRINTER_URL` (Default: `http://127.0.0.1/php/modernapi.php?cmd=printer_status`)
+- `PRICELEVEL_URL` (Default: `http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state`)
 
 **Empfehlung produktiv:**
 - Broker läuft auf dem Server, auf dem auch PHP läuft.
@@ -126,11 +141,11 @@ Wenn die WebApp keine Kassenliste anzeigt:
 
 ## 6) Hinweise zur Cache‑Strategie
 
-Modern UI und Kundendisplay nutzen gehashte Dateien (z. B. `app.<hash>.js`).
+Modern UI und Kundendisplay nutzen feste Dateinamen (`app.js`, `styles.css`).
 
 Nach Updates:
-- Browser neu laden (normaler Reload reicht, weil Hash geändert wird)
-- iPad Home‑Screen WebApp: ggf. einmal schließen und neu öffnen
+- Browser neu laden (Hard‑Reload empfohlen)
+- iPad Home‑Screen WebApp: einmal schließen und neu öffnen
 
 ## 7) Prüf‑/Troubleshooting
 
