@@ -42,17 +42,20 @@ WEBGROUP="$(stat -c '%G' "$WEBROOT")"
 
 need_pkg() { command -v "$1" >/dev/null 2>&1; }
 
-install_deps_apt() {
-  sudo apt-get update
-  sudo apt-get install -y nodejs npm rsync curl
+NODE_MAJOR="${NODE_MAJOR:-18}"
+
+install_nodesource_deb() {
+  curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
+  sudo apt-get install -y nodejs rsync curl
 }
 
-install_deps_dnf() {
-  sudo dnf install -y nodejs npm rsync curl
-}
-
-install_deps_yum() {
-  sudo yum install -y nodejs npm rsync curl
+install_nodesource_rpm() {
+  curl -fsSL "https://rpm.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
+  if command -v dnf >/dev/null 2>&1; then
+    sudo dnf install -y nodejs rsync curl
+  else
+    sudo yum install -y nodejs rsync curl
+  fi
 }
 
 ensure_deps() {
@@ -60,15 +63,11 @@ ensure_deps() {
     return 0
   fi
   if command -v apt-get >/dev/null 2>&1; then
-    install_deps_apt
+    install_nodesource_deb
     return 0
   fi
-  if command -v dnf >/dev/null 2>&1; then
-    install_deps_dnf
-    return 0
-  fi
-  if command -v yum >/dev/null 2>&1; then
-    install_deps_yum
+  if command -v dnf >/dev/null 2>&1 || command -v yum >/dev/null 2>&1; then
+    install_nodesource_rpm
     return 0
   fi
   echo "ERROR: Unsupported package manager. Install nodejs, npm, rsync manually." >&2
