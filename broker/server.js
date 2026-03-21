@@ -5,6 +5,7 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
 const TOKEN = process.env.BROKER_TOKEN || "";
 const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd=state";
 const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
+const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state";
 const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
 const clients = new Set();
 let nextId = 1;
@@ -140,6 +141,7 @@ server.listen(PORT, () => {
 
 let lastVersion = null;
 let lastStatus = null;
+let lastPriceLevelVersion = null;
 async function pollState() {
   try {
     const resp = await fetch(POLL_URL);
@@ -177,3 +179,20 @@ async function pollPrinter() {
 
 setInterval(pollState, POLL_INTERVAL);
 setInterval(pollPrinter, POLL_INTERVAL);
+
+async function pollPriceLevel() {
+  try {
+    const resp = await fetch(PRICELEVEL_URL);
+    if (!resp.ok) return;
+    const data = await resp.json();
+    if (data.status !== "OK") return;
+    if (lastPriceLevelVersion && lastPriceLevelVersion !== data.version) {
+      sendAll({ type: "UPDATE_REQUIRED", scope: "MENU", event: "PRICELEVEL_CHANGE", ts: Date.now() });
+    }
+    lastPriceLevelVersion = data.version;
+  } catch (_) {
+    // ignore polling errors
+  }
+}
+
+setInterval(pollPriceLevel, POLL_INTERVAL);

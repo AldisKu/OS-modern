@@ -260,6 +260,23 @@ if ($cmd == "state") {
 	return;
 }
 
+if ($cmd == "pricelevel_state") {
+	$pdo = DbUtils::openDbAndReturnPdoStatic();
+	$level = CommonUtils::getCurrentPriceLevel($pdo);
+	$id = $level["id"] ?? "";
+	$name = $level["name"] ?? "";
+	$version = hash("sha256", $id . "|" . $name);
+	$response = array(
+		"status" => "OK",
+		"id" => $id,
+		"name" => $name,
+		"version" => $version
+	);
+	echo json_encode($response);
+	logApi($cmd, $requestForLog, $response);
+	return;
+}
+
 if ($cmd == "config") {
 	$serverAddr = $_SERVER['SERVER_ADDR'] ?? '127.0.0.1';
 	$host = $_SERVER['HTTP_HOST'] ?? $serverAddr;
