@@ -158,27 +158,10 @@ async function pollState() {
 }
 
 async function pollPrinter() {
-  try {
-    const resp = await fetch(PRINTER_URL);
-    if (!resp.ok) return;
-    const data = await resp.json();
-    if (data.status !== "OK") return;
-    const status = {
-      printer: data.msg ?? null,
-      tse: data.tsestatus ?? null,
-      tasksforme: data.tasksforme ?? null
-    };
-    if (!lastStatus || JSON.stringify(lastStatus) !== JSON.stringify(status)) {
-      sendAll({ type: "STATUS_UPDATE", status, ts: Date.now() });
-      lastStatus = status;
-    }
-  } catch (_) {
-    // ignore
-  }
+  // printer/TSE status is intentionally disabled in modern UI
 }
 
 setInterval(pollState, POLL_INTERVAL);
-setInterval(pollPrinter, POLL_INTERVAL);
 
 async function pollPriceLevel() {
   try {

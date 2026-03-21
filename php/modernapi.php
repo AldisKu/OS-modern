@@ -262,7 +262,8 @@ if ($cmd == "state") {
 
 if ($cmd == "pricelevel_state") {
 	$pdo = DbUtils::openDbAndReturnPdoStatic();
-	$level = CommonUtils::getCurrentPriceLevel($pdo);
+	$commUtils = new CommonUtils();
+	$level = $commUtils->getCurrentPriceLevel($pdo);
 	$id = $level["id"] ?? "";
 	$name = $level["name"] ?? "";
 	$version = hash("sha256", $id . "|" . $name);
