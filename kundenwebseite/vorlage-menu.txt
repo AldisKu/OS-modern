@@ -1,5 +1,0 @@
-<h1>Unser Angebot</H1>
-
-<p>Im {Restaurantname} haben wir sehr leckere {Produktkategorie} für Sie:</p>
-
-<p>{Menu}</p>

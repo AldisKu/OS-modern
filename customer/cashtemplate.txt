@@ -1,7 +1,0 @@
-{TAB::10}
-{-:links:Barein-/auszahlung}{id:rechts:ID:hoch}
-{TAB:}
-{billdate:rechts}
-{username:links:Anwender}
-{cashtype:links:Kategorie}
-{brutto:links:Betrag:hochbreit}

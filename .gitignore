@@ -1,19 +1,10 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-
-# Editor
-.vscode/
-.idea/
-
-# Node (falls vorhanden)
-node_modules/
-
-# Environment
-.env
-
-# Windows ADS (Sicherheit)
-*:Zone.Identifier
+*
+!.gitignore
+!modern/
+!modern/**
+!broker/
+!broker/**
+!php/
+!php/modernapi.php
+!install.md
+!deploy-modern.sh

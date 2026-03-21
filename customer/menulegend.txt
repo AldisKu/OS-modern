@@ -1,5 +1,0 @@
-#
-# ***** Diese Speisekarte ist vom System bereits eingespeichert worden (erkennbar an den zugewiesenen IDs).     ****
-# 
-# ***** Eine Erklärung der Syntax ist im Aufklappfeld "Legende" zu lesen.
-#
