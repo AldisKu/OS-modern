@@ -34,6 +34,21 @@ cd /home/aldis/ordersprinter
 # git pull (oder Ihre Update‑Routine)
 ```
 
+### 3.2 Modern-Deployment (ohne Legacy im Git)
+Für die Option A (nur Modern-Komponenten per Git, Legacy bleibt lokal):
+
+```bash
+cd /home/aldis/ordersprinter
+sudo ./deploy-modern.sh
+```
+
+Der Installer sucht automatisch den Webroot (z. B. `/var/www/webapp`).  
+Falls nötig, kann der Webroot explizit gesetzt werden:
+
+```bash
+sudo WEBROOT=/var/www/webapp ./deploy-modern.sh
+```
+
 ### 3.2 Modern UI bereitstellen
 Stelle sicher, dass der Webserver `modern/` ausliefert (z. B. via Apache Alias oder direkt im Webroot). Beispiel URL:
 - `http://<SERVER-IP>/modern/`
@@ -146,4 +161,3 @@ curl -X POST http://<SERVER-IP>/php/modernapi.php?cmd=state
 3. Broker läuft und `/health` OK
 4. Kundendisplay zeigt Kassenliste
 5. Eine Bestellung wird korrekt im Kundendisplay angezeigt
-
