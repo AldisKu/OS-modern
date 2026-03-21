@@ -8,3 +8,4 @@
 !php/modernapi.php
 !install.md
 !deploy-modern.sh
+!setup-runtime.sh
