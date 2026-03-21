@@ -8,6 +8,7 @@
 - Kundendisplay: QR/Idle‑Logik implementiert.
 - Preis‑Popup für „Preisprodukte“ funktioniert.
 - Tischlayout per JSON implementiert.
+- Warenkorb‑Summe wird angezeigt (rechts oben in Bestellung).
 
 ## Kritische Regeln (dürfen nicht brechen)
 - Keine Legacy‑Dateien ändern.
@@ -27,4 +28,3 @@
 
 ## Wann Broker neu starten?
 - Immer nach Änderungen an `broker/server.js` oder Broker‑Konfiguration.
-

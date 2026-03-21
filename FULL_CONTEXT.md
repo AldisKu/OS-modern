@@ -105,6 +105,7 @@ Layout: oben Menüleiste, rechts Produktliste (20%), links Menü/Kategorien.
 - Bestellte Produkte + Warenkorb getrennt, optisch markiert.
 - Neue Produkte oben, Trennlinie.
 - Zusammenfassen nur bei identischen Extras/ToGo/Rabatt und nebeneinander.
+- Warenkorb‑Summe oben in der rechten Spalte.
 
 **Warenkorb‑Sortierung:**
 - Reihenfolge bleibt stabil.
@@ -181,4 +182,3 @@ Nach Wechsel:
 - `setup-runtime.sh` – Runtime Setup (NodeSource)
 - `deploy-modern.sh` – Deployment
 - `CONTEXT.md`, `WORKFLOW.md`, `FULL_CONTEXT.md`, `STATE_OF_PLAY.md`
-

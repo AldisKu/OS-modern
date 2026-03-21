@@ -32,6 +32,7 @@ const els = {
   categoryRow: document.getElementById("category-row"),
   productsGrid: document.getElementById("products-grid"),
   orderItems: document.getElementById("order-items"),
+  orderCartSum: document.getElementById("order-cart-sum"),
 
   paydeskTables: document.getElementById("paydesk-tables"),
   paydeskLeft: document.getElementById("paydesk-left"),
@@ -707,6 +708,19 @@ function renderOrderItems() {
   const cart = state.cartByTable[state.selectedTable.id] || [];
   const existing = state.orderExisting || [];
   const parts = [];
+  if (els.orderCartSum) {
+    const sum = cart.reduce((s, it) => {
+      const base = Number(it.price || 0);
+      const changed = Number(it.changedPrice || 0);
+      const hasChangedPrice = it.changedPrice !== undefined && it.changedPrice !== null && it.changedPrice !== "NO";
+      const extrasList = normalizeExtras(it);
+      const extrasSum = extrasList.reduce((acc, e) => acc + (Number(e.price || 0) * Number(e.amount || 1)), 0);
+      const price = (hasChangedPrice && Math.abs(changed - base) > 0.0001) ? changed : base;
+      const qty = Number(it.unitamount || 1);
+      return s + ((Number(price || 0) + extrasSum) * qty);
+    }, 0);
+    els.orderCartSum.textContent = `Summe: ${sum.toFixed(2)} €`;
+  }
   const cartGroups = groupCartItems(cart);
   cartGroups.forEach(g => {
   const extraLabels = [];

@@ -96,6 +96,7 @@ Navigation:
 - Start (Tische), Bestellung (Tischansicht), Kasse.
 - Warenkorb lokal, Bestellung senden via `cmd=order`.
 - Arbeitsbon wird immer gedruckt, wenn Bestellung gesendet wird.
+- Warenkorb‑Summe wird oben in der rechten Spalte angezeigt.
 
 Warenkorb‑Sortierung:
 - Reihenfolge bleibt erhalten, nur geändertes Produkt kann nach oben wandern.
@@ -128,4 +129,3 @@ Kasse:
 - `install.md`: Installationsanleitung
 - `deploy-modern.sh`: Deployment auf Webroot
 - `setup-runtime.sh`: Runtime‑Setup mit NodeSource
-
