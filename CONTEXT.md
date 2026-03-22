@@ -97,6 +97,7 @@ Navigation:
 - Warenkorb lokal, Bestellung senden via `cmd=order`.
 - Arbeitsbon wird immer gedruckt, wenn Bestellung gesendet wird.
 - Warenkorb‑Summe wird oben in der rechten Spalte angezeigt.
+- „Bestellung beenden“ führt bei leerem Warenkorb zurück zum Start.
 
 Warenkorb‑Sortierung:
 - Reihenfolge bleibt erhalten, nur geändertes Produkt kann nach oben wandern.

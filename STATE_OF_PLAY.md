@@ -9,6 +9,7 @@
 - Preis‑Popup für „Preisprodukte“ funktioniert.
 - Tischlayout per JSON implementiert.
 - Warenkorb‑Summe wird angezeigt (rechts oben in Bestellung).
+- „Bestellung beenden“ geht bei leerem Warenkorb direkt zum Start.
 
 ## Kritische Regeln (dürfen nicht brechen)
 - Keine Legacy‑Dateien ändern.

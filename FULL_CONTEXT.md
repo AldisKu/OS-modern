@@ -106,6 +106,7 @@ Layout: oben Menüleiste, rechts Produktliste (20%), links Menü/Kategorien.
 - Neue Produkte oben, Trennlinie.
 - Zusammenfassen nur bei identischen Extras/ToGo/Rabatt und nebeneinander.
 - Warenkorb‑Summe oben in der rechten Spalte.
+- „Bestellung beenden“ navigiert bei leerem Warenkorb zurück zum Start.
 
 **Warenkorb‑Sortierung:**
 - Reihenfolge bleibt stabil.

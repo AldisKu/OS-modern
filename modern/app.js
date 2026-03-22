@@ -1529,6 +1529,16 @@ async function handleMenuAction(action, btn) {
     renderCategories();
     show(els.startScreen);
   } else if (action === "send") {
+    if (state.selectedTable) {
+      const cart = state.cartByTable[state.selectedTable.id] || [];
+      if (cart.length === 0) {
+        state.typeStack = [];
+        state.selectedType = topLevelTypes()[0]?.id || null;
+        renderCategories();
+        show(els.startScreen);
+        return;
+      }
+    }
     await sendOrder(true, true);
   } else if (action === "workprint") {
     await sendOrder(true, false);
