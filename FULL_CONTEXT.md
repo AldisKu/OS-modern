@@ -178,6 +178,36 @@ Nach Wechsel:
 - iPad Home‑Screen WebApp: Cache kann hängen → hard reload / schließen.
 - Broker muss nach Änderungen neu gestartet werden.
 
+## K) Prod‑Troubleshooting (Broker/Kundendisplay)
+**Symptome:**
+- Kundendisplay findet keine Kasse
+- Warnung: „Broker hat Veränderung unterschlagen …“
+
+**Testschritte:**
+1. Broker Health:
+```
+curl http://<SERVER-IP>:3077/health
+```
+2. PHP‑State:
+```
+curl -X POST http://<SERVER-IP>/php/modernapi.php?cmd=state
+```
+3. Broker‑Service:
+```
+sudo systemctl status ordersprinter-broker
+sudo journalctl -u ordersprinter-broker -n 200
+```
+4. Broker‑Config:
+```
+cat /etc/systemd/system/ordersprinter-broker.service
+```
+5. Client‑Broker‑URL:
+- `modernapi.php?cmd=config` → `broker_ws` (muss Server‑IP/Hostname sein).
+
+**Interpretation:**
+- Kein WS → Kundendisplay sieht keine Kasse.
+- Poll findet Änderung, Push fehlt → Broker down, falsche URL, Port/Firewall oder WS‑Block.
+
 ## K) Wichtige Dateien
 - `install.md` – Installation
 - `setup-runtime.sh` – Runtime Setup (NodeSource)
