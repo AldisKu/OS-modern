@@ -1,7 +1,7 @@
 # OrderSprinter Broker
 
 ## Zweck
-Der Broker verteilt Updates an alle iPads via WebSocket. Ohne Plugins nutzt er ein Polling gegen die Wrapper‑API und pusht bei Änderungen.
+Der Broker verteilt Updates an alle iPads via WebSocket. Er nutzt ein Polling gegen die Wrapper‑API und pusht bei Änderungen.
 
 ## Technische Voraussetzungen
 - Node.js (empfohlen: LTS)
@@ -52,5 +52,5 @@ curl http://127.0.0.1:3077/health
 
 ## Hinweise
 - Broker funktioniert **ohne** `broker.json`.
-- `plugins/config.json` ist entfernt (keine Core‑Plugins aktiv).
+- Es sind keine zusätzlichen Legacy‑Erweiterungen erforderlich.
 - Der Modern‑Client aktualisiert zusätzlich alle 5 Sekunden (Polling im UI). Das ist der Fallback.
