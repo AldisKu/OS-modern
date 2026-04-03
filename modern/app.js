@@ -1,4 +1,5 @@
 const API = "../php/modernapi.php";
+const APP_VERSION = "v:02";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -18,11 +19,13 @@ const els = {
   statusBroker: document.getElementById("status-broker"),
   statusOnline: document.getElementById("status-online"),
   statusSync: document.getElementById("status-sync"),
+  statusVersion: document.getElementById("status-version"),
 
   orderUser: document.getElementById("order-user"),
   orderBroker: document.getElementById("order-broker"),
   orderOnline: document.getElementById("order-online"),
   orderSync: document.getElementById("order-sync"),
+  orderVersion: document.getElementById("order-version"),
 
   paydeskUser: document.getElementById("paydesk-user"),
   paydeskOnline: document.getElementById("paydesk-online"),
@@ -462,6 +465,7 @@ function updateStatus() {
   [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel || "OK");
   [els.statusOnline, els.orderOnline, els.paydeskOnline].filter(Boolean).forEach(el => el.textContent = "OK");
   [els.statusSync, els.orderSync, els.paydeskSync].filter(Boolean).forEach(el => el.textContent = state.lastSync);
+  [els.statusVersion, els.orderVersion].filter(Boolean).forEach(el => el.textContent = APP_VERSION);
 }
 
 async function logClientError(message) {
