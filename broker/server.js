@@ -124,6 +124,7 @@ wss.on("connection", (ws, req) => {
     remote: (req && req.socket && req.socket.remoteAddress) ? String(req.socket.remoteAddress) : ""
   };
   ws.send(JSON.stringify({ type: "HELLO", ts: Date.now() }));
+  console.log(`CONNECT id=${ws.meta.id} remote=${ws.meta.remote} origin=${ws.meta.origin}`);
 
   ws.on("message", (raw) => {
     let msg = null;
@@ -164,10 +165,12 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", () => {
     clients.delete(ws);
+    console.log(`CLOSE id=${ws.meta && ws.meta.id ? ws.meta.id : "?"} remote=${ws.meta ? ws.meta.remote : ""}`);
     sendPosListToDisplays();
   });
   ws.on("error", () => {
     clients.delete(ws);
+    console.log(`ERROR id=${ws.meta && ws.meta.id ? ws.meta.id : "?"} remote=${ws.meta ? ws.meta.remote : ""}`);
     sendPosListToDisplays();
   });
 });

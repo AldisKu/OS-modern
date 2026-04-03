@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "19";
+const APP_VERSION = "20";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -213,12 +213,14 @@ async function init() {
 function initBroker() {
   if (!brokerUrl) return;
   if (state.brokerWs && (state.brokerWs.readyState === WebSocket.OPEN || state.brokerWs.readyState === WebSocket.CONNECTING)) return;
+  showStatusMessage(`Broker connect ${brokerUrl}`);
   try {
     const ws = new WebSocket(brokerUrl);
     state.brokerWs = ws;
     ws.onopen = () => {
       state.brokerLabel = "OK";
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
+      showStatusMessage(`Broker open ${brokerUrl}`);
       registerBrokerUnknown();
       registerBrokerClient();
       if (state.brokerReconnectTimer) {
@@ -228,10 +230,12 @@ function initBroker() {
     };
     ws.onclose = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+      showStatusMessage(`Broker close ${brokerUrl}`);
       scheduleBrokerReconnect();
     };
     ws.onerror = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+      showStatusMessage(`Broker error ${brokerUrl}`);
       scheduleBrokerReconnect();
     };
     ws.onmessage = async (evt) => {
