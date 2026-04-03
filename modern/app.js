@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "06";
+const APP_VERSION = "07";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -238,8 +238,9 @@ function initBroker() {
         if (scope.includes("MENU") || scope.includes("PRICE") || scope.includes("PRICES")) {
           console.debug("Preisstufe geändert");
           await refreshMenuPrices();
+          showStatusMessage("Price level updated (broker)");
         } else {
-          await refreshTablesWithRetry();
+          await refreshTablesWithRetry("Tables updated (broker)");
           await refreshOrderIfVisible();
         }
       }
@@ -247,7 +248,7 @@ function initBroker() {
   } catch (_) {}
 }
 
-async function refreshTablesWithRetry() {
+async function refreshTablesWithRetry(message) {
   const attempt = async () => { await refreshTables(); };
   await attempt();
   // Keep a pending flag so the next navigation to start-screen refreshes again
@@ -256,6 +257,13 @@ async function refreshTablesWithRetry() {
   setTimeout(attempt, 1200);
   setTimeout(attempt, 2500);
   setTimeout(attempt, 4000);
+  if (message) showStatusMessage(message);
+}
+
+function showStatusMessage(text) {
+  if (!els.startMessageBody) return;
+  const ts = new Date().toLocaleTimeString();
+  els.startMessageBody.textContent = `${text} @ ${ts}`;
 }
 
 function registerBrokerClient() {
