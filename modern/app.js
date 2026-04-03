@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "09";
+const APP_VERSION = "10";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -371,11 +371,31 @@ function bindModals() {
 async function loadServerConfig() {
   const data = await api("config", {});
   if (data.status === "OK" && data.broker_ws) {
-    brokerUrl = data.broker_ws;
+    brokerUrl = normalizeBrokerUrl(data.broker_ws);
     if (Number.isFinite(Number(data.client_poll_interval_ms))) {
       state.clientPollMs = Math.max(10000, Number(data.client_poll_interval_ms));
     }
   }
+}
+
+function normalizeBrokerUrl(raw) {
+  if (!raw) return "";
+  let url = String(raw).trim();
+  const isHttps = window.location?.protocol === "https:";
+  if (url.startsWith("//")) {
+    url = `${isHttps ? "wss:" : "ws:"}${url}`;
+  } else if (url.startsWith("http://") || url.startsWith("https://")) {
+    url = url.replace(/^http/, "ws");
+  } else if (url.startsWith("/")) {
+    url = `${isHttps ? "wss" : "ws"}://${window.location.host}${url}`;
+  } else if (!url.startsWith("ws://") && !url.startsWith("wss://")) {
+    // host:port without scheme
+    url = `${isHttps ? "wss" : "ws"}://${url}`;
+  }
+  if (isHttps && url.startsWith("ws://")) {
+    url = url.replace("ws://", "wss://");
+  }
+  return url;
 }
 
 async function loadUsers() {
