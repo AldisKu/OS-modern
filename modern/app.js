@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "15";
+const APP_VERSION = "16";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -1278,7 +1278,7 @@ function showExistingItemActions(item) {
   els.confirmTitle.textContent = `${item.longname} (${groupCount})`;
   const codeField = state.cancelUnpaidCode ? `
     <div class="storno-block">
-      <input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" inputmode="numeric" />
+      <input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" inputmode="none" />
       <div class="price-keypad storno-keypad">
         <div class="keyboard-row">
           <button type="button" onclick="stornoKeyPress('1')">1</button>
