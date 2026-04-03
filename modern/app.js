@@ -223,7 +223,7 @@ function initBroker() {
     ws.onerror = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
     };
-    ws.onmessage = (evt) => {
+    ws.onmessage = async (evt) => {
       let payload = null;
       try { payload = JSON.parse(evt.data); } catch (_) { return; }
       if (payload && payload.type === "REGISTERED") {
@@ -238,12 +238,15 @@ function initBroker() {
         const scope = String(payload.scope || "").toUpperCase();
         if (scope.includes("MENU") || scope.includes("PRICE") || scope.includes("PRICES")) {
           console.debug("Preisstufe geändert");
-          refreshMenuPrices();
+          await refreshMenuPrices();
         } else {
           // Always refresh tables so the start screen shows new orders immediately,
           // even when it is currently hidden.
-          refreshTables();
-          refreshOrderIfVisible();
+          await refreshTables();
+          await refreshOrderIfVisible();
+          if (els.startScreen && els.startScreen.classList.contains("hidden")) {
+            state.pendingRoomRefresh = true;
+          }
         }
       }
     };
