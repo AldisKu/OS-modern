@@ -25,7 +25,8 @@ Deploy:
 - Repo enthält **nur** Modern‑Komponenten (Modern UI, Broker, `php/modernapi.php`, `deploy-modern.sh`, `setup-runtime.sh`, `install.md`).
 - Alle Legacy‑Dateien bleiben lokal, sind nicht mehr getrackt.
 - `.gitignore` lässt nur Modern‑Komponenten zu.
-- Nach Änderungen **kein git push durch Codex**, Nutzer pusht selbst.
+- Nach Änderungen: Codex macht `git add` + `git commit`. **Kein `git push` durch Codex**, Nutzer pusht selbst.
+- Bei jeder Änderung `modern/app.js` Version hochziehen (`APP_VERSION`).
 
 ## 4) Install/Setup
 - `setup-runtime.sh` installiert Node.js über NodeSource (Default `NODE_MAJOR=18`), deployt Modern‑Komponenten, richtet Log‑Ordner ein, installiert Broker‑Service.

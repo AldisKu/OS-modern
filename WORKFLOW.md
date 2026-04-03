@@ -2,8 +2,9 @@
 
 ## 1) Arbeitsstil (User‑Vorgaben)
 - Ergebnisse pragmatisch liefern, keine langen Erklärungen.
-- Bei Änderungen immer `git add` + `git commit` ausführen.
+- Bei Änderungen immer `git add` + `git commit` ausführen (Codex macht das).
 - **Kein `git push` durch Codex**, User pusht selbst.
+- Bei jeder Änderung die App-Version hochziehen (siehe `modern/app.js` → `APP_VERSION`).
 - Legacy‑Dateien nicht ändern.
  - Nach jeder Entscheidung/Anforderung/Änderung alle Kontextdateien aktualisieren:
    `CONTEXT.md`, `FULL_CONTEXT.md`, `STATE_OF_PLAY.md`, `WORKFLOW.md` (falls relevant).
