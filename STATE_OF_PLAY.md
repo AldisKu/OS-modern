@@ -4,12 +4,14 @@
 - Git ist auf Modern‑Komponenten reduziert, Legacy untracked.
 - `setup-runtime.sh`, `deploy-modern.sh` funktionieren.
 - Broker Push für TABLES und MENU (Preisstufe).
+- Start‑Screen aktualisiert jetzt sofort nach Broker‑Push (Tables werden immer neu geladen, auch wenn der Start‑Screen gerade nicht sichtbar ist).
 - Modern UI: Start, Bestellung, Kasse, Kundendisplay laufen.
 - Kundendisplay: QR/Idle‑Logik implementiert.
 - Preis‑Popup für „Preisprodukte“ funktioniert.
 - Tischlayout per JSON implementiert.
 - Warenkorb‑Summe wird angezeigt (rechts oben in Bestellung).
 - „Bestellung beenden“ geht bei leerem Warenkorb direkt zum Start.
+- False‑Positive bei „broker hat Update unterschlagen“ reduziert: Warnung erfolgt erst nach kurzer Grace‑Zeit ohne Broker‑Update.
 
 ## Kritische Regeln (dürfen nicht brechen)
 - Keine Legacy‑Dateien ändern.
@@ -24,7 +26,6 @@
 
 ## Offene Punkte / To‑Do
 - Lokale Konfiguration (Menüpunkt „Lokale Konfiguration“): dauerhaft speichern (IndexedDB oder localStorage).
-- Konsistente Update‑Warnung bei fehlendem Broker‑Push (Client‑Poll).
 - Kasse‑Fehler‑Handling bei Doppelzahlung: UI + Tischliste refreshen.
 
 ## Prod‑Troubleshooting (Broker/Kundendisplay)

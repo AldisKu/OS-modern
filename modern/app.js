@@ -1,5 +1,6 @@
 const API = "../php/modernapi.php";
 let brokerUrl = "ws://127.0.0.1:3077";
+const BROKER_MISS_GRACE_MS = 6000;
 
 const els = {
   loginScreen: document.getElementById("login-screen"),
@@ -236,11 +237,10 @@ function initBroker() {
           console.debug("Preisstufe geändert");
           refreshMenuPrices();
         } else {
-          refreshTablesIfVisible();
+          // Always refresh tables so the start screen shows new orders immediately,
+          // even when it is currently hidden.
+          refreshTables();
           refreshOrderIfVisible();
-          if (els.startScreen && els.startScreen.classList.contains("hidden")) {
-            state.pendingRoomRefresh = true;
-          }
         }
       }
     };
@@ -2389,13 +2389,16 @@ function startPolling() {
         if (state.lastServerVersion && state.lastServerVersion !== stateRes.version) {
           console.debug("Preisstufe geändert");
           await refreshMenuPrices();
-          if (!state.lastBrokerUpdateAt || state.lastBrokerUpdateAt < state.lastServerVersionAt) {
-            if (state.missedUpdateVersion !== stateRes.version) {
-              state.missedUpdateVersion = stateRes.version;
-              await logClientError("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
-              showWarnPopup("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
-            }
-          }
+          const changedVersion = stateRes.version;
+          const changedAt = now;
+          setTimeout(async () => {
+            if (state.lastServerVersion !== changedVersion) return;
+            if (state.lastBrokerUpdateAt >= changedAt) return;
+            if (state.missedUpdateVersion === changedVersion) return;
+            state.missedUpdateVersion = changedVersion;
+            await logClientError("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
+            showWarnPopup("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
+          }, BROKER_MISS_GRACE_MS);
           state.lastServerVersionAt = now;
         }
         if (!state.lastServerVersion) {
