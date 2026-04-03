@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "12";
+const APP_VERSION = "13";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -639,6 +639,7 @@ function shouldEnterPrice(prod) {
 }
 
 function renderTables() {
+  console.debug("renderTables invoked", new Date().toISOString());
   if (!state.rooms?.roomstables) return;
   const cards = [];
   const layout = state.tableLayout;
@@ -2456,6 +2457,7 @@ function startPolling() {
       renderTables();
       state.lastSync = new Date().toLocaleTimeString();
       updateStatus();
+      console.debug("refreshTables done", { lastSync: state.lastSync, roomsTs: Date.now() });
     }
     if (state.selectedTable) {
       await fetchExistingOrders();
