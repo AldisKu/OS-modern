@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "07";
+const APP_VERSION = "08";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -119,6 +119,7 @@ const state = {
   displayActivity: false,
   displaySeq: 0,
   brokerLabel: "OK",
+  brokerReconnectTimer: null,
   clientPollMs: 120000,
   lastServerVersion: null,
   lastServerVersionAt: 0,
@@ -208,6 +209,7 @@ async function init() {
 
 function initBroker() {
   if (!brokerUrl) return;
+  if (state.brokerWs && (state.brokerWs.readyState === WebSocket.OPEN || state.brokerWs.readyState === WebSocket.CONNECTING)) return;
   try {
     const ws = new WebSocket(brokerUrl);
     state.brokerWs = ws;
@@ -215,12 +217,18 @@ function initBroker() {
       state.brokerLabel = "OK";
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
       registerBrokerClient();
+      if (state.brokerReconnectTimer) {
+        clearTimeout(state.brokerReconnectTimer);
+        state.brokerReconnectTimer = null;
+      }
     };
     ws.onclose = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+      scheduleBrokerReconnect();
     };
     ws.onerror = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+      scheduleBrokerReconnect();
     };
     ws.onmessage = async (evt) => {
       let payload = null;
@@ -246,6 +254,14 @@ function initBroker() {
       }
     };
   } catch (_) {}
+}
+
+function scheduleBrokerReconnect() {
+  if (state.brokerReconnectTimer) return;
+  state.brokerReconnectTimer = setTimeout(() => {
+    state.brokerReconnectTimer = null;
+    initBroker();
+  }, 3000);
 }
 
 async function refreshTablesWithRetry(message) {
