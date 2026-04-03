@@ -138,7 +138,7 @@ function connectBroker() {
 }
 
 function requestPosList() {
-  if (state.ws && state.ws.readyState === state.ws.OPEN) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "REQUEST_POS_LIST" }));
   }
 }
@@ -178,7 +178,7 @@ function handlePosList(list) {
 
 function subscribeToPos(posId) {
   state.selectedPosId = posId;
-  if (state.ws && state.ws.readyState === state.ws.OPEN) {
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId }));
   }
   show(els.displayScreen);

@@ -131,7 +131,7 @@
 
   function safeSend(obj) {
     try {
-      if (state.ws && state.ws.readyState === state.ws.OPEN) {
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
         state.ws.send(JSON.stringify(obj));
       }
     } catch (_) {}
@@ -390,4 +390,3 @@
     init();
   }
 })();
-

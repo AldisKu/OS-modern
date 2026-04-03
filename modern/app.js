@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "17";
+const APP_VERSION = "18";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -295,7 +295,8 @@ function showStatusMessage(text) {
 }
 
 function registerBrokerClient() {
-  if (!state.brokerWs || state.brokerWs.readyState !== state.brokerWs.OPEN) return;
+  // Some browsers expose OPEN only on the WebSocket constructor, not on instances.
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) return;
   if (!state.user) return;
   if (!state.deviceId) {
     const existing = localStorage.getItem("modern_device_id");
