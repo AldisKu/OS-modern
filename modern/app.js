@@ -255,6 +255,7 @@ async function refreshTablesWithRetry() {
   // Safety retries to handle backend lag or race with push timing
   setTimeout(attempt, 1200);
   setTimeout(attempt, 2500);
+  setTimeout(attempt, 4000);
 }
 
 function registerBrokerClient() {
