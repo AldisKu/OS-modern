@@ -45,6 +45,35 @@ function sendPosListToDisplays() {
 }
 
 const server = http.createServer(async (req, res) => {
+  if (req.method === "GET" && req.url === "/clients") {
+    // Debug endpoint. If a token is configured, require it.
+    // If no token is configured, only allow localhost access.
+    const remote = req.socket && req.socket.remoteAddress ? String(req.socket.remoteAddress) : "";
+    const isLocal = remote === "127.0.0.1" || remote === "::1" || remote === "::ffff:127.0.0.1";
+    if ((TOKEN && req.headers["x-broker-token"] !== TOKEN) || (!TOKEN && !isLocal)) {
+      res.writeHead(403);
+      res.end("forbidden");
+      return;
+    }
+    const list = [];
+    for (const ws of clients) {
+      if (!ws.meta) continue;
+      list.push({
+        id: ws.meta.id,
+        role: ws.meta.role,
+        deviceId: ws.meta.deviceId || "",
+        userId: ws.meta.userId || "",
+        userName: ws.meta.userName || "",
+        targetPosId: ws.meta.targetPosId || null,
+        origin: ws.meta.origin || "",
+        remote: ws.meta.remote || ""
+      });
+    }
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ status: "OK", clients: list, ts: Date.now() }));
+    return;
+  }
+
   if (req.method === "POST" && req.url === "/event") {
     if (TOKEN && req.headers["x-broker-token"] !== TOKEN) {
       res.writeHead(401);
@@ -86,9 +115,14 @@ const server = http.createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server });
 
-wss.on("connection", (ws) => {
+wss.on("connection", (ws, req) => {
   clients.add(ws);
-  ws.meta = { role: "unknown", id: nextId++ };
+  ws.meta = {
+    role: "unknown",
+    id: nextId++,
+    origin: (req && req.headers && req.headers.origin) ? String(req.headers.origin) : "",
+    remote: (req && req.socket && req.socket.remoteAddress) ? String(req.socket.remoteAddress) : ""
+  };
   ws.send(JSON.stringify({ type: "HELLO", ts: Date.now() }));
 
   ws.on("message", (raw) => {
@@ -100,6 +134,9 @@ wss.on("connection", (ws) => {
       ws.meta.deviceId = msg.deviceId || "";
       ws.meta.userId = msg.userId || "";
       ws.meta.userName = msg.userName || "";
+      console.log(
+        `REGISTER id=${ws.meta.id} role=${ws.meta.role} deviceId=${ws.meta.deviceId} user=${ws.meta.userName} remote=${ws.meta.remote} origin=${ws.meta.origin}`
+      );
       ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, list: getPosList(), ts: Date.now() }));
       sendPosListToDisplays();
       return;
