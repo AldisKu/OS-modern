@@ -260,7 +260,12 @@ function initBroker() {
         }
       }
     };
-  } catch (_) {}
+  } catch (_) {
+    // If the WebSocket constructor throws (invalid URL, mixed content, etc),
+    // show OFF and keep retrying so the user sees the problem.
+    [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
+    scheduleBrokerReconnect();
+  }
 }
 
 function scheduleBrokerReconnect() {
@@ -375,6 +380,14 @@ async function loadServerConfig() {
   const data = await api("config", {});
   if (data.status === "OK" && data.broker_ws) {
     brokerUrl = data.broker_ws;
+    // Some installs return localhost/127.0.0.1 (valid for the server, not for clients).
+    // Rewrite to the current host so iPad Home-Screen/PWA sessions can connect reliably.
+    if (brokerUrl && (brokerUrl.includes("127.0.0.1") || brokerUrl.includes("localhost"))) {
+      try {
+        const host = window.location.hostname;
+        brokerUrl = brokerUrl.replace("127.0.0.1", host).replace("localhost", host);
+      } catch (_) {}
+    }
     if (Number.isFinite(Number(data.client_poll_interval_ms))) {
       state.clientPollMs = Math.max(10000, Number(data.client_poll_interval_ms));
     }
