@@ -68,6 +68,7 @@ sudo WEBROOT=/var/www/webapp ./deploy-modern.sh
 Stelle sicher, dass der Webserver `modern/` ausliefert (z. B. via Apache Alias oder direkt im Webroot). Beispiel URL:
 - `http://<SERVER-IP>/modern/`
 - Kundendisplay: `http://<SERVER-IP>/modern/customer.html`
+- Kundendisplay (Legacy/alte Android-Tablets, z. B. Android 5.1.1): `http://<SERVER-IP>/modern/customer-legacy.html`
 
 ### 3.5 PHP Wrapper aktiv
 Datei vorhanden:

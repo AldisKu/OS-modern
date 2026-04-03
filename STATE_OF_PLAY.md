@@ -7,6 +7,7 @@
 - Start‑Screen aktualisiert jetzt sofort nach Broker‑Push (Tables werden immer neu geladen, auch wenn der Start‑Screen gerade nicht sichtbar ist).
 - Modern UI: Start, Bestellung, Kasse, Kundendisplay laufen.
 - Kundendisplay: QR/Idle‑Logik implementiert.
+- Kundendisplay: separate Legacy-Seite fuer alte Android-Tablets (Android 5.x) vorhanden (`modern/customer-legacy.html`).
 - Preis‑Popup für „Preisprodukte“ funktioniert.
 - Tischlayout per JSON implementiert.
 - Warenkorb‑Summe wird angezeigt (rechts oben in Bestellung).

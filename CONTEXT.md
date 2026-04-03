@@ -80,6 +80,9 @@ Verbindung:
 - Display wählt Kasse über Broker‑Session (ohne Login).
 - Wenn nur eine Kasse vorhanden → automatisch verbinden.
 
+Legacy/alte Android-Tablets:
+- Separate, ES5-kompatible Seite: `modern/customer-legacy.html` (kein ES-Module/async/await; XHR statt fetch).
+
 Anzeige‑Logik:
 - Modus: Bestellung (Warenkorb), Kasse (Bon), QR‑Code nach Zahlung, Idle nach 30s.
 - QR wird nach Zahlung angezeigt und bleibt sichtbar, bis Produktaktivität erfolgt.
@@ -98,6 +101,7 @@ Navigation:
 - Arbeitsbon wird immer gedruckt, wenn Bestellung gesendet wird.
 - Warenkorb‑Summe wird oben in der rechten Spalte angezeigt.
 - „Bestellung beenden“ führt bei leerem Warenkorb zurück zum Start.
+- Client‑Poll bleibt Fallback; Warnung „broker hat Update unterschlagen“ wird nur nach kurzer Grace‑Zeit ohne Broker‑Signal gezeigt (Race‑Schutz).
 
 Warenkorb‑Sortierung:
 - Reihenfolge bleibt erhalten, nur geändertes Produkt kann nach oben wandern.

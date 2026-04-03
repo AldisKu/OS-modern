@@ -107,6 +107,7 @@ Layout: oben Menüleiste, rechts Produktliste (20%), links Menü/Kategorien.
 - Zusammenfassen nur bei identischen Extras/ToGo/Rabatt und nebeneinander.
 - Warenkorb‑Summe oben in der rechten Spalte.
 - „Bestellung beenden“ navigiert bei leerem Warenkorb zurück zum Start.
+- Client‑Poll‑Warnung „Broker hat Veränderung unterschlagen …“ ist gegen Timing‑Races entschärft (Grace‑Zeit vor Warnung).
 
 **Warenkorb‑Sortierung:**
 - Reihenfolge bleibt stabil.
@@ -153,6 +154,9 @@ Nach Wechsel:
 **Anmeldung:**
 - Kein Login. Auswahl der Kasse (POS) aus Broker.
 - Wenn 1 Kasse → auto.
+
+**Legacy/alte Android-Tablets:**
+- Separate Seite: `modern/customer-legacy.html` (ES5-kompatibel, kein ES-Module/async/await; XHR statt fetch).
 
 **Modi:**
 - Bestellung (nur Warenkorb)

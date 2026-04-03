@@ -21,6 +21,7 @@ sudo systemctl restart ordersprinter-broker
 4) URLs
 - Modern UI: `http://<SERVER-IP>/modern/`
 - Kundendisplay: `http://<SERVER-IP>/modern/customer.html`
+- Kundendisplay (Legacy Android 5.x): `http://<SERVER-IP>/modern/customer-legacy.html`
 
 5) Debug
 ```bash

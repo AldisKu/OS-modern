@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>OrderSprinter Kundendisplay (Legacy)</title>
+  <link rel="stylesheet" href="./customer.css" />
+  <!--
+    Legacy customer display for old Android WebViews (e.g. Android 5.1.1).
+    - No ES modules
+    - No async/await
+    - No template literals / arrow functions
+    - Uses XHR instead of fetch
+  -->
+</head>
+<body>
+  <div id="app">
+    <div class="display-hash" id="display-hash">customer-legacy</div>
+    <section class="pair-screen hidden" id="pair-screen">
+      <div class="pair-card">
+        <h1>Kasse waehlen</h1>
+        <label>
+          <span>Aktive Kassen</span>
+          <select id="pair-select"></select>
+        </label>
+        <div class="pair-actions">
+          <button class="primary" id="pair-apply">Anzeigen</button>
+          <button class="ghost" id="pair-refresh">Verbindung pruefen</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="display-screen hidden" id="display-screen">
+      <div class="display-wrap" id="display-wrap">
+        <div class="display-top">
+          <div class="display-header">
+            <img id="display-logo" class="display-logo" src="./logo.png" alt="Logo" onerror="this.style.display='none'" />
+            <div class="display-sum" id="display-sum">0.00</div>
+          </div>
+          <div class="display-bon-title" id="display-bon-title">Bon</div>
+          <div class="display-bon-list" id="display-bon-list"></div>
+        </div>
+        <div class="display-bottom">
+          <div class="display-order-title" id="display-order-title">Bestellung</div>
+          <div class="display-order-list" id="display-order-list"></div>
+        </div>
+        <div class="display-qr hidden" id="display-qr">
+          <div class="display-qr-title">Elektronischer Kassenbon</div>
+          <img id="display-qr-img" alt="QR" />
+          <div class="display-qr-link" id="display-qr-link"></div>
+        </div>
+        <div class="display-idle hidden" id="display-idle">
+          <img id="display-idle-logo" class="display-idle-logo" src="./logo.png" alt="Logo" />
+          <div class="display-idle-text">Bereit</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="./customer-legacy.js"></script>
+</body>
+</html>
+
