@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "11";
+const APP_VERSION = "12";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -128,6 +128,9 @@ const state = {
   pendingRoomRefresh: false,
   priceEntry: null
 };
+
+// Expose for on-device debugging (e.g., iPad Web Inspector)
+globalThis.__osState = state;
 
 function markDisplayActivity() {
   state.displayActivity = true;
