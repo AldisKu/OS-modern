@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "03";
+const APP_VERSION = "04";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
