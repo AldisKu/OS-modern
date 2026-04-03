@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "20";
+const APP_VERSION = "21";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -217,7 +217,17 @@ function initBroker() {
   try {
     const ws = new WebSocket(brokerUrl);
     state.brokerWs = ws;
-    ws.onopen = () => {
+    let openHandled = false;
+    let openProbe = null;
+    const handleOpen = () => {
+      if (openHandled) return;
+      if (!state.brokerWs || state.brokerWs !== ws) return;
+      if (ws.readyState !== WebSocket.OPEN) return;
+      openHandled = true;
+      if (openProbe) {
+        clearInterval(openProbe);
+        openProbe = null;
+      }
       state.brokerLabel = "OK";
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
       showStatusMessage(`Broker open ${brokerUrl}`);
@@ -228,6 +238,17 @@ function initBroker() {
         state.brokerReconnectTimer = null;
       }
     };
+    ws.onopen = () => {
+      handleOpen();
+    };
+    // iOS standalone/PWA mode can be flaky with event delivery; probe readyState.
+    openProbe = setInterval(handleOpen, 500);
+    setTimeout(() => {
+      if (openProbe) {
+        clearInterval(openProbe);
+        openProbe = null;
+      }
+    }, 10000);
     ws.onclose = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
       showStatusMessage(`Broker close ${brokerUrl}`);
