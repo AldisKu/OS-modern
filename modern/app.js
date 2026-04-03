@@ -240,17 +240,23 @@ function initBroker() {
           console.debug("Preisstufe geändert");
           await refreshMenuPrices();
         } else {
-          // Always refresh tables so the start screen shows new orders immediately,
-          // even when it is currently hidden.
-          await refreshTables();
+          await refreshTablesWithRetry();
           await refreshOrderIfVisible();
-          if (els.startScreen && els.startScreen.classList.contains("hidden")) {
-            state.pendingRoomRefresh = true;
-          }
         }
       }
     };
   } catch (_) {}
+}
+
+async function refreshTablesWithRetry() {
+  // Immediate attempt
+  await refreshTables();
+  // If start screen is hidden, mark for next visit
+  if (els.startScreen && els.startScreen.classList.contains("hidden")) {
+    state.pendingRoomRefresh = true;
+  }
+  // Safety retry after a short delay to catch backend lag
+  setTimeout(() => { refreshTables(); }, 1200);
 }
 
 function registerBrokerClient() {
