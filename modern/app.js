@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "18";
+const APP_VERSION = "19";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -219,6 +219,7 @@ function initBroker() {
     ws.onopen = () => {
       state.brokerLabel = "OK";
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
+      registerBrokerUnknown();
       registerBrokerClient();
       if (state.brokerReconnectTimer) {
         clearTimeout(state.brokerReconnectTimer);
@@ -294,19 +295,45 @@ function showStatusMessage(text) {
   els.startMessageBody.textContent = `${text} @ ${ts}`;
 }
 
+function ensureDeviceId() {
+  if (state.deviceId) return state.deviceId;
+  try {
+    const existing = localStorage.getItem("modern_device_id");
+    if (existing) {
+      state.deviceId = existing;
+      return state.deviceId;
+    }
+    const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+    state.deviceId = `POS-${rnd}`;
+    localStorage.setItem("modern_device_id", state.deviceId);
+    return state.deviceId;
+  } catch (_) {
+    // localStorage might be blocked; still generate a session-scoped id.
+    const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
+    state.deviceId = `POS-${rnd}`;
+    return state.deviceId;
+  }
+}
+
+function registerBrokerUnknown() {
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) return;
+  // Register as unknown so we always get a broker id back (label becomes broker<N>).
+  // Later, after login/bootstrap, registerBrokerClient() upgrades the role to "pos".
+  const payload = {
+    type: "REGISTER",
+    role: "unknown",
+    deviceId: ensureDeviceId()
+  };
+  try {
+    state.brokerWs.send(JSON.stringify(payload));
+  } catch (_) {}
+}
+
 function registerBrokerClient() {
   // Some browsers expose OPEN only on the WebSocket constructor, not on instances.
   if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) return;
   if (!state.user) return;
-  if (!state.deviceId) {
-    const existing = localStorage.getItem("modern_device_id");
-    if (existing) state.deviceId = existing;
-    else {
-      const rnd = Math.random().toString(36).slice(2, 6).toUpperCase();
-      state.deviceId = `POS-${rnd}`;
-      localStorage.setItem("modern_device_id", state.deviceId);
-    }
-  }
+  ensureDeviceId();
   const payload = {
     type: "REGISTER",
     role: "pos",
