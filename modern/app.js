@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "13";
+const APP_VERSION = "14";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -694,6 +694,8 @@ function renderTables() {
     }
   });
   els.tablesGrid.innerHTML = cards.join("");
+  const metas = Array.from(els.tablesGrid.querySelectorAll(".table-card .meta")).map(el => el.textContent.trim());
+  console.debug("renderTables metas", metas);
   els.tablesGrid.querySelectorAll(".table-card").forEach(el => {
     el.addEventListener("click", () => openOrderForTable({ id: Number(el.dataset.id), name: el.dataset.name }));
   });
