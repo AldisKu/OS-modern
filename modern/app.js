@@ -167,10 +167,9 @@ function show(screen) {
   }
   if (screen === els.startScreen) {
     sendDisplayIdle();
-    if (state.pendingRoomRefresh) {
-      state.pendingRoomRefresh = false;
-      refreshTables();
-    }
+    // Always refresh tables when entering the start screen to align with broker/poll data
+    refreshTables();
+    if (state.pendingRoomRefresh) state.pendingRoomRefresh = false;
   }
 }
 
@@ -249,14 +248,13 @@ function initBroker() {
 }
 
 async function refreshTablesWithRetry() {
-  // Immediate attempt
-  await refreshTables();
-  // If start screen is hidden, mark for next visit
-  if (els.startScreen && els.startScreen.classList.contains("hidden")) {
-    state.pendingRoomRefresh = true;
-  }
-  // Safety retry after a short delay to catch backend lag
-  setTimeout(() => { refreshTables(); }, 1200);
+  const attempt = async () => { await refreshTables(); };
+  await attempt();
+  // Keep a pending flag so the next navigation to start-screen refreshes again
+  state.pendingRoomRefresh = true;
+  // Safety retries to handle backend lag or race with push timing
+  setTimeout(attempt, 1200);
+  setTimeout(attempt, 2500);
 }
 
 function registerBrokerClient() {
