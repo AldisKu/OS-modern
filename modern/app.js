@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "08";
+const APP_VERSION = "09";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -233,6 +233,10 @@ function initBroker() {
     ws.onmessage = async (evt) => {
       let payload = null;
       try { payload = JSON.parse(evt.data); } catch (_) { return; }
+      if (payload && payload.type) {
+        const scopeLabel = payload.scope ? String(payload.scope).toUpperCase() : "";
+        showStatusMessage(`Broker event: ${payload.type}${scopeLabel ? " / " + scopeLabel : ""}`);
+      }
       if (payload && payload.type === "REGISTERED") {
         state.brokerId = payload.id || null;
         const label = payload.id ? `broker${payload.id}` : "OK";
