@@ -759,6 +759,11 @@ body {
   flex: 1;
 }
 
+.storno-keypad button {
+  padding: 10px 0;
+  font-size: 18px;
+}
+
 .confirm-action:disabled {
   background: #fff;
   color: #000;

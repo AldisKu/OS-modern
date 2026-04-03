@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "14";
+const APP_VERSION = "15";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -974,6 +974,20 @@ function handlePriceKey(label, e) {
   }
   updatePriceModalDisplay();
 }
+window.stornoKeyPress = handleStornoKey;
+function handleStornoKey(label, e) {
+  if (e && e.preventDefault) e.preventDefault();
+  const input = document.getElementById("storno-code");
+  if (!input) return;
+  if (label === "Back") {
+    input.value = input.value.slice(0, -1);
+  } else {
+    input.value = `${input.value || ""}${label}`;
+  }
+  const ev = new Event("input", { bubbles: true });
+  input.dispatchEvent(ev);
+  input.focus();
+}
 
 function quickAddProduct(prod) {
   addToCart(prod, [], "", 1);
@@ -1262,7 +1276,32 @@ function showExistingItemActions(item) {
   if (isTogo(item)) titleExtras.push("+ ToGo");
   if (item.orderoption) titleExtras.push(`+ ${item.orderoption}`);
   els.confirmTitle.textContent = `${item.longname} (${groupCount})`;
-  const codeField = state.cancelUnpaidCode ? `<input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" />` : "";
+  const codeField = state.cancelUnpaidCode ? `
+    <div class="storno-block">
+      <input type="text" id="storno-code" class="storno-code" placeholder="Stornocode" inputmode="numeric" />
+      <div class="price-keypad storno-keypad">
+        <div class="keyboard-row">
+          <button type="button" onclick="stornoKeyPress('1')">1</button>
+          <button type="button" onclick="stornoKeyPress('2')">2</button>
+          <button type="button" onclick="stornoKeyPress('3')">3</button>
+        </div>
+        <div class="keyboard-row">
+          <button type="button" onclick="stornoKeyPress('4')">4</button>
+          <button type="button" onclick="stornoKeyPress('5')">5</button>
+          <button type="button" onclick="stornoKeyPress('6')">6</button>
+        </div>
+        <div class="keyboard-row">
+          <button type="button" onclick="stornoKeyPress('7')">7</button>
+          <button type="button" onclick="stornoKeyPress('8')">8</button>
+          <button type="button" onclick="stornoKeyPress('9')">9</button>
+        </div>
+        <div class="keyboard-row">
+          <button type="button" onclick="stornoKeyPress('0')">0</button>
+          <button type="button" class="key-wide" onclick="stornoKeyPress('Back')">Back</button>
+        </div>
+      </div>
+    </div>
+  ` : "";
   els.confirmBody.innerHTML = `
     ${titleExtras.length ? `<div class="edit-row">${titleExtras.join("<br>")}</div>` : ""}
     <div class="edit-row"><b>Anzahl</b></div>
