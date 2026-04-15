@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "21";
+const APP_VERSION = "22";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -171,9 +171,14 @@ function show(screen) {
   }
   if (screen === els.startScreen) {
     sendDisplayIdle();
-    // Always refresh tables when entering the start screen to align with broker/poll data
-    refreshTables();
-    if (state.pendingRoomRefresh) state.pendingRoomRefresh = false;
+    // Only refresh tables from server if broker signaled a pending change
+    if (state.pendingRoomRefresh) {
+      state.pendingRoomRefresh = false;
+      refreshTables();
+    } else {
+      // Use cached data — just re-render
+      renderTables();
+    }
   }
 }
 
@@ -307,10 +312,8 @@ async function refreshTablesWithRetry(message) {
   await attempt();
   // Keep a pending flag so the next navigation to start-screen refreshes again
   state.pendingRoomRefresh = true;
-  // Safety retries to handle backend lag or race with push timing
-  setTimeout(attempt, 1200);
-  setTimeout(attempt, 2500);
-  setTimeout(attempt, 4000);
+  // Single safety retry to handle backend lag after broker push
+  setTimeout(attempt, 2000);
   if (message) showStatusMessage(message);
 }
 
@@ -541,25 +544,9 @@ async function bootstrap() {
 }
 
 async function refreshMenuPrices() {
-  const data = await api("bootstrap", {});
+  const data = await api("refresh_menu", {});
   if (data.status !== "OK") return;
-  state.config = normalizeConfig(data.config);
-  state.userPrefs = data.userprefs || { preferimgmobile: 0 };
   state.menu = data.menu;
-  state.rooms = data.rooms;
-  const parsePct = (v) => {
-    if (v === null || v === undefined) return 0;
-    return parseFloat(String(v).replace(",", ".")) || 0;
-  };
-  state.discounts = {
-    d1: parsePct(state.config?.discount1),
-    d2: parsePct(state.config?.discount2),
-    d3: parsePct(state.config?.discount3),
-    n1: state.config?.discountname1 || "Rabatt 1",
-    n2: state.config?.discountname2 || "Rabatt 2",
-    n3: state.config?.discountname3 || "Rabatt 3"
-  };
-  renderTables();
   renderCategories();
   renderProducts();
 }
@@ -1912,12 +1899,11 @@ async function openPaydesk(table) {
 }
 
 async function loadPaydeskTables() {
-  const data = await api("refresh_tables", {});
-  if (data.status !== "OK") return;
-  state.rooms = data.rooms;
+  const rooms = state.rooms;
+  if (!rooms) return;
   const tables = [];
-  (state.rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
-  if (Number(state.rooms.takeawayunpaidprodcount || 0) > 0) tables.push({ id: 0, name: "To-Go" });
+  (rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
+  if (Number(rooms.takeawayunpaidprodcount || 0) > 0) tables.push({ id: 0, name: "To-Go" });
   if (els.paydeskTables) {
     els.paydeskTables.innerHTML = tables.map(t => `<div class="paydesk-table" data-id="${t.id}">${t.name}</div>`).join("");
     els.paydeskTables.querySelectorAll(".paydesk-table").forEach(el => {
@@ -2111,11 +2097,10 @@ async function paydeskPay(paymentId, print) {
 
 async function openPaydeskPicker(origin) {
   resetConfirmActionsLayout();
-  const data = await api("refresh_tables", {});
-  if (data.status !== "OK") return;
-  state.rooms = data.rooms;
+  const rooms = state.rooms;
+  if (!rooms || !rooms.roomstables) return;
   const tables = [];
-  (state.rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
+  (rooms.roomstables || []).forEach(r => r.tables.forEach(t => { if (Number(t.unpaidprodcount || 0) > 0) tables.push(t); }));
   if (Number(state.rooms.takeawayunpaidprodcount || 0) > 0) tables.push({ id: 0, name: "To-Go" });
   if (tables.length === 0) {
     alert("Keine offenen Tische");
@@ -2538,8 +2523,12 @@ function startPolling() {
       if (stateRes && stateRes.status === "OK" && stateRes.version) {
         const now = Date.now();
         if (state.lastServerVersion && state.lastServerVersion !== stateRes.version) {
-          console.debug("Preisstufe geändert");
-          await refreshMenuPrices();
+          // State hash changed (order/payment activity) — refresh tables as broker fallback
+          await refreshTables();
+          if (state.selectedTable) {
+            await fetchExistingOrders();
+            renderOrderItems();
+          }
           const changedVersion = stateRes.version;
           const changedAt = now;
           setTimeout(async () => {
@@ -2558,18 +2547,6 @@ function startPolling() {
         state.lastServerVersion = stateRes.version;
       }
     } catch (_) {}
-    const data = await api("refresh_tables", {});
-    if (data.status === "OK") {
-      state.rooms = data.rooms;
-      renderTables();
-      state.lastSync = new Date().toLocaleTimeString();
-      updateStatus();
-      console.debug("refreshTables done", { lastSync: state.lastSync, roomsTs: Date.now() });
-    }
-    if (state.selectedTable) {
-      await fetchExistingOrders();
-      renderOrderItems();
-    }
   }, interval);
 }
 

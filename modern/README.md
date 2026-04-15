@@ -24,21 +24,21 @@ node server.js
 - `login` { userid, password, modus, time }
 - `logout` {}
 - `session` {}
-- `bootstrap` {}
-- `refresh_tables` {}
-- `refresh_menu` {}
+- `bootstrap` {} (einmal beim Login, liefert alles)
+- `refresh_tables` {} (Tischdaten, bei Broker-Push oder Poll-Fallback)
+- `refresh_menu` {} (Menü/Preise, bei Preisstufen-Änderung)
 - `order` { tableid, prods, print, payprinttype, orderoption }
 - `table_open_items` { tableid }
 - `table_records` { tableid }
 
 ## Lokale Datenhaltung
-- IndexedDB: `ordersprinter-modern`
-- Store: `cache` (`config`, `menu`, `rooms`)
+- Menü, Tische, Config: im Speicher (`state.*`), geladen via `bootstrap`, aktualisiert via Broker-Push.
 - Warenkorb pro Tisch in `localStorage` (`cart_<tableid>`)
+- Kein IndexedDB, kein Service Worker — App ist online-only.
 
 ## Broker-Konfiguration
 Optional: Setze `BROKER_TOKEN` in `webapp/broker/server.js`/Service und sende `X-Broker-Token`.
 
 ## Hinweise
 - UI nutzt bestehende PHP-Session und Rechteverwaltung.
-- Updates laufen über Broker-Polling gegen `modernapi.php`.
+- Updates laufen über Broker-Push (primär) und Client-Poll (Fallback, Default 120s).

@@ -1,13 +1,13 @@
-# OrderSprinter Modern – Vollständiger Kontext (für neue Codex‑Session)
+# OrderSprinter Modern – Vollständiger Kontext (für neue Codex-Session)
 
 Ziel: Eine neue Session liest diese Datei und kann ohne Rückfragen weiterarbeiten.
 
 ## A) Projektziele
-- Modernes, iPad‑optimiertes Frontend für Kellner.
-- Backend bleibt die bestehende OrderSprinter‑Installation (Legacy).
-- Minimale Serverlast, lokale Datenhaltung (IndexedDB), Push‑Updates.
-- Echtzeit‑Updates über Node‑Broker (WebSocket).
-- Legacy‑Benutzerrechte/Session weiterverwenden.
+- Modernes, iPad-optimiertes Frontend für Kellner.
+- Backend bleibt die bestehende OrderSprinter-Installation (Legacy).
+- Minimale Serverlast, lokale Datenhaltung im Speicher (Menü, Tische, Config einmal laden, dann nur bei Broker-Push aktualisieren).
+- Echtzeit-Updates über Node-Broker (WebSocket).
+- Legacy-Benutzerrechte/Session weiterverwenden.
 
 ## B) Architektur & Komponenten
 **Modern UI**
@@ -17,25 +17,25 @@ Ziel: Eine neue Session liest diese Datei und kann ohne Rückfragen weiterarbeit
 
 **Kundendisplay**
 - `modern/customer.html`, `modern/customer.js`, `modern/customer.css`
-- Anzeige für Kassen‑Kundenterminal (hochkant).
+- Anzeige für Kassen-Kundenterminal (hochkant).
 
 **PHP Wrapper**
-- `php/modernapi.php` ist die einzige neue PHP‑Datei.
-- Alle Legacy‑Funktionen werden über Wrapper aufgerufen.
-- Legacy‑Core darf nicht verändert werden.
+- `php/modernapi.php` ist die einzige neue PHP-Datei.
+- Alle Legacy-Funktionen werden über Wrapper aufgerufen.
+- Legacy-Core darf nicht verändert werden.
 
 **Broker**
 - `broker/server.js`
-- WebSocket‑Hub für Modern UI und Kundendisplay.
-- Pollt PHP‑State und Preisstufen‑State; pusht nur bei Änderung.
+- WebSocket-Hub für Modern UI und Kundendisplay.
+- Pollt PHP-State und Preisstufen-State; pusht nur bei Änderung.
 - Printer/TSE Status entfernt.
 
-## C) Git/Deployment‑Regeln (sehr wichtig)
-- Repo enthält nur Modern‑Komponenten.
-- Legacy‑Dateien bleiben lokal, **nicht getrackt**.
+## C) Git/Deployment-Regeln (sehr wichtig)
+- Repo enthält nur Modern-Komponenten.
+- Legacy-Dateien bleiben lokal, **nicht getrackt**.
 - `.gitignore` blockiert alles außer Modern, Broker, `modernapi.php`, Skripte, Doku.
 - Nach Änderungen immer `git add` + `git commit`.
-- **Codex darf nicht `git push` ausführen** (User pusht).
+- **Codex/Kiro darf nicht `git push` ausführen** (User pusht).
 
 ## D) Setup/Installation (Server)
 **Einmalig:**
@@ -51,28 +51,29 @@ sudo WEBROOT=/var/www/webapp ./deploy-modern.sh
 sudo systemctl restart ordersprinter-broker
 ```
 
-## E) Broker‑Details
+## E) Broker-Details
 **Env:**
 - `PORT` (3077)
 - `POLL_URL` → `modernapi.php?cmd=state`
 - `PRICELEVEL_URL` → `modernapi.php?cmd=pricelevel_state`
 - `POLL_INTERVAL_MS` (4000)
 
-**Push‑Scopes:**
-- `TABLES` bei Version‑Änderung
+**Push-Scopes:**
+- `TABLES` bei Version-Änderung (Bestellung/Zahlung)
 - `MENU` bei Preisstufenänderung
 
 **Customer Display:**
 - Kassen verbinden sich als `role=pos`.
 - Displays als `role=display` + `SUBSCRIBE`.
 - Broker verteilt `DISPLAY_UPDATE`, `DISPLAY_IDLE`, `DISPLAY_EBON`.
+- Kommunikation POS → Broker → Display ist rein WebSocket, kein PHP/DB-Zugriff.
 
 ## F) Preisstufe / Rabatt (kritisch)
 **Preisstufe:**
 - System global, nicht pro Produkt.
 - Modern bekommt im `bootstrap` nur den **aktuell gültigen Preis**.
 - Broker überwacht Preisstufe → `UPDATE_REQUIRED scope: MENU`.
-- Preisaktualisierung: Menü + Preise neu laden.
+- Preisaktualisierung: nur Menü/Preise neu laden via `cmd=refresh_menu` (nicht volles bootstrap).
 
 **Rabatt:**
 - 3 frei konfigurierbare Rabatte (Name + %).
@@ -80,47 +81,58 @@ sudo systemctl restart ordersprinter-broker
 - Nach Bestellung: Rabatt nicht anzeigen, nur Preis.
 - Preisstufe darf nicht mit Rabatt verwechselt werden.
 
-## G) UI‑Regeln (Modern UI)
+## G) UI-Regeln (Modern UI)
+
+### 0) Daten-Strategie (ab v22)
+- `cmd=bootstrap` wird einmal beim Login aufgerufen. Menü, Tische, Config, Discounts bleiben im Speicher (`state.*`).
+- Tischdaten: nur bei Broker-Push (`scope: TABLES`) oder Poll-Fallback (State-Hash geändert) vom Server geholt via `refreshTables()`.
+- Menü/Preise: nur bei Broker-Push (`scope: MENU`) neu geladen via `cmd=refresh_menu`.
+- Navigation zwischen Screens (Start, Bestellung, Kasse) nutzt gecachte Daten, kein Server-Roundtrip.
+- Kasse/Paydesk-Picker nutzt gecachte Tischdaten aus `state.rooms`.
+- Warenkorb pro Tisch in `localStorage` (`cart_<tableid>`).
+- Poll-Timer (Default 120s) prüft nur `cmd=state` Hash; bei Änderung → `refresh_tables` als Broker-Fallback.
+
 ### 1) Login
 - aktuell wieder klassisches Login (UserID + Passwort).
-- Onscreen‑Keyboard für Passworteingabe (Ziffern/Buchstaben/Sonderzeichen).
+- Onscreen-Keyboard für Passworteingabe (Ziffern/Buchstaben/Sonderzeichen).
 
-### 2) Start‑Maske
-- Split: links Tische, rechts Status/Message‑Panel.
+### 2) Start-Maske
+- Split: links Tische, rechts Status/Message-Panel.
 - Tische mit offenem Betrag rot.
 - ToGo nicht in Liste (oben Button).
 - Tischlayout optional via `modern/table-layout.json`.
 - Nicht im Layout gelistete aktive Tische unten anhängen.
-- Statusinfos: Broker‑ID bleibt konstant (nicht zurück auf „broker“).
+- Statusinfos: Broker-ID bleibt konstant (nicht zurück auf „broker").
 - Printer/TSE Anzeige entfernt.
+- Navigation zum Start-Screen nutzt gecachte Tischdaten; Server-Refresh nur bei Broker-Push-Signal.
 
 ### 3) Bestellung (Tischansicht)
 Layout: oben Menüleiste, rechts Produktliste (20%), links Menü/Kategorien.
 
 **Breadcrumbs:**
-- „Kategorien“ (Start), aktuelle Kategorie nur einmal.
+- „Kategorien" (Start), aktuelle Kategorie nur einmal.
 - Styles: nach oben / aktuell / tiefer.
 
 **Produktliste rechts:**
 - Bestellte Produkte + Warenkorb getrennt, optisch markiert.
 - Neue Produkte oben, Trennlinie.
 - Zusammenfassen nur bei identischen Extras/ToGo/Rabatt und nebeneinander.
-- Warenkorb‑Summe oben in der rechten Spalte.
-- „Bestellung beenden“ navigiert bei leerem Warenkorb zurück zum Start.
-- Client‑Poll‑Warnung „Broker hat Veränderung unterschlagen …“ ist gegen Timing‑Races entschärft (Grace‑Zeit vor Warnung).
+- Warenkorb-Summe oben in der rechten Spalte.
+- „Bestellung beenden" navigiert bei leerem Warenkorb zurück zum Start.
+- Client-Poll-Warnung „Broker hat Veränderung unterschlagen …" ist gegen Timing-Races entschärft (Grace-Zeit vor Warnung).
 
-**Warenkorb‑Sortierung:**
+**Warenkorb-Sortierung:**
 - Reihenfolge bleibt stabil.
-- Änderung (außer +/‑) kann Produkt nach oben bringen.
+- Änderung (außer +/-) kann Produkt nach oben bringen.
 - Zusammenfassen nur, wenn gleiches Produkt direkt nebeneinander.
 
 **Extras:**
 - Popup zeigt nur Extras als Buttons, ohne Kommentar/Anzahl.
 - Mehrere Extras möglich.
-- „Bestellen“ bestätigt.
+- „Bestellen" bestätigt.
 
 **Rabatt:**
-- Rabatt‑Buttons toggle.
+- Rabatt-Buttons toggle.
 - Preis im Popup wird neu berechnet (immer vom Originalpreis).
 - Rabatt nur im Warenkorb sichtbar.
 
@@ -128,14 +140,14 @@ Layout: oben Menüleiste, rechts Produktliste (20%), links Menü/Kategorien.
 - ToGo separat darstellen.
 
 **Preisprodukte:**
-- Produkte mit „Preisangabe“ öffnen Preis‑Popup (Num‑Pad inkl. `,` und `-`).
+- Produkte mit „Preisangabe" öffnen Preis-Popup (Num-Pad inkl. `,` und `-`).
 
 ### 4) Kasse
 Layout: rechts 20% Status, links Bon / Nicht bezahlt.
 
 **Zahlungsarten:**
 - Nicht alle anzeigen – nur wie in Legacy verfügbar.
-- Legacy hat „Zahlung“ und „Bondruck“ → Popup zeigt erlaubte Zahlungsarten.
+- Legacy hat „Zahlung" und „Bondruck" → Popup zeigt erlaubte Zahlungsarten.
 
 **Bewirtungsbeleg:**
 - Toggle wirkt nur für aktuellen Zahlungsvorgang, nach Zahlung zurücksetzen.
@@ -161,58 +173,58 @@ Nach Wechsel:
 **Modi:**
 - Bestellung (nur Warenkorb)
 - Kasse (Bon)
-- QR‑Code nach Zahlung
+- QR-Code nach Zahlung
 - Idle nach 30s ohne Aktivität
 
-**QR‑Logik:**
+**QR-Logik:**
 - Nach Zahlung: QR anzeigen.
 - QR bleibt, bis Produktaktion erfolgt.
 - Keine Unterbrechung nur weil Kasse offen bleibt.
 
 **Darstellung:**
-- Header: Logo links, rechts „Summe  <Wert> €“.
-- Bestellung: ein Block, „Bestellung:“ + Liste.
-- Kasse: obere Liste („Sie bezahlen:“), darunter Fließtext‑Buttons mit Bestellpositionen.
+- Header: Logo links, rechts „Summe  <Wert> €".
+- Bestellung: ein Block, „Bestellung:" + Liste.
+- Kasse: obere Liste („Sie bezahlen:"), darunter Fließtext-Buttons mit Bestellpositionen.
 - Extras: `+ <n> <Extra>` klein, eingerückt, linksbündig.
 - Produkte im Bon: Sortierung `_seq` absteigend (letzter oben).
 - Gruppierung nur bei direkt benachbarten gleichen Produkten.
 
 ## J) Known Behavior/Constraints
-- Keine gehashten Asset‑Dateinamen mehr.
-- iPad Home‑Screen WebApp: Cache kann hängen → hard reload / schließen.
+- Keine gehashten Asset-Dateinamen mehr.
+- iPad Home-Screen WebApp: Cache kann hängen → hard reload / schließen.
 - Broker muss nach Änderungen neu gestartet werden.
 
-## K) Prod‑Troubleshooting (Broker/Kundendisplay)
+## K) Prod-Troubleshooting (Broker/Kundendisplay)
 **Symptome:**
 - Kundendisplay findet keine Kasse
-- Warnung: „Broker hat Veränderung unterschlagen …“
+- Warnung: „Broker hat Veränderung unterschlagen …"
 
 **Testschritte:**
 1. Broker Health:
 ```
 curl http://<SERVER-IP>:3077/health
 ```
-2. PHP‑State:
+2. PHP-State:
 ```
 curl -X POST http://<SERVER-IP>/php/modernapi.php?cmd=state
 ```
-3. Broker‑Service:
+3. Broker-Service:
 ```
 sudo systemctl status ordersprinter-broker
 sudo journalctl -u ordersprinter-broker -n 200
 ```
-4. Broker‑Config:
+4. Broker-Config:
 ```
 cat /etc/systemd/system/ordersprinter-broker.service
 ```
-5. Client‑Broker‑URL:
-- `modernapi.php?cmd=config` → `broker_ws` (muss Server‑IP/Hostname sein).
+5. Client-Broker-URL:
+- `modernapi.php?cmd=config` → `broker_ws` (muss Server-IP/Hostname sein).
 
 **Interpretation:**
 - Kein WS → Kundendisplay sieht keine Kasse.
-- Poll findet Änderung, Push fehlt → Broker down, falsche URL, Port/Firewall oder WS‑Block.
+- Poll findet Änderung, Push fehlt → Broker down, falsche URL, Port/Firewall oder WS-Block.
 
-## K) Wichtige Dateien
+## L) Wichtige Dateien
 - `install.md` – Installation
 - `setup-runtime.sh` – Runtime Setup (NodeSource)
 - `deploy-modern.sh` – Deployment
