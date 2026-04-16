@@ -3,41 +3,37 @@
 ## Fertig / Stabil
 - Git ist auf Modern-Komponenten reduziert, Legacy untracked.
 - `setup-runtime.sh`, `deploy-modern.sh` funktionieren.
-- Broker Push für TABLES und MENU (Preisstufe).
+- Broker Push fuer TABLES und MENU (Preisstufe).
 - Modern UI: Start, Bestellung, Kasse, Kundendisplay laufen.
 - Kundendisplay: QR/Idle-Logik implementiert.
 - Kundendisplay: separate Legacy-Seite fuer alte Android-Tablets (Android 5.x) vorhanden (`modern/customer-legacy.html`).
-- Preis-Popup für „Preisprodukte" funktioniert.
+- Preis-Popup fuer Preisprodukte funktioniert.
 - Tischlayout per JSON implementiert.
 - Warenkorb-Summe wird angezeigt (rechts oben in Bestellung).
-- „Bestellung beenden" geht bei leerem Warenkorb direkt zum Start.
-- False-Positive bei „broker hat Update unterschlagen" reduziert: Warnung erfolgt erst nach kurzer Grace-Zeit ohne Broker-Update.
-- Netzwerk-Traffic reduziert (v22):
-  - `refreshMenuPrices` nutzt `cmd=refresh_menu` statt vollem `bootstrap`.
-  - Poll-Timer ruft `refresh_tables` nur bei State-Hash-Aenderung (Broker-Fallback).
-  - Start-Screen nutzt gecachte Tischdaten; Server-Refresh nur bei Broker-Push-Signal.
-  - Kasse/Paydesk-Picker nutzt gecachte Tischdaten aus `state.rooms`.
-  - `refreshTablesWithRetry` reduziert von 4 auf 2 Server-Calls.
+- Bestellung beenden geht bei leerem Warenkorb direkt zum Start.
+- False-Positive bei broker hat Update unterschlagen reduziert: Warnung erfolgt erst nach kurzer Grace-Zeit ohne Broker-Update.
+- Netzwerk-Traffic reduziert (v22): refresh_menu statt bootstrap, Poll nur bei State-Aenderung, gecachte Tischdaten.
+- Kundendisplay-Sync gefixt (v23): POS sendet DISPLAY_IDLE nach Bestellung/Zahlung; customer.js startet Idle-Timer nach jedem Update; customer.css kompatibel mit alten Browsern.
 
-## Kritische Regeln (dürfen nicht brechen)
-- Keine Legacy-Dateien ändern.
+## Kritische Regeln (duerfen nicht brechen)
+- Keine Legacy-Dateien aendern.
 - Keine gehashten Assets erzeugen.
 - Rabatt nur im Warenkorb anzeigen, nie nach Bestellung.
-- Preisstufe: global, Menüpreise müssen bei Änderung neu geladen werden (via `cmd=refresh_menu`).
+- Preisstufe: global, Menupreise muessen bei Aenderung neu geladen werden (via `cmd=refresh_menu`).
 
 ## Bekannte fragile Bereiche
-- Preisstufen-Push: muss Broker-Polling zuverlässig triggern.
+- Preisstufen-Push: muss Broker-Polling zuverlaessig triggern.
 - UI-Refresh bei gleichzeitigen Zahlungen mehrerer Terminals.
 - Browser-Cache (iPad Home-Screen) kann alte Assets behalten.
 
 ## Offene Punkte / To-Do
-- Lokale Konfiguration (Menüpunkt „Lokale Konfiguration"): dauerhaft speichern (IndexedDB oder localStorage).
+- Lokale Konfiguration (Menuepunkt Lokale Konfiguration): dauerhaft speichern (IndexedDB oder localStorage).
 - Kasse-Fehler-Handling bei Doppelzahlung: UI + Tischliste refreshen.
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:
 - Kundendisplay findet keine Kasse
-- Meldung: „Broker hat Veränderung unterschlagen …"
+- Meldung: Broker hat Veraenderung unterschlagen
 
 Testschritte:
 1) Broker Health:
@@ -48,18 +44,18 @@ curl http://<SERVER-IP>:3077/health
 ```
 curl -X POST http://<SERVER-IP>/php/modernapi.php?cmd=state
 ```
-3) Broker-Service prüfen:
+3) Broker-Service pruefen:
 ```
 sudo systemctl status ordersprinter-broker
 sudo journalctl -u ordersprinter-broker -n 200
 ```
-4) Broker-Env prüfen:
+4) Broker-Env pruefen:
 ```
 cat /etc/systemd/system/ordersprinter-broker.service
 ```
 Erwartet: `POLL_URL` und `PRICELEVEL_URL` zeigen auf `http://127.0.0.1/php/modernapi.php?...`
-5) Client-Broker-URL prüfen:
-- `modernapi.php?cmd=config` → Feld `broker_ws`
+5) Client-Broker-URL pruefen:
+- `modernapi.php?cmd=config` -> Feld `broker_ws`
 - muss Server-IP/Hostname enthalten (kein `127.0.0.1` von Client-Sicht)
 
 Hinweise:
@@ -67,4 +63,4 @@ Hinweise:
 - Wenn Poll-Update aber kein Push: Broker down, falsche URL, Port/Firewall, WS-Block.
 
 ## Wann Broker neu starten?
-- Immer nach Änderungen an `broker/server.js` oder Broker-Konfiguration.
+- Immer nach Aenderungen an `broker/server.js` oder Broker-Konfiguration.

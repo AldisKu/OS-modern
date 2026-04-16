@@ -217,6 +217,7 @@ function handleDisplayUpdate(msg) {
     els.displayOrderTitle.textContent = "";
     els.displayOrderList.innerHTML = "";
     hideIdle();
+    startIdleTimer();
     return;
   }
     if (msg.mode === "paydesk") {
@@ -244,6 +245,7 @@ function handleDisplayUpdate(msg) {
       <span class="display-order-item">${i.qty}x ${i.name}</span>
     `).join("");
     hideIdle();
+    startIdleTimer();
     requestAnimationFrame(() => {
       if (els.displayWrap) {
         const bonList = els.displayBonList;

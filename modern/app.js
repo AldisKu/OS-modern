@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "22";
+const APP_VERSION = "23";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -1711,6 +1711,8 @@ async function sendOrder(workprint, goStart) {
     renderOrderItems();
     state.lastSync = new Date().toLocaleTimeString();
     updateStatus();
+    // Cart is now empty — tell customer display immediately
+    sendDisplayIdle();
     if (goStart) {
       setStartMessage(`Tisch ${table.name}: Bestellung abgeschickt`, cart);
       show(els.startScreen);
@@ -2077,6 +2079,9 @@ async function paydeskPay(paymentId, print) {
     if (els.paydeskHost) els.paydeskHost.classList.remove("active");
     if (res.msg && res.msg.ebonurl && res.msg.ebonref) {
       sendDisplayEbon(res.msg.ebonurl, res.msg.ebonref);
+    } else {
+      // No ebon — send idle so customer display clears the paid items
+      sendDisplayIdle();
     }
     if (print && res.msg && res.msg.billid) {
       await fetch("../php/contenthandler.php?module=printqueue&command=queueReceiptPrintJob", {
