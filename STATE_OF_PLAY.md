@@ -14,6 +14,7 @@
 - False-Positive bei broker hat Update unterschlagen reduziert: Warnung erfolgt erst nach kurzer Grace-Zeit ohne Broker-Update.
 - Netzwerk-Traffic reduziert (v22): refresh_menu statt bootstrap, Poll nur bei State-Aenderung, gecachte Tischdaten.
 - Kundendisplay-Sync gefixt (v23): POS sendet DISPLAY_IDLE nach Bestellung/Zahlung; customer.js startet Idle-Timer nach jedem Update; customer.css kompatibel mit alten Browsern.
+- iPad Broker-Registrierung gefixt (v25): Separate 'unknown' und 'pos' Registrierungsphasen, nur 'pos' nach Login, explizites State-Tracking, Debug-Logging.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
@@ -25,10 +26,12 @@
 - Preisstufen-Push: muss Broker-Polling zuverlaessig triggern.
 - UI-Refresh bei gleichzeitigen Zahlungen mehrerer Terminals.
 - Browser-Cache (iPad Home-Screen) kann alte Assets behalten.
+- iPad Safari WebSocket: Kann in CONNECTING-State steckenbleiben (v24/v25 Fixes implementiert).
 
 ## Offene Punkte / To-Do
 - Lokale Konfiguration (Menuepunkt Lokale Konfiguration): dauerhaft speichern (IndexedDB oder localStorage).
 - Kasse-Fehler-Handling bei Doppelzahlung: UI + Tischliste refreshen.
+- iPad Broker-Registrierung: Testen auf problematischem iPad mit v25 um zu verifizieren dass Race-Condition behoben ist.
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:
