@@ -16,6 +16,8 @@
 - Kundendisplay-Sync gefixt (v23): POS sendet DISPLAY_IDLE nach Bestellung/Zahlung; customer.js startet Idle-Timer nach jedem Update; customer.css kompatibel mit alten Browsern.
 - iPad Broker-Registrierung gefixt (v25): Separate 'unknown' und 'pos' Registrierungsphasen, nur 'pos' nach Login, explizites State-Tracking, Debug-Logging.
 - Kundendisplay POS-Auswahl gefixt: Unterbrechen nicht aktive Verbindung wenn neue Kasse online kommt; zeige verbundene Kassen-ID statt 'customer.js'; klickbar zum Wechsel (modern + legacy).
+- Kundendisplay POS-Persistierung: Speichert ausgewählte Kasse in localStorage, stellt Verbindung nach Login wieder her (modern + legacy).
+- Pull-Update Status gefixt: Erkennt jetzt korrekt wenn Broker-Push gleichzeitig mit Pull-Update ankommt (Timestamp-Vergleich >= zu > geaendert).
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
