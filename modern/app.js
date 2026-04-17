@@ -1,7 +1,8 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "24";
+const APP_VERSION = "25";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
+const DEBUG_BROKER = true; // Enable broker registration logging
 
 const els = {
   loginScreen: document.getElementById("login-screen"),
@@ -120,6 +121,9 @@ const state = {
   displaySeq: 0,
   brokerLabel: "OK",
   brokerReconnectTimer: null,
+  brokerRegisteredAsUnknown: false,
+  brokerRegisteredAsPos: false,
+  brokerRegistrationRetryTimer: null,
   clientPollMs: 120000,
   lastServerVersion: null,
   lastServerVersionAt: 0,
@@ -242,8 +246,13 @@ function initBroker() {
       state.brokerLabel = "OK";
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
       showStatusMessage(`Broker open ${brokerUrl}`);
+      if (DEBUG_BROKER) console.log("[BROKER] Socket opened, registering as unknown");
       registerBrokerUnknown();
-      registerBrokerClient();
+      // Only register as POS if already logged in; otherwise wait for login
+      if (state.user) {
+        if (DEBUG_BROKER) console.log("[BROKER] User already logged in, registering as POS");
+        registerBrokerClient();
+      }
       if (state.brokerReconnectTimer) {
         clearTimeout(state.brokerReconnectTimer);
         state.brokerReconnectTimer = null;
@@ -263,11 +272,13 @@ function initBroker() {
     ws.onclose = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
       showStatusMessage(`Broker close ${brokerUrl}`);
+      if (DEBUG_BROKER) console.log("[BROKER] Socket closed");
       scheduleBrokerReconnect();
     };
     ws.onerror = () => {
       [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = "OFF");
       showStatusMessage(`Broker error ${brokerUrl}`);
+      if (DEBUG_BROKER) console.log("[BROKER] Socket error");
       scheduleBrokerReconnect();
     };
     ws.onmessage = async (evt) => {
@@ -281,6 +292,7 @@ function initBroker() {
         state.brokerId = payload.id || null;
         const label = payload.id ? `broker${payload.id}` : "OK";
         state.brokerLabel = label;
+        if (DEBUG_BROKER) console.log(`[BROKER] REGISTERED received: id=${state.brokerId}, label=${label}`);
         [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
         return;
       }
@@ -307,8 +319,16 @@ function initBroker() {
 
 function scheduleBrokerReconnect() {
   if (state.brokerReconnectTimer) return;
+  // Reset registration state when reconnecting
+  state.brokerRegisteredAsUnknown = false;
+  state.brokerRegisteredAsPos = false;
+  if (state.brokerRegistrationRetryTimer) {
+    clearTimeout(state.brokerRegistrationRetryTimer);
+    state.brokerRegistrationRetryTimer = null;
+  }
   state.brokerReconnectTimer = setTimeout(() => {
     state.brokerReconnectTimer = null;
+    if (DEBUG_BROKER) console.log("[BROKER] Reconnecting...");
     initBroker();
   }, 3000);
 }
@@ -350,7 +370,14 @@ function ensureDeviceId() {
 }
 
 function registerBrokerUnknown() {
-  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) return;
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerUnknown: socket not ready, will retry");
+    return;
+  }
+  if (state.brokerRegisteredAsUnknown) {
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerUnknown: already registered");
+    return;
+  }
   // Register as unknown so we always get a broker id back (label becomes broker<N>).
   // Later, after login/bootstrap, registerBrokerClient() upgrades the role to "pos".
   const payload = {
@@ -359,15 +386,28 @@ function registerBrokerUnknown() {
     deviceId: ensureDeviceId()
   };
   try {
+    if (DEBUG_BROKER) console.log("[BROKER] Sending REGISTER unknown:", payload);
     state.brokerWs.send(JSON.stringify(payload));
-  } catch (_) {}
+    state.brokerRegisteredAsUnknown = true;
+  } catch (e) {
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerUnknown send failed:", e.message);
+  }
 }
 
 function registerBrokerClient() {
-  if (!state.user) return;
+  if (!state.user) {
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerClient: no user logged in yet");
+    return;
+  }
   if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
     // Socket not ready — schedule a retry so registration isn't silently lost
-    setTimeout(() => registerBrokerClient(), 1000);
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerClient: socket not ready, scheduling retry");
+    if (state.brokerRegistrationRetryTimer) clearTimeout(state.brokerRegistrationRetryTimer);
+    state.brokerRegistrationRetryTimer = setTimeout(() => registerBrokerClient(), 1000);
+    return;
+  }
+  if (state.brokerRegisteredAsPos) {
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerClient: already registered as POS");
     return;
   }
   ensureDeviceId();
@@ -379,10 +419,14 @@ function registerBrokerClient() {
     userName: state.user?.name || ""
   };
   try {
+    if (DEBUG_BROKER) console.log("[BROKER] Sending REGISTER pos:", payload);
     state.brokerWs.send(JSON.stringify(payload));
-  } catch (_) {
+    state.brokerRegisteredAsPos = true;
+  } catch (e) {
     // Send failed — retry
-    setTimeout(() => registerBrokerClient(), 1000);
+    if (DEBUG_BROKER) console.log("[BROKER] registerBrokerClient send failed:", e.message);
+    if (state.brokerRegistrationRetryTimer) clearTimeout(state.brokerRegistrationRetryTimer);
+    state.brokerRegistrationRetryTimer = setTimeout(() => registerBrokerClient(), 1000);
   }
 }
 
@@ -554,6 +598,8 @@ async function bootstrap() {
   renderTables();
   renderCategories();
   show(els.startScreen);
+  // Ensure broker registration as POS after bootstrap
+  if (DEBUG_BROKER) console.log("[BROKER] bootstrap complete, registering as POS");
   registerBrokerClient();
 }
 
@@ -1146,6 +1192,12 @@ function resetClientState() {
   state.paydeskTable = null;
   state.notDelivered = [];
   state.lastSync = "-";
+  // Reset broker registration state so we can re-register after login
+  state.brokerRegisteredAsPos = false;
+  if (state.brokerRegistrationRetryTimer) {
+    clearTimeout(state.brokerRegistrationRetryTimer);
+    state.brokerRegistrationRetryTimer = null;
+  }
   if (els.startMessageBody) {
     els.startMessageBody.textContent = "Bereit.";
   }
