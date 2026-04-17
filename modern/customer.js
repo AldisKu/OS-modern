@@ -263,7 +263,11 @@ function clearSavedPosId() {
 }
 
 function openPosSelector() {
-  // Request fresh POS list and show selection screen
+  // Always show selection screen when clicking on broker ID
+  state.selectedPosId = null;
+  clearSavedPosId();
+  show(els.pairScreen);
+  // Request fresh POS list
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "REQUEST_POS_LIST" }));
   }

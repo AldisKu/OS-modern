@@ -171,6 +171,10 @@ wss.on("connection", (ws, req) => {
         client.send(JSON.stringify({ type: "POS_OFFLINE", posId: ws.meta.id, ts: Date.now() }));
         console.log(`POS_OFFLINE: POS id=${ws.meta.id} logged out, notifying display id=${client.meta.id}`);
       }
+      // Downgrade POS role to unknown so it doesn't appear in POS_LIST anymore
+      ws.meta.role = "unknown";
+      // Send updated POS_LIST to all displays (removes the logged-out POS)
+      sendPosListToDisplays();
       return;
     }
     if (msg.type === "DISPLAY_UPDATE" || msg.type === "DISPLAY_IDLE" || msg.type === "DISPLAY_EBON") {
