@@ -107,9 +107,15 @@
         requestPosList();
       };
       ws.onclose = function () {
+        // POS went offline - clear saved POS ID and go to start screen
+        state.selectedPosId = null;
+        clearSavedPosId();
         show(els.pairScreen);
       };
       ws.onerror = function () {
+        // POS went offline - clear saved POS ID and go to start screen
+        state.selectedPosId = null;
+        clearSavedPosId();
         show(els.pairScreen);
       };
       ws.onmessage = function (evt) {
@@ -122,6 +128,14 @@
         if (msg.type === "DISPLAY_EBON") return handleEbon(msg);
         if (msg.type === "DISPLAY_IDLE") {
           if (!(state.qrActiveUntil && Date.now() < state.qrActiveUntil)) showIdle();
+        }
+        if (msg.type === "POS_OFFLINE") {
+          // POS went offline - clear saved POS ID and go to start screen
+          if (msg.posId === state.selectedPosId) {
+            state.selectedPosId = null;
+            clearSavedPosId();
+            show(els.pairScreen);
+          }
         }
       };
     } catch (_) {
@@ -231,6 +245,12 @@
     } catch (_) {
       return null;
     }
+  }
+
+  function clearSavedPosId() {
+    try {
+      localStorage.removeItem("customer_selected_pos_id");
+    } catch (_) {}
   }
 
   function updateDisplayHash() {

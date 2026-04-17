@@ -152,6 +152,25 @@ wss.on("connection", (ws, req) => {
     }
     if (msg.type === "SUBSCRIBE" && ws.meta.role === "display") {
       ws.meta.targetPosId = msg.posId || null;
+      // Notify the POS that a display connected
+      if (msg.posId) {
+        const posWs = Array.from(clients).find(c => c.meta && c.meta.role === "pos" && c.meta.id === msg.posId);
+        if (posWs && posWs.readyState === posWs.OPEN) {
+          posWs.send(JSON.stringify({ type: "DISPLAY_CONNECTED", displayId: ws.meta.id, ts: Date.now() }));
+          console.log(`DISPLAY_CONNECTED: display id=${ws.meta.id} connected to POS id=${msg.posId}`);
+        }
+      }
+      return;
+    }
+    if (msg.type === "POS_LOGOUT" && ws.meta.role === "pos") {
+      // POS is logging out - notify all connected displays
+      for (const client of clients) {
+        if (client.readyState !== client.OPEN) continue;
+        if (!client.meta || client.meta.role !== "display") continue;
+        if (client.meta.targetPosId !== ws.meta.id) continue;
+        client.send(JSON.stringify({ type: "POS_OFFLINE", posId: ws.meta.id, ts: Date.now() }));
+        console.log(`POS_OFFLINE: POS id=${ws.meta.id} logged out, notifying display id=${client.meta.id}`);
+      }
       return;
     }
     if (msg.type === "DISPLAY_UPDATE" || msg.type === "DISPLAY_IDLE" || msg.type === "DISPLAY_EBON") {
@@ -170,6 +189,14 @@ wss.on("connection", (ws, req) => {
   ws.on("close", () => {
     clients.delete(ws);
     console.log(`CLOSE id=${ws.meta && ws.meta.id ? ws.meta.id : "?"} remote=${ws.meta ? ws.meta.remote : ""}`);
+    // If a display disconnected, notify the POS it was connected to
+    if (ws.meta && ws.meta.role === "display" && ws.meta.targetPosId) {
+      const posWs = Array.from(clients).find(c => c.meta && c.meta.role === "pos" && c.meta.id === ws.meta.targetPosId);
+      if (posWs && posWs.readyState === posWs.OPEN) {
+        posWs.send(JSON.stringify({ type: "DISPLAY_DISCONNECTED", displayId: ws.meta.id, ts: Date.now() }));
+        console.log(`DISPLAY_DISCONNECTED: display id=${ws.meta.id} disconnected from POS id=${ws.meta.targetPosId}`);
+      }
+    }
     sendPosListToDisplays();
   });
   ws.on("error", () => {

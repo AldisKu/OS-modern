@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "28";
+const APP_VERSION = "29";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -18,6 +18,7 @@ const els = {
 
   statusUser: document.getElementById("status-user"),
   statusBroker: document.getElementById("status-broker"),
+  statusDisplay: document.getElementById("status-display"),
   statusOnline: document.getElementById("status-online"),
   statusSync: document.getElementById("status-sync"),
   statusVersion: document.getElementById("status-version"),
@@ -124,6 +125,7 @@ const state = {
   brokerRegisteredAsUnknown: false,
   brokerRegisteredAsPos: false,
   brokerRegistrationRetryTimer: null,
+  displayConnected: false,
   clientPollMs: 120000,
   lastServerVersion: null,
   lastServerVersionAt: 0,
@@ -294,6 +296,18 @@ function initBroker() {
         state.brokerLabel = label;
         if (DEBUG_BROKER) console.log(`[BROKER] REGISTERED received: id=${state.brokerId}, label=${label}`);
         [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
+        return;
+      }
+      if (payload && payload.type === "DISPLAY_CONNECTED") {
+        state.displayConnected = true;
+        if (DEBUG_BROKER) console.log(`[BROKER] Display connected: id=${payload.displayId}`);
+        updateStatus();
+        return;
+      }
+      if (payload && payload.type === "DISPLAY_DISCONNECTED") {
+        state.displayConnected = false;
+        if (DEBUG_BROKER) console.log(`[BROKER] Display disconnected: id=${payload.displayId}`);
+        updateStatus();
         return;
       }
       if (payload && payload.type === "UPDATE_REQUIRED") {
@@ -615,6 +629,7 @@ function updateStatus() {
   const name = state.user?.name || "-";
   [els.statusUser, els.orderUser, els.paydeskUser].filter(Boolean).forEach(el => el.textContent = name);
   [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel || "OK");
+  [els.statusDisplay].filter(Boolean).forEach(el => el.textContent = state.displayConnected ? "OK" : "-");
   [els.statusOnline, els.orderOnline, els.paydeskOnline].filter(Boolean).forEach(el => el.textContent = "OK");
   [els.statusSync, els.orderSync, els.paydeskSync].filter(Boolean).forEach(el => el.textContent = state.lastSync);
   [els.statusVersion, els.orderVersion].filter(Boolean).forEach(el => el.textContent = APP_VERSION);
@@ -1896,6 +1911,10 @@ function sendDisplayEbon(ebonUrl, ebonRef) {
 }
 
 async function doLogout() {
+  // Send logout message to broker to notify display
+  if (state.brokerWs && state.brokerWs.readyState === state.brokerWs.OPEN) {
+    state.brokerWs.send(JSON.stringify({ type: "POS_LOGOUT" }));
+  }
   await api("logout", {});
   resetClientState();
   show(els.loginScreen);
