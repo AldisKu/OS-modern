@@ -15,7 +15,7 @@
 - Netzwerk-Traffic reduziert (v22): refresh_menu statt bootstrap, Poll nur bei State-Aenderung, gecachte Tischdaten.
 - Kundendisplay-Sync gefixt (v23): POS sendet DISPLAY_IDLE nach Bestellung/Zahlung; customer.js startet Idle-Timer nach jedem Update; customer.css kompatibel mit alten Browsern.
 - iPad Broker-Registrierung gefixt (v25): Separate 'unknown' und 'pos' Registrierungsphasen, nur 'pos' nach Login, explizites State-Tracking, Debug-Logging.
-- Kundendisplay POS-Auswahl gefixt: Unterbrechen nicht aktive Verbindung wenn neue Kasse online kommt; zeige verbundene Kassen-ID statt 'customer.js'; klickbar zum Wechsel.
+- Kundendisplay POS-Auswahl gefixt: Unterbrechen nicht aktive Verbindung wenn neue Kasse online kommt; zeige verbundene Kassen-ID statt 'customer.js'; klickbar zum Wechsel (modern + legacy).
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
