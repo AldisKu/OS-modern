@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "23";
+const APP_VERSION = "24";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 
@@ -217,7 +217,13 @@ async function init() {
 
 function initBroker() {
   if (!brokerUrl) return;
-  if (state.brokerWs && (state.brokerWs.readyState === WebSocket.OPEN || state.brokerWs.readyState === WebSocket.CONNECTING)) return;
+  if (state.brokerWs) {
+    if (state.brokerWs.readyState === WebSocket.OPEN) return;
+    // Close stale connections (e.g. stuck in CONNECTING on iPad Safari)
+    if (state.brokerWs.readyState === WebSocket.CONNECTING) {
+      try { state.brokerWs.close(); } catch (_) {}
+    }
+  }
   showStatusMessage(`Broker connect ${brokerUrl}`);
   try {
     const ws = new WebSocket(brokerUrl);
@@ -358,9 +364,12 @@ function registerBrokerUnknown() {
 }
 
 function registerBrokerClient() {
-  // Some browsers expose OPEN only on the WebSocket constructor, not on instances.
-  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) return;
   if (!state.user) return;
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    // Socket not ready — schedule a retry so registration isn't silently lost
+    setTimeout(() => registerBrokerClient(), 1000);
+    return;
+  }
   ensureDeviceId();
   const payload = {
     type: "REGISTER",
@@ -369,7 +378,12 @@ function registerBrokerClient() {
     userId: state.user?.id || "",
     userName: state.user?.name || ""
   };
-  state.brokerWs.send(JSON.stringify(payload));
+  try {
+    state.brokerWs.send(JSON.stringify(payload));
+  } catch (_) {
+    // Send failed — retry
+    setTimeout(() => registerBrokerClient(), 1000);
+  }
 }
 
 function bindMenuButtons() {
