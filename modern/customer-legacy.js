@@ -146,10 +146,30 @@
       show(els.pairScreen);
       setPairSelectLoading("Keine Kasse online");
       if (els.pairApply) els.pairApply.onclick = null;
+      state.selectedPosId = null;
+      updateDisplayHash();
       return;
     }
 
-    if (list.length === 1) {
+    // If already connected to a POS, don't interrupt - just update the list
+    if (state.selectedPosId) {
+      // Check if currently connected POS is still in the list
+      var stillConnected = false;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === state.selectedPosId) {
+          stillConnected = true;
+          break;
+        }
+      }
+      if (stillConnected) {
+        // Stay connected, don't show selection screen
+        return;
+      }
+      // If connected POS went offline, show selection screen
+    }
+
+    if (list.length === 1 && !state.selectedPosId) {
+      // Only auto-connect if not already connected
       subscribeToPos(list[0].id);
       return;
     }
@@ -176,7 +196,29 @@
     state.selectedPosId = posId;
     safeSend({ type: "SUBSCRIBE", posId: posId });
     show(els.displayScreen);
+    updateDisplayHash();
     showIdle();
+  }
+
+  function updateDisplayHash() {
+    var el = document.getElementById("display-hash");
+    if (!el) return;
+    if (state.selectedPosId) {
+      el.textContent = "broker" + state.selectedPosId;
+      el.style.cursor = "pointer";
+      el.onclick = openPosSelector;
+    } else {
+      el.textContent = "customer-legacy";
+      el.style.cursor = "default";
+      el.onclick = null;
+    }
+  }
+
+  function openPosSelector() {
+    // Request fresh POS list and show selection screen
+    if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ type: "REQUEST_POS_LIST" }));
+    }
   }
 
   function escapeHtml(s) {
@@ -367,6 +409,7 @@
   function init() {
     show(els.pairScreen);
     setPairSelectLoading("Suche...");
+    updateDisplayHash();
 
     if (els.pairRefresh) {
       els.pairRefresh.onclick = function () {
