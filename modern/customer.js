@@ -3,8 +3,15 @@ function showHash() {
   const el = document.getElementById("display-hash");
   if (el) {
     try {
-      const url = new URL(import.meta.url);
-      el.textContent = url.pathname.split("/").pop();
+      // Show connected POS ID instead of filename
+      if (state.selectedPosId) {
+        el.textContent = `broker${state.selectedPosId}`;
+        el.style.cursor = "pointer";
+        el.onclick = openPosSelector;
+      } else {
+        const url = new URL(import.meta.url);
+        el.textContent = url.pathname.split("/").pop();
+      }
     } catch (_) {
       el.textContent = "customer.js";
     }
@@ -145,6 +152,18 @@ function requestPosList() {
 
 function handlePosList(list) {
   if (!Array.isArray(list)) list = [];
+  
+  // If already connected to a POS, don't interrupt - just update the list
+  if (state.selectedPosId) {
+    // Check if currently connected POS is still in the list
+    const stillConnected = list.some(p => p.id === state.selectedPosId);
+    if (stillConnected) {
+      // Stay connected, don't show selection screen
+      return;
+    }
+    // If connected POS went offline, show selection screen
+  }
+  
   if (list.length === 0) {
     show(els.pairScreen);
     els.pairSelect.innerHTML = "";
@@ -155,12 +174,18 @@ function handlePosList(list) {
     opt.selected = true;
     els.pairSelect.appendChild(opt);
     els.pairApply.onclick = null;
+    state.selectedPosId = null;
+    showHash();
     return;
   }
-  if (list.length === 1) {
+  
+  if (list.length === 1 && !state.selectedPosId) {
+    // Only auto-connect if not already connected
     subscribeToPos(list[0].id);
     return;
   }
+  
+  // Multiple POS available - show selection screen
   show(els.pairScreen);
   els.pairSelect.innerHTML = "";
   list.forEach(p => {
@@ -182,10 +207,18 @@ function subscribeToPos(posId) {
     state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId }));
   }
   show(els.displayScreen);
+  showHash();
   if (document.documentElement.requestFullscreen) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
   showIdle();
+}
+
+function openPosSelector() {
+  // Request fresh POS list and show selection screen
+  if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+    state.ws.send(JSON.stringify({ type: "REQUEST_POS_LIST" }));
+  }
 }
 
 function handleDisplayUpdate(msg) {
