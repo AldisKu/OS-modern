@@ -37,6 +37,7 @@ function getPosList() {
 function sendPosListToDisplays() {
   const list = getPosList();
   const payload = JSON.stringify({ type: "POS_LIST", list, ts: Date.now() });
+  console.log(`SEND_POS_LIST to displays: ${list.length} POS clients`);
   for (const ws of clients) {
     if (ws.readyState === ws.OPEN && ws.meta && ws.meta.role === "display") {
       ws.send(payload);
@@ -135,15 +136,18 @@ wss.on("connection", (ws, req) => {
       ws.meta.deviceId = msg.deviceId || "";
       ws.meta.userId = msg.userId || "";
       ws.meta.userName = msg.userName || "";
+      const posList = getPosList();
       console.log(
-        `REGISTER id=${ws.meta.id} role=${ws.meta.role} deviceId=${ws.meta.deviceId} user=${ws.meta.userName} remote=${ws.meta.remote} origin=${ws.meta.origin}`
+        `REGISTER id=${ws.meta.id} role=${ws.meta.role} deviceId=${ws.meta.deviceId} user=${ws.meta.userName} remote=${ws.meta.remote} origin=${ws.meta.origin} | POS_LIST: ${posList.length}`
       );
-      ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, list: getPosList(), ts: Date.now() }));
+      ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, list: posList, ts: Date.now() }));
       sendPosListToDisplays();
       return;
     }
     if (msg.type === "REQUEST_POS_LIST") {
-      ws.send(JSON.stringify({ type: "POS_LIST", list: getPosList(), ts: Date.now() }));
+      const posList = getPosList();
+      console.log(`REQUEST_POS_LIST from id=${ws.meta.id} | POS_LIST: ${posList.length}`);
+      ws.send(JSON.stringify({ type: "POS_LIST", list: posList, ts: Date.now() }));
       return;
     }
     if (msg.type === "SUBSCRIBE" && ws.meta.role === "display") {
