@@ -15,6 +15,7 @@
 - Netzwerk-Traffic reduziert (v22): refresh_menu statt bootstrap, Poll nur bei State-Aenderung, gecachte Tischdaten.
 - Kundendisplay-Sync gefixt (v23): POS sendet DISPLAY_IDLE nach Bestellung/Zahlung; customer.js startet Idle-Timer nach jedem Update; customer.css kompatibel mit alten Browsern.
 - iPad Broker-Registrierung gefixt (v25): Separate 'unknown' und 'pos' Registrierungsphasen, nur 'pos' nach Login, explizites State-Tracking, Debug-Logging.
+- Kundendisplay POS-Auswahl gefixt: Unterbrechen nicht aktive Verbindung wenn neue Kasse online kommt; zeige verbundene Kassen-ID statt 'customer.js'; klickbar zum Wechsel.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
@@ -32,6 +33,7 @@
 - Lokale Konfiguration (Menuepunkt Lokale Konfiguration): dauerhaft speichern (IndexedDB oder localStorage).
 - Kasse-Fehler-Handling bei Doppelzahlung: UI + Tischliste refreshen.
 - iPad Broker-Registrierung: Testen auf problematischem iPad mit v25 um zu verifizieren dass Race-Condition behoben ist.
+- iPad Broker-Registrierung: Broker Logs sammeln um Root-Cause zu identifizieren (siehe DEBUGGING_GUIDE_iPad_Broker.md).
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:
