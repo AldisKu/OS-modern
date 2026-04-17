@@ -182,29 +182,7 @@
       // If connected POS went offline, show selection screen
     }
 
-    // Check if we have a previously saved POS ID
-    var savedPosId = loadSavedPosId();
-    if (savedPosId) {
-      var savedPosExists = false;
-      for (var i = 0; i < list.length; i++) {
-        if (list[i].id === savedPosId) {
-          savedPosExists = true;
-          break;
-        }
-      }
-      if (savedPosExists) {
-        // Restore previous connection
-        subscribeToPos(savedPosId);
-        return;
-      }
-    }
-
-    if (list.length === 1 && !state.selectedPosId) {
-      // Only auto-connect if not already connected
-      subscribeToPos(list[0].id);
-      return;
-    }
-
+    // Always show selection screen - user must manually select POS
     show(els.pairScreen);
     els.pairSelect.innerHTML = "";
     for (var i = 0; i < list.length; i++) {

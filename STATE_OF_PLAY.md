@@ -21,6 +21,7 @@
 - Pull-Update Status gefixt (v28): Erkennt jetzt korrekt wenn Broker-Push gleichzeitig mit Pull-Update ankommt (Timestamp-Vergleich >= zu > geaendert).
 - Kundendisplay POS-Logout und Offline-Erkennung (v29): POS sendet POS_LOGOUT beim Logout; Broker notifiziert Display mit POS_OFFLINE; Display geht zu Start-Screen und loescht gespeicherte Kassen-ID. POS zeigt Display-Status in Info-Zeile (OK oder -) an.
 - Kundendisplay POS-Auswahl gefixt (v30): Klick auf Broker-ID zeigt immer Selection-Screen; Broker downgradet POS-Rolle zu "unknown" beim Logout und sendet aktualisierte POS_LIST; Display kann nicht mehr auf ausgeloggte Kasse zugreifen.
+- Broker ID und Display-Verbindung gefixt (v31): Customer Display zeigt immer Selection-Screen (keine Auto-Reconnect); POS schließt Broker-Verbindung beim Logout um neue ID zu bekommen; Display-Status wird korrekt zurückgesetzt beim Logout; verhindert Mismatch zwischen POS und Display nach Login/Logout-Zyklus.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.

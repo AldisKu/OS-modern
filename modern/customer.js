@@ -194,24 +194,7 @@ function handlePosList(list) {
     return;
   }
   
-  // Check if we have a previously saved POS ID
-  const savedPosId = loadSavedPosId();
-  if (savedPosId) {
-    const savedPosExists = list.some(p => p.id === savedPosId);
-    if (savedPosExists) {
-      // Restore previous connection
-      subscribeToPos(savedPosId);
-      return;
-    }
-  }
-  
-  if (list.length === 1 && !state.selectedPosId) {
-    // Only auto-connect if not already connected
-    subscribeToPos(list[0].id);
-    return;
-  }
-  
-  // Multiple POS available - show selection screen
+  // Always show selection screen - user must manually select POS
   show(els.pairScreen);
   els.pairSelect.innerHTML = "";
   list.forEach(p => {

@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "30";
+const APP_VERSION = "31";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -1914,7 +1914,15 @@ async function doLogout() {
   // Send logout message to broker to notify display
   if (state.brokerWs && state.brokerWs.readyState === state.brokerWs.OPEN) {
     state.brokerWs.send(JSON.stringify({ type: "POS_LOGOUT" }));
+    // Close broker connection so we get a new ID on next login
+    try { state.brokerWs.close(); } catch (_) {}
   }
+  state.brokerWs = null;
+  state.brokerId = null;
+  state.brokerLabel = "OK";
+  state.displayConnected = false;
+  state.brokerRegisteredAsUnknown = false;
+  state.brokerRegisteredAsPos = false;
   await api("logout", {});
   resetClientState();
   show(els.loginScreen);
