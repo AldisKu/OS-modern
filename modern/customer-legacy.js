@@ -168,6 +168,23 @@
       // If connected POS went offline, show selection screen
     }
 
+    // Check if we have a previously saved POS ID
+    var savedPosId = loadSavedPosId();
+    if (savedPosId) {
+      var savedPosExists = false;
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].id === savedPosId) {
+          savedPosExists = true;
+          break;
+        }
+      }
+      if (savedPosExists) {
+        // Restore previous connection
+        subscribeToPos(savedPosId);
+        return;
+      }
+    }
+
     if (list.length === 1 && !state.selectedPosId) {
       // Only auto-connect if not already connected
       subscribeToPos(list[0].id);
@@ -194,10 +211,26 @@
 
   function subscribeToPos(posId) {
     state.selectedPosId = posId;
+    savePosId(posId);
     safeSend({ type: "SUBSCRIBE", posId: posId });
     show(els.displayScreen);
     updateDisplayHash();
     showIdle();
+  }
+
+  function savePosId(posId) {
+    try {
+      localStorage.setItem("customer_selected_pos_id", String(posId));
+    } catch (_) {}
+  }
+
+  function loadSavedPosId() {
+    try {
+      var saved = localStorage.getItem("customer_selected_pos_id");
+      return saved ? Number(saved) : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   function updateDisplayHash() {

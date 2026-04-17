@@ -2604,7 +2604,9 @@ function startPolling() {
           const changedAt = now;
           setTimeout(async () => {
             if (state.lastServerVersion !== changedVersion) return;
-            if (state.lastBrokerUpdateAt >= changedAt) return;
+            // Check if broker update arrived AFTER the version change was detected
+            // Use > instead of >= to allow for broker updates that arrive at the same millisecond
+            if (state.lastBrokerUpdateAt > changedAt) return;
             if (state.missedUpdateVersion === changedVersion) return;
             state.missedUpdateVersion = changedVersion;
             await logClientError("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");

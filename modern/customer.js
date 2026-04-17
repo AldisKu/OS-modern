@@ -179,6 +179,17 @@ function handlePosList(list) {
     return;
   }
   
+  // Check if we have a previously saved POS ID
+  const savedPosId = loadSavedPosId();
+  if (savedPosId) {
+    const savedPosExists = list.some(p => p.id === savedPosId);
+    if (savedPosExists) {
+      // Restore previous connection
+      subscribeToPos(savedPosId);
+      return;
+    }
+  }
+  
   if (list.length === 1 && !state.selectedPosId) {
     // Only auto-connect if not already connected
     subscribeToPos(list[0].id);
@@ -203,6 +214,7 @@ function handlePosList(list) {
 
 function subscribeToPos(posId) {
   state.selectedPosId = posId;
+  savePosId(posId);
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
     state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId }));
   }
@@ -212,6 +224,21 @@ function subscribeToPos(posId) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
   showIdle();
+}
+
+function savePosId(posId) {
+  try {
+    localStorage.setItem("customer_selected_pos_id", String(posId));
+  } catch (_) {}
+}
+
+function loadSavedPosId() {
+  try {
+    const saved = localStorage.getItem("customer_selected_pos_id");
+    return saved ? Number(saved) : null;
+  } catch (_) {
+    return null;
+  }
 }
 
 function openPosSelector() {
