@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "31";
+const APP_VERSION = "32";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -130,7 +130,6 @@ const state = {
   lastServerVersion: null,
   lastServerVersionAt: 0,
   lastBrokerUpdateAt: 0,
-  missedUpdateVersion: null,
   pendingRoomRefresh: false,
   priceEntry: null
 };
@@ -2627,18 +2626,6 @@ function startPolling() {
             await fetchExistingOrders();
             renderOrderItems();
           }
-          const changedVersion = stateRes.version;
-          const changedAt = now;
-          setTimeout(async () => {
-            if (state.lastServerVersion !== changedVersion) return;
-            // Check if broker update arrived AFTER the version change was detected
-            // Use > instead of >= to allow for broker updates that arrive at the same millisecond
-            if (state.lastBrokerUpdateAt > changedAt) return;
-            if (state.missedUpdateVersion === changedVersion) return;
-            state.missedUpdateVersion = changedVersion;
-            await logClientError("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
-            showWarnPopup("Hinweis: broker hat Update unterschlagen, Sysadmin informieren");
-          }, BROKER_MISS_GRACE_MS);
           state.lastServerVersionAt = now;
         }
         if (!state.lastServerVersion) {
