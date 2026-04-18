@@ -23,6 +23,7 @@
 - Kundendisplay POS-Auswahl gefixt (v30): Klick auf Broker-ID zeigt immer Selection-Screen; Broker downgradet POS-Rolle zu "unknown" beim Logout und sendet aktualisierte POS_LIST; Display kann nicht mehr auf ausgeloggte Kasse zugreifen.
 - Broker ID und Display-Verbindung gefixt (v31): Customer Display zeigt immer Selection-Screen (keine Auto-Reconnect); POS schließt Broker-Verbindung beim Logout um neue ID zu bekommen; Display-Status wird korrekt zurückgesetzt beim Logout; verhindert Mismatch zwischen POS und Display nach Login/Logout-Zyklus.
 - Pull-Update Warnung entfernt (v32): Broker-Fallback-Warnung "broker hat Update unterschlagen" entfernt; POS vertraut auf Pull-Update wenn Broker-Push nicht ankommt; vereinfacht Fehlerbehandlung.
+- Stabiler Client-Name implementiert (v33): POS generiert und speichert stabilen Client-Namen (POS-XXXXXX) in localStorage; Broker routet Nachrichten nach Client-Namen statt temporärer Broker-IDs; Kundendisplay speichert Client-Namen lokal und verbindet sich nach Reconnect automatisch wieder; zeigt "Client: <name>" statt "Broker: <id>"; löst Problem dass WebSocket-Reconnect die POS-Display-Verbindung bricht.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
@@ -42,6 +43,7 @@
 - iPad Broker-Registrierung: Testen auf problematischem iPad mit v25 um zu verifizieren dass Race-Condition behoben ist.
 - iPad Broker-Registrierung: Broker Logs sammeln um Root-Cause zu identifizieren (siehe DEBUGGING_GUIDE_iPad_Broker.md).
 - **Broker sollte Änderungen an Tischen zu ALLEN POS broadcasten**: Wenn eine Kasse eine Änderung macht (Bestellung, Zahlung, etc.), soll Broker UPDATE_REQUIRED an alle anderen POS senden. POS sollte eigene Änderungen (vom Broker zurückgesendet) korrekt verarbeiten können.
+- **Stable Client Name testen**: v33 mit stabilen Client-Namen testen - POS backgrounding/return sollte Verbindung zu Display halten.
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:
