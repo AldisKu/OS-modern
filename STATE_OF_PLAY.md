@@ -23,6 +23,7 @@
 - Kundendisplay POS-Auswahl gefixt (v30): Klick auf Broker-ID zeigt immer Selection-Screen; Broker downgradet POS-Rolle zu "unknown" beim Logout und sendet aktualisierte POS_LIST; Display kann nicht mehr auf ausgeloggte Kasse zugreifen.
 - Broker ID und Display-Verbindung gefixt (v31): Customer Display zeigt immer Selection-Screen (keine Auto-Reconnect); POS schließt Broker-Verbindung beim Logout um neue ID zu bekommen; Display-Status wird korrekt zurückgesetzt beim Logout; verhindert Mismatch zwischen POS und Display nach Login/Logout-Zyklus.
 - Pull-Update Warnung entfernt (v32): Broker-Fallback-Warnung "broker hat Update unterschlagen" entfernt; POS vertraut auf Pull-Update wenn Broker-Push nicht ankommt; vereinfacht Fehlerbehandlung.
+- Cart-Grouping in Datenstruktur (v33): Identische Items werden in Cart-Daten gruppiert (nicht nur auf Screen); wenn Item 2x geklickt wird, wird Menge addiert statt neuer Eintrag erstellt; Item wird nach oben verschoben (neueste oben); Plus/Minus funktioniert korrekt mit richtiger Menge beim Senden.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
