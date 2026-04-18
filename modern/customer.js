@@ -68,6 +68,19 @@ async function init() {
   show(els.pairScreen);
   await loadServerConfig();
   connectBroker();
+  
+  // Try to auto-reconnect to previously connected POS
+  const savedPosId = loadSavedPosId();
+  const savedClientName = loadSavedClientName();
+  if (savedPosId && savedClientName) {
+    // Wait a moment for broker connection to establish
+    setTimeout(() => {
+      if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+        subscribeToPos(savedPosId, savedClientName);
+      }
+    }, 500);
+  }
+  
   if (els.pairRefresh) {
     els.pairRefresh.onclick = () => {
       els.pairSelect.innerHTML = "";

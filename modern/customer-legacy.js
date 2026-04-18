@@ -474,6 +474,18 @@
 
     loadServerConfig(function () {
       connectBroker();
+      
+      // Try to auto-reconnect to previously connected POS
+      var savedPosId = loadSavedPosId();
+      var savedClientName = loadSavedClientName();
+      if (savedPosId && savedClientName) {
+        // Wait a moment for broker connection to establish
+        setTimeout(function () {
+          if (state.ws && state.ws.readyState === WebSocket.OPEN) {
+            subscribeToPos(savedPosId, savedClientName);
+          }
+        }, 500);
+      }
     });
   }
 
