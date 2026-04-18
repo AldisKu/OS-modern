@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "33";
+const APP_VERSION = "32";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -1133,7 +1133,7 @@ function addProductToCart() {
 function addToCart(prod, extras, option, qty, forceTogo) {
   const tableId = state.selectedTable.id;
   const nowTs = Date.now();
-  const newItem = {
+  const item = {
     _id: Date.now(),
     prodid: prod.id,
     name: prod.longname || prod.name,
@@ -1147,23 +1147,7 @@ function addToCart(prod, extras, option, qty, forceTogo) {
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
-  
-  // Check if identical item already exists in cart
-  const key = cartKey(newItem);
-  const existingIdx = cart.findIndex(c => cartKey(c) === key);
-  
-  if (existingIdx >= 0) {
-    // Item exists: add quantity and move to top
-    cart[existingIdx].unitamount = Number(cart[existingIdx].unitamount || 1) + qty;
-    cart[existingIdx].ts = nowTs; // Update timestamp to move to top
-    // Move to end (will be sorted by ts descending in groupCartItems)
-    const item = cart.splice(existingIdx, 1)[0];
-    cart.push(item);
-  } else {
-    // New item: add to cart
-    cart.push(newItem);
-  }
-  
+  cart.push(item);
   markDisplayActivity();
   saveCart(tableId);
   renderOrderItems();
@@ -1178,7 +1162,7 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice, priceEnt
   if (Number.isFinite(cp) && Math.abs(cp - base) <= 0.0001) {
     normalizedChanged = "NO";
   }
-  const newItem = {
+  const item = {
     _id: Date.now(),
     prodid: prod.id,
     name: prod.longname || prod.name,
@@ -1194,23 +1178,7 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice, priceEnt
   };
   state.cartByTable[tableId] = state.cartByTable[tableId] || [];
   const cart = state.cartByTable[tableId];
-  
-  // Check if identical item already exists in cart
-  const key = cartKey(newItem);
-  const existingIdx = cart.findIndex(c => cartKey(c) === key);
-  
-  if (existingIdx >= 0) {
-    // Item exists: add quantity and move to top
-    cart[existingIdx].unitamount = Number(cart[existingIdx].unitamount || 1) + qty;
-    cart[existingIdx].ts = nowTs; // Update timestamp to move to top
-    // Move to end (will be sorted by ts descending in groupCartItems)
-    const item = cart.splice(existingIdx, 1)[0];
-    cart.push(item);
-  } else {
-    // New item: add to cart
-    cart.push(newItem);
-  }
-  
+  cart.push(item);
   markDisplayActivity();
   saveCart(tableId);
   renderOrderItems();
