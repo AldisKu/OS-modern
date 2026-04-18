@@ -3,9 +3,10 @@ function showHash() {
   const el = document.getElementById("display-hash");
   if (el) {
     try {
-      // Show connected POS ID instead of filename
+      // Show connected POS client name instead of broker ID
       if (state.selectedPosId) {
-        el.textContent = `broker${state.selectedPosId}`;
+        const clientName = loadSavedClientName();
+        el.textContent = clientName ? `Client: ${clientName}` : `broker${state.selectedPosId}`;
         el.style.cursor = "pointer";
         el.onclick = openPosSelector;
       } else {
@@ -198,23 +199,26 @@ function handlePosList(list) {
   show(els.pairScreen);
   els.pairSelect.innerHTML = "";
   list.forEach(p => {
-    const label = `broker${p.id} ${p.userName || ""} ${p.deviceId || ""}`.trim();
+    const label = `${p.clientName || ("broker" + p.id)} ${p.userName || ""} ${p.deviceId || ""}`.trim();
     const opt = document.createElement("option");
     opt.value = String(p.id);
+    opt.dataset.clientName = p.clientName || "";
     opt.textContent = label;
     els.pairSelect.appendChild(opt);
   });
   els.pairApply.onclick = () => {
     const val = Number(els.pairSelect.value);
-    if (val) subscribeToPos(val);
+    const clientName = els.pairSelect.options[els.pairSelect.selectedIndex]?.dataset?.clientName || "";
+    if (val) subscribeToPos(val, clientName);
   };
 }
 
-function subscribeToPos(posId) {
+function subscribeToPos(posId, clientName) {
   state.selectedPosId = posId;
-  savePosId(posId);
+  savePosId(posId, clientName);
   if (state.ws && state.ws.readyState === WebSocket.OPEN) {
-    state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId }));
+    // Send both ID and client name for compatibility
+    state.ws.send(JSON.stringify({ type: "SUBSCRIBE", posId, clientName }));
   }
   show(els.displayScreen);
   showHash();
@@ -224,9 +228,12 @@ function subscribeToPos(posId) {
   showIdle();
 }
 
-function savePosId(posId) {
+function savePosId(posId, clientName) {
   try {
     localStorage.setItem("customer_selected_pos_id", String(posId));
+    if (clientName) {
+      localStorage.setItem("customer_selected_client_name", String(clientName));
+    }
   } catch (_) {}
 }
 
@@ -239,9 +246,18 @@ function loadSavedPosId() {
   }
 }
 
+function loadSavedClientName() {
+  try {
+    return localStorage.getItem("customer_selected_client_name") || null;
+  } catch (_) {
+    return null;
+  }
+}
+
 function clearSavedPosId() {
   try {
     localStorage.removeItem("customer_selected_pos_id");
+    localStorage.removeItem("customer_selected_client_name");
   } catch (_) {}
 }
 

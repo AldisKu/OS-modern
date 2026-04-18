@@ -187,32 +187,37 @@
     els.pairSelect.innerHTML = "";
     for (var i = 0; i < list.length; i++) {
       var p = list[i];
-      var label = ("broker" + p.id + " " + (p.userName || "") + " " + (p.deviceId || "")).replace(/\s+/g, " ").trim();
+      var label = ((p.clientName || ("broker" + p.id)) + " " + (p.userName || "") + " " + (p.deviceId || "")).replace(/\s+/g, " ").trim();
       var opt = document.createElement("option");
       opt.value = String(p.id);
+      opt.dataset.clientName = p.clientName || "";
       opt.textContent = label;
       els.pairSelect.appendChild(opt);
     }
     if (els.pairApply) {
       els.pairApply.onclick = function () {
         var val = Number(els.pairSelect.value);
-        if (val) subscribeToPos(val);
+        var clientName = els.pairSelect.options[els.pairSelect.selectedIndex].dataset.clientName || "";
+        if (val) subscribeToPos(val, clientName);
       };
     }
   }
 
-  function subscribeToPos(posId) {
+  function subscribeToPos(posId, clientName) {
     state.selectedPosId = posId;
-    savePosId(posId);
-    safeSend({ type: "SUBSCRIBE", posId: posId });
+    savePosId(posId, clientName);
+    safeSend({ type: "SUBSCRIBE", posId: posId, clientName: clientName });
     show(els.displayScreen);
     updateDisplayHash();
     showIdle();
   }
 
-  function savePosId(posId) {
+  function savePosId(posId, clientName) {
     try {
       localStorage.setItem("customer_selected_pos_id", String(posId));
+      if (clientName) {
+        localStorage.setItem("customer_selected_client_name", String(clientName));
+      }
     } catch (_) {}
   }
 
@@ -225,9 +230,18 @@
     }
   }
 
+  function loadSavedClientName() {
+    try {
+      return localStorage.getItem("customer_selected_client_name") || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   function clearSavedPosId() {
     try {
       localStorage.removeItem("customer_selected_pos_id");
+      localStorage.removeItem("customer_selected_client_name");
     } catch (_) {}
   }
 
@@ -235,7 +249,8 @@
     var el = document.getElementById("display-hash");
     if (!el) return;
     if (state.selectedPosId) {
-      el.textContent = "broker" + state.selectedPosId;
+      var clientName = loadSavedClientName();
+      el.textContent = clientName ? ("Client: " + clientName) : ("broker" + state.selectedPosId);
       el.style.cursor = "pointer";
       el.onclick = openPosSelector;
     } else {

@@ -9,6 +9,7 @@ const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/php/moder
 const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
 const clients = new Set();
 let nextId = 1;
+const clientsByName = new Map(); // Map of clientName -> ws
 
 function sendAll(msg) {
   const data = JSON.stringify(msg);
@@ -25,6 +26,7 @@ function getPosList() {
     if (ws.meta && ws.meta.role === "pos") {
       list.push({
         id: ws.meta.id,
+        clientName: ws.meta.clientName || "",
         deviceId: ws.meta.deviceId || "",
         userId: ws.meta.userId || "",
         userName: ws.meta.userName || ""
@@ -136,11 +138,24 @@ wss.on("connection", (ws, req) => {
       ws.meta.deviceId = msg.deviceId || "";
       ws.meta.userId = msg.userId || "";
       ws.meta.userName = msg.userName || "";
+      ws.meta.clientName = msg.clientName || "";
+      
+      // If this is a POS with a client name, track it for reconnection
+      if (ws.meta.role === "pos" && ws.meta.clientName) {
+        // If a previous connection with this name exists, close it
+        const oldWs = clientsByName.get(ws.meta.clientName);
+        if (oldWs && oldWs !== ws && oldWs.readyState === oldWs.OPEN) {
+          console.log(`REGISTER: Closing old connection for clientName=${ws.meta.clientName}`);
+          oldWs.close();
+        }
+        clientsByName.set(ws.meta.clientName, ws);
+      }
+      
       const posList = getPosList();
       console.log(
-        `REGISTER id=${ws.meta.id} role=${ws.meta.role} deviceId=${ws.meta.deviceId} user=${ws.meta.userName} remote=${ws.meta.remote} origin=${ws.meta.origin} | POS_LIST: ${posList.length}`
+        `REGISTER id=${ws.meta.id} role=${ws.meta.role} clientName=${ws.meta.clientName} deviceId=${ws.meta.deviceId} user=${ws.meta.userName} remote=${ws.meta.remote} origin=${ws.meta.origin} | POS_LIST: ${posList.length}`
       );
-      ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, list: posList, ts: Date.now() }));
+      ws.send(JSON.stringify({ type: "REGISTERED", id: ws.meta.id, clientName: ws.meta.clientName, list: posList, ts: Date.now() }));
       sendPosListToDisplays();
       return;
     }
@@ -152,13 +167,19 @@ wss.on("connection", (ws, req) => {
     }
     if (msg.type === "SUBSCRIBE" && ws.meta.role === "display") {
       ws.meta.targetPosId = msg.posId || null;
-      // Notify the POS that a display connected
-      if (msg.posId) {
-        const posWs = Array.from(clients).find(c => c.meta && c.meta.role === "pos" && c.meta.id === msg.posId);
-        if (posWs && posWs.readyState === posWs.OPEN) {
-          posWs.send(JSON.stringify({ type: "DISPLAY_CONNECTED", displayId: ws.meta.id, ts: Date.now() }));
-          console.log(`DISPLAY_CONNECTED: display id=${ws.meta.id} connected to POS id=${msg.posId}`);
-        }
+      ws.meta.targetClientName = msg.clientName || null;
+      
+      // Find the target POS (by ID or by client name)
+      let posWs = null;
+      if (msg.clientName) {
+        posWs = clientsByName.get(msg.clientName);
+      } else if (msg.posId) {
+        posWs = Array.from(clients).find(c => c.meta && c.meta.role === "pos" && c.meta.id === msg.posId);
+      }
+      
+      if (posWs && posWs.readyState === posWs.OPEN) {
+        posWs.send(JSON.stringify({ type: "DISPLAY_CONNECTED", displayId: ws.meta.id, ts: Date.now() }));
+        console.log(`DISPLAY_CONNECTED: display id=${ws.meta.id} connected to POS id=${posWs.meta.id} clientName=${posWs.meta.clientName}`);
       }
       return;
     }
@@ -169,7 +190,11 @@ wss.on("connection", (ws, req) => {
         if (!client.meta || client.meta.role !== "display") continue;
         if (client.meta.targetPosId !== ws.meta.id) continue;
         client.send(JSON.stringify({ type: "POS_OFFLINE", posId: ws.meta.id, ts: Date.now() }));
-        console.log(`POS_OFFLINE: POS id=${ws.meta.id} logged out, notifying display id=${client.meta.id}`);
+        console.log(`POS_OFFLINE: POS id=${ws.meta.id} clientName=${ws.meta.clientName} logged out, notifying display id=${client.meta.id}`);
+      }
+      // Remove from client name mapping
+      if (ws.meta.clientName) {
+        clientsByName.delete(ws.meta.clientName);
       }
       // Downgrade POS role to unknown so it doesn't appear in POS_LIST anymore
       ws.meta.role = "unknown";
@@ -192,7 +217,11 @@ wss.on("connection", (ws, req) => {
 
   ws.on("close", () => {
     clients.delete(ws);
-    console.log(`CLOSE id=${ws.meta && ws.meta.id ? ws.meta.id : "?"} remote=${ws.meta ? ws.meta.remote : ""}`);
+    // Remove from client name mapping if it was a POS
+    if (ws.meta && ws.meta.clientName && ws.meta.role === "pos") {
+      clientsByName.delete(ws.meta.clientName);
+    }
+    console.log(`CLOSE id=${ws.meta && ws.meta.id ? ws.meta.id : "?"} clientName=${ws.meta && ws.meta.clientName ? ws.meta.clientName : ""} remote=${ws.meta ? ws.meta.remote : ""}`);
     // If a display disconnected, notify the POS it was connected to
     if (ws.meta && ws.meta.role === "display" && ws.meta.targetPosId) {
       const posWs = Array.from(clients).find(c => c.meta && c.meta.role === "pos" && c.meta.id === ws.meta.targetPosId);

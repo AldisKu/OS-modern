@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "32";
+const APP_VERSION = "33";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -116,6 +116,7 @@ const state = {
   tableLayout: null,
   brokerWs: null,
   brokerId: null,
+  clientName: null,
   deviceId: null,
   displayUpdateTimer: null,
   displayActivity: false,
@@ -291,9 +292,11 @@ function initBroker() {
       }
       if (payload && payload.type === "REGISTERED") {
         state.brokerId = payload.id || null;
-        const label = payload.id ? `broker${payload.id}` : "OK";
+        state.clientName = payload.clientName || null;
+        // Display client name instead of broker ID
+        const label = state.clientName ? `Client: ${state.clientName}` : (payload.id ? `broker${payload.id}` : "OK");
         state.brokerLabel = label;
-        if (DEBUG_BROKER) console.log(`[BROKER] REGISTERED received: id=${state.brokerId}, label=${label}`);
+        if (DEBUG_BROKER) console.log(`[BROKER] REGISTERED received: id=${state.brokerId}, clientName=${state.clientName}, label=${label}`);
         [els.statusBroker, els.orderBroker].filter(Boolean).forEach(el => el.textContent = state.brokerLabel);
         return;
       }
@@ -382,6 +385,26 @@ function ensureDeviceId() {
   }
 }
 
+function ensureClientName() {
+  // Stable client name for persistent POS identification across reconnections
+  try {
+    const existing = localStorage.getItem("modern_client_name");
+    if (existing) {
+      return existing;
+    }
+    // Generate new stable client name: POS-XXXXXX (6 random chars)
+    const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const clientName = `POS-${rnd}`;
+    localStorage.setItem("modern_client_name", clientName);
+    if (DEBUG_BROKER) console.log(`[BROKER] Generated new stable client name: ${clientName}`);
+    return clientName;
+  } catch (_) {
+    // localStorage might be blocked; generate session-scoped name
+    const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `POS-${rnd}`;
+  }
+}
+
 function registerBrokerUnknown() {
   if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
     if (DEBUG_BROKER) console.log("[BROKER] registerBrokerUnknown: socket not ready, will retry");
@@ -424,9 +447,11 @@ function registerBrokerClient() {
     return;
   }
   ensureDeviceId();
+  const clientName = ensureClientName();
   const payload = {
     type: "REGISTER",
     role: "pos",
+    clientName: clientName,
     deviceId: state.deviceId,
     userId: state.user?.id || "",
     userName: state.user?.name || ""
