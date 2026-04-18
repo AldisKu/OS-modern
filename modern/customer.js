@@ -208,6 +208,18 @@ function handlePosList(list) {
     return;
   }
   
+  // Check if we have a saved client name and can auto-reconnect
+  const savedClientName = loadSavedClientName();
+  if (savedClientName) {
+    // Find the POS with matching client name
+    const matchingPos = list.find(p => p.clientName === savedClientName);
+    if (matchingPos) {
+      // Auto-reconnect to the saved POS
+      subscribeToPos(matchingPos.id, savedClientName);
+      return;
+    }
+  }
+  
   // Always show selection screen - user must manually select POS
   show(els.pairScreen);
   els.pairSelect.innerHTML = "";

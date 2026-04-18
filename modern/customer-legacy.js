@@ -182,6 +182,19 @@
       // If connected POS went offline, show selection screen
     }
 
+    // Check if we have a saved client name and can auto-reconnect
+    var savedClientName = loadSavedClientName();
+    if (savedClientName) {
+      // Find the POS with matching client name
+      for (var j = 0; j < list.length; j++) {
+        if (list[j].clientName === savedClientName) {
+          // Auto-reconnect to the saved POS
+          subscribeToPos(list[j].id, savedClientName);
+          return;
+        }
+      }
+    }
+
     // Always show selection screen - user must manually select POS
     show(els.pairScreen);
     els.pairSelect.innerHTML = "";
