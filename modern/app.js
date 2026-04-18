@@ -917,7 +917,7 @@ function renderOrderItems() {
       <div class="order-item new" data-cart="${g.item._id}">
         <div class="order-title"><b>${g.item.name}</b></div>
         ${extras}
-        <div class="order-qty" data-key="${key}">
+        <div class="order-qty" data-key="${key}" style="display: none;">
           <button type="button" class="mini" data-act="dec">-</button>
           <span class="order-count">${g.count}</span>
           <button type="button" class="mini" data-act="inc">+</button>
