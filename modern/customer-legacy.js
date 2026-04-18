@@ -130,10 +130,11 @@
           if (!(state.qrActiveUntil && Date.now() < state.qrActiveUntil)) showIdle();
         }
         if (msg.type === "POS_OFFLINE") {
-          // POS went offline - clear saved POS ID and go to start screen
+          // POS went offline - only clear state.selectedPosId, keep saved client name for auto-reconnect
           if (msg.posId === state.selectedPosId) {
             state.selectedPosId = null;
-            clearSavedPosId();
+            // Don't clear saved client name - we want to auto-reconnect when POS comes back
+            // clearSavedPosId();
             show(els.pairScreen);
           }
         }
