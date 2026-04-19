@@ -1011,21 +1011,40 @@ function matchDiscountName(pct) {
 function adjustCartGroup(key, delta) {
   if (!state.selectedTable) return;
   const cart = state.cartByTable[state.selectedTable.id] || [];
+  
   if (delta > 0) {
+    // Plus button: find first matching item and create a copy with qty=1
     const idx = cart.findIndex(c => cartKey(c) === key);
     if (idx >= 0) {
-      cart[idx].unitamount = Number(cart[idx].unitamount || 1) + 1;
+      const original = cart[idx];
+      const newItem = {
+        ...original,
+        unitamount: 1,  // Always qty=1 for backend
+        ts: Date.now()  // New timestamp so it appears at top
+      };
+      cart.push(newItem);
       markDisplayActivity();
     }
   } else {
-    for (let i = cart.length - 1; i >= 0; i--) {
-      if (cartKey(cart[i]) !== key) continue;
-      cart[i].unitamount = Number(cart[i].unitamount || 1) - 1;
-      if (cart[i].unitamount <= 0) cart.splice(i, 1);
-      break;
+    // Minus button: find and delete the OLDEST item with matching key
+    // (oldest = earliest timestamp = will be first in sorted order)
+    let oldestIdx = -1;
+    let oldestTs = Infinity;
+    for (let i = 0; i < cart.length; i++) {
+      if (cartKey(cart[i]) === key) {
+        const ts = cart[i].ts || 0;
+        if (ts < oldestTs) {
+          oldestTs = ts;
+          oldestIdx = i;
+        }
+      }
     }
-    markDisplayActivity();
+    if (oldestIdx >= 0) {
+      cart.splice(oldestIdx, 1);
+      markDisplayActivity();
+    }
   }
+  
   state.cartByTable[state.selectedTable.id] = cart;
   saveCart(state.selectedTable.id);
   renderOrderItems();
@@ -1164,7 +1183,7 @@ function addToCart(prod, extras, option, qty, forceTogo) {
     name: prod.longname || prod.name,
     price: Number(prod.price || 0),
     unit: Number(prod.unit || 0),
-    unitamount: qty,
+    unitamount: 1,  // Always 1 - backend requirement
     togo: typeof forceTogo === "number" ? forceTogo : (state.selectedTable?.id === 0 ? 1 : 0),
     option: option || "",
     extras: sanitizeExtras(extras),
@@ -1193,7 +1212,7 @@ function addToCartCustom(prod, extras, option, qty, togo, changedPrice, priceEnt
     name: prod.longname || prod.name,
     price: Number(prod.price || 0),
     unit: Number(prod.unit || 0),
-    unitamount: qty,
+    unitamount: 1,  // Always 1 - backend requirement
     togo: togo ? 1 : 0,
     option: option || "",
     extras: sanitizeExtras(extras),
