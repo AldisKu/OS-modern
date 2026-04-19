@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "34";
+const APP_VERSION = "35";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -942,7 +942,7 @@ function renderOrderItems() {
       <div class="order-item new" data-cart="${g.item._id}">
         <div class="order-title"><b>${g.item.name}</b></div>
         ${extras}
-        <div class="order-qty" data-key="${key}" style="display: none;">
+        <div class="order-qty" data-key="${key}">
           <button type="button" class="mini" data-act="dec">-</button>
           <span class="order-count">${g.count}</span>
           <button type="button" class="mini" data-act="inc">+</button>

@@ -28,6 +28,7 @@
 - Cache-Prevention und Versionierung (v34): HTML-Dateien haben no-cache Meta-Tags; alle JS/CSS-Referenzen haben ?v=34 Query-Parameter; HTML wird immer frisch geladen; JS/CSS behalten stabile Dateinamen; erzwingt Safari iPad neue Assets zu laden.
 
 ## Kritische Regeln (duerfen nicht brechen)
+- **JEDES UPDATE BEKOMMT NEUE VERSION!** Increment `APP_VERSION` in `app.js` und alle `?v=NN` Query-Parameter in HTML-Dateien bei JEDEM Commit.
 - Keine Legacy-Dateien aendern.
 - Keine gehashten Assets erzeugen.
 - Rabatt nur im Warenkorb anzeigen, nie nach Bestellung.
