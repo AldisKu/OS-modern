@@ -24,6 +24,8 @@
 - Broker ID und Display-Verbindung gefixt (v31): Customer Display zeigt immer Selection-Screen (keine Auto-Reconnect); POS schließt Broker-Verbindung beim Logout um neue ID zu bekommen; Display-Status wird korrekt zurückgesetzt beim Logout; verhindert Mismatch zwischen POS und Display nach Login/Logout-Zyklus.
 - Pull-Update Warnung entfernt (v32): Broker-Fallback-Warnung "broker hat Update unterschlagen" entfernt; POS vertraut auf Pull-Update wenn Broker-Push nicht ankommt; vereinfacht Fehlerbehandlung.
 - Stabiler Client-Name implementiert (v33): POS generiert und speichert stabilen Client-Namen (POS-XXXXXX) in localStorage; Broker routet Nachrichten nach Client-Namen statt temporärer Broker-IDs; Kundendisplay speichert Client-Namen lokal und verbindet sich nach Reconnect automatisch wieder; zeigt "Client: <name>" statt "Broker: <id>"; löst Problem dass WebSocket-Reconnect die POS-Display-Verbindung bricht.
+- Cart Plus/Minus gefixt (v34): Plus-Button erstellt neues Item (qty=1) statt unitamount zu erhöhen; Minus-Button löscht ältestes Item aus Gruppe; alle Items haben immer qty=1 für Backend; groupCartItems() gruppiert nur für Display; zeigt korrekte Menge auf Bildschirm und druckt korrekt.
+- Cache-Prevention und Versionierung (v34): HTML-Dateien haben no-cache Meta-Tags; alle JS/CSS-Referenzen haben ?v=34 Query-Parameter; HTML wird immer frisch geladen; JS/CSS behalten stabile Dateinamen; erzwingt Safari iPad neue Assets zu laden.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - Keine Legacy-Dateien aendern.
