@@ -353,6 +353,12 @@ EOF
   # Install broker dependencies
   log_info "Installing broker dependencies..."
   echo "[DEBUG] Running: npm install in $broker_dir"
+  
+  # Create npm cache folder with correct permissions
+  echo "[DEBUG] Setting up npm cache..."
+  sudo mkdir -p /var/www/.npm
+  sudo chown -R 33:33 /var/www/.npm
+  
   cd "$broker_dir"
   sudo -u www-data npm install
   cd - > /dev/null
