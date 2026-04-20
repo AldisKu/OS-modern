@@ -18,7 +18,7 @@ function showHash() {
     }
   }
 }
-const API = "../php/modernapi.php";
+const API = "./modernapi.php";
 
 const els = {
   pairScreen: document.getElementById("pair-screen"),
