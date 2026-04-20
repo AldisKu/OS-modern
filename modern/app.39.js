@@ -1,5 +1,5 @@
 const API = "./modernapi.php";
-const APP_VERSION = "38";
+const APP_VERSION = "39";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -924,6 +924,7 @@ function renderOrderItems() {
   const extraLabels = [];
     normalizeExtras(g.item).forEach(e => extraLabels.push(`+ ${e.name}`));
     if (g.item.togo) extraLabels.push("+ ToGo");
+    if (g.item.option) extraLabels.push(`+ Notiz: ${g.item.option}`);
     const base = Number(g.item.price || 0);
     const changed = Number(g.item.changedPrice || 0);
     const hasChangedPrice = g.item.changedPrice !== undefined && g.item.changedPrice !== null && g.item.changedPrice !== "NO";
@@ -1626,6 +1627,21 @@ function editCartItem(id) {
   const formatPct = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(2));
 
   els.confirmTitle.textContent = item.name;
+  
+  // Build note field with predefined comments dropdown + free text (same as product modal)
+  const comments = state.localConfig?.comments || [];
+  const noteFieldHtml = comments.length > 0 ? `
+    <div class="note-input-group">
+      <select id="modal-note-select" class="note-select">
+        <option value="">-- Bemerkung wählen --</option>
+        ${comments.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("")}
+      </select>
+      <input type="text" id="modal-note-input" class="note-input" placeholder="oder manuell eingeben..." value="${item.option || ""}" />
+    </div>
+  ` : `
+    <input type="text" id="modal-note-input" class="note-input" placeholder="Bemerkung..." value="${item.option || ""}" />
+  `;
+  
   els.confirmBody.innerHTML = `
     <div class="edit-row"><b>${item.name}</b> (aktuell: ${groupCount})</div>
     <div class="edit-row"><b>Einzelpreis</b></div>
@@ -1646,7 +1662,7 @@ function editCartItem(id) {
       <span class="edit-qty-max">/ ${groupCount}</span>
     </div>
     <div class="edit-row"><b>Notiz</b></div>
-    <input type="text" id="note-val" value="${item.option || ""}" />
+    ${noteFieldHtml}
   `;
   els.confirmActions.innerHTML = `
     <button class="ghost" id="cancel">Abbruch</button>
@@ -1713,6 +1729,20 @@ function editCartItem(id) {
     if (btn) btn.classList.add("active");
   }
 
+  // Handle predefined comment selection in edit modal
+  if (comments.length > 0) {
+    const select = els.confirmBody.querySelector("#modal-note-select");
+    const input = els.confirmBody.querySelector("#modal-note-input");
+    if (select && input) {
+      select.onchange = () => {
+        if (select.value) {
+          input.value = select.value;
+          select.value = "";
+        }
+      };
+    }
+  }
+
   let togoVal = item.togo ? 1 : 0;
   els.confirmBody.querySelector("#act-togo").onclick = () => {
     togoVal = togoVal ? 0 : 1;
@@ -1722,7 +1752,8 @@ function editCartItem(id) {
   els.confirmActions.querySelector("#cancel").onclick = () => els.confirmModal.classList.add("hidden");
   els.confirmActions.querySelector("#apply").onclick = () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
-    const newNote = els.confirmBody.querySelector("#note-val").value.trim();
+    const noteInput = els.confirmBody.querySelector("#modal-note-input");
+    const newNote = noteInput ? noteInput.value.trim() : "";
     const newPrice = Number.isFinite(currentPrice) ? Number(currentPrice) : Number(basePrice || 0);
     const changedPrice = Math.abs(newPrice - Number(item.price || 0)) > 0.0001 ? newPrice.toFixed(2) : "NO";
     const discountPct = selectedDiscountPct ? Number(selectedDiscountPct) : null;
