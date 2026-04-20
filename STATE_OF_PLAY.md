@@ -34,6 +34,20 @@
 - Rabatt nur im Warenkorb anzeigen, nie nach Bestellung.
 - Preisstufe: global, Menupreise muessen bei Aenderung neu geladen werden (via `cmd=refresh_menu`).
 
+## Versioned Filenames Strategy (Cache Busting für iPad Safari PWA)
+- Verwende versionierte Dateinamen: `app.35.js`, `styles.35.css`, `customer.35.js`, etc.
+- Update HTML um neue versionierte Dateinamen zu referenzieren bei jedem Version-Bump
+- **IMMER vorherige Version-Dateien nach Deployment löschen** (z.B. `app.34.js`, `styles.34.css`)
+- Nur aktuelle Version-Dateien behalten (+ optional ein Backup)
+- Garantiert: aggressive Caching funktioniert, keine stale cache Probleme, minimaler Speicher
+
+### Deployment Workflow für Versioned Filenames
+1. Rename: `app.js` → `app.35.js`, `styles.css` → `styles.35.css`, etc.
+2. Update HTML: `<script src="app.35.js"></script>`
+3. Commit & push
+4. Delete: `app.34.js`, `styles.34.css` (alte Version)
+5. Commit deletion & push
+
 ## Bekannte fragile Bereiche
 - Preisstufen-Push: muss Broker-Polling zuverlaessig triggern.
 - UI-Refresh bei gleichzeitigen Zahlungen mehrerer Terminals.
@@ -47,6 +61,25 @@
 - iPad Broker-Registrierung: Broker Logs sammeln um Root-Cause zu identifizieren (siehe DEBUGGING_GUIDE_iPad_Broker.md).
 - **Broker sollte Änderungen an Tischen zu ALLEN POS broadcasten**: Wenn eine Kasse eine Änderung macht (Bestellung, Zahlung, etc.), soll Broker UPDATE_REQUIRED an alle anderen POS senden. POS sollte eigene Änderungen (vom Broker zurückgesendet) korrekt verarbeiten können.
 - **Stable Client Name testen**: v33 mit stabilen Client-Namen testen - POS backgrounding/return sollte Verbindung zu Display halten.
+
+## iPad Safari PWA Cache Issue (v35)
+- **Problem**: iPad PWA zeigte v35 in Status-Zeile, aber Broker wurde nicht gefunden. Nach mehrfachen Safari-Refreshes funktionierte es.
+- **Root Cause**: Wahrscheinlich iPad Safari PWA Cache-Verhalten - query parameter `?v=35` allein reicht nicht aus
+- **Lösung implementiert**: Versioned Filenames Strategy (siehe unten)
+- **Status**: Zu testen auf iPad PWA nach nächstem Deployment
+
+## Predefined Remarks/Notes Feature (In Progress)
+- **Ziel**: Kellner können vordefinierte Bemerkungen (z.B. "Keine Zwiebeln", "Extra Sauce") zu Produkten hinzufügen
+- **Current State**:
+  - Item `option` Feld existiert bereits (für Notizen)
+  - Edit-Modal zeigt Notiz-Input
+  - Keine Notiz-Input beim Hinzufügen neuer Items
+  - **Keine vordefinierte Remarks-Liste vorhanden**
+- **Nächste Schritte**:
+  - User stellt Original-Quellcode zur Verfügung
+  - Analysieren wo predefined remarks in Legacy-System gespeichert sind
+  - Remarks zu bootstrap API hinzufügen
+  - UI implementieren (Predefined-Buttons oder Dropdown)
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:

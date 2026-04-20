@@ -1,0 +1,275 @@
+/* Legacy CSS for old Android WebViews (e.g. Android 5.1.1).
+   Avoid CSS Grid and backdrop-filter; stick to flex + simple layout. */
+
+body {
+  margin: 0;
+  font-family: sans-serif;
+  background: #f7f3ee;
+  color: #1a1a1a;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.display-hash {
+  font-size: 12px;
+  text-align: center;
+  color: #6b5b4d;
+  position: fixed;
+  top: 4px;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pair-screen,
+.display-screen {
+  min-height: 100vh;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pair-card {
+  background: #fff;
+  padding: 24px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+.pair-card h1 {
+  margin: 0 0 12px 0;
+}
+
+.pair-card label {
+  display: block;
+  margin: 0 0 12px 0;
+}
+
+.pair-card label span {
+  display: block;
+  margin: 0 0 6px 0;
+}
+
+.pair-card select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #d9d3cc;
+}
+
+.pair-actions {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  gap: 8px;
+}
+
+.primary {
+  background: #2b6cb0;
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+.ghost {
+  background: #fff;
+  border: 1px solid #d9d3cc;
+  padding: 10px 16px;
+  border-radius: 8px;
+}
+
+.display-wrap {
+  width: 100%;
+  height: 100vh;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  position: relative;
+}
+
+.display-top,
+.display-bottom {
+  padding: 16px 24px 20px;
+}
+
+.display-header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.display-logo {
+  max-height: 60px;
+  max-width: 40%;
+  object-fit: contain;
+}
+
+.display-sum {
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.display-sum-label {
+  font-size: 20px;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.display-sum-value {
+  font-size: 52px;
+  font-weight: 800;
+}
+
+.display-sum-currency {
+  font-size: 28px;
+  font-weight: 700;
+  margin-left: 4px;
+}
+
+.display-bon-title,
+.display-order-title {
+  margin-top: 14px;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6b5b4d;
+}
+
+.display-bon-list {
+  margin-top: 12px;
+}
+
+.display-bon-item {
+  border-bottom: 1px dashed #e0d9d2;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+}
+
+.display-row {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+  -webkit-align-items: baseline;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 28px;
+  line-height: 1.25;
+  width: 100%;
+}
+
+.display-row > span:last-child {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.display-extra {
+  font-size: 16px;
+  color: #6b5b4d;
+  text-align: left;
+  padding-left: 1.8em;
+  margin-top: 2px;
+}
+
+.display-order-list {
+  margin-top: 12px;
+}
+
+.display-order-item {
+  font-size: 16px;
+  background: #f0ebe5;
+  padding: 6px 10px;
+  border-radius: 999px;
+  display: inline-block;
+  white-space: nowrap;
+  margin-right: 6px;
+  margin-bottom: 6px;
+}
+
+.display-wrap.mode-paydesk .display-top {
+  -webkit-flex: 3 0 auto;
+  flex: 3 0 auto;
+}
+
+.display-wrap.mode-paydesk .display-bottom {
+  -webkit-flex: 1 0 auto;
+  flex: 1 0 auto;
+}
+
+.display-wrap.mode-order .display-top {
+  -webkit-flex: 1 1 auto;
+  flex: 1 1 auto;
+}
+
+.display-wrap.mode-order .display-bottom {
+  display: none;
+}
+
+.display-qr {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f7f3ee;
+  text-align: center;
+  padding-top: 36px;
+}
+
+.display-qr img {
+  width: 240px;
+  height: 240px;
+}
+
+.display-qr-link {
+  font-size: 14px;
+  word-break: break-all;
+  padding: 0 20px;
+}
+
+.display-idle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #141414;
+  text-align: center;
+  color: #fff;
+  font-size: 32px;
+  letter-spacing: 2px;
+  padding-top: 120px;
+}
+
+.display-idle-logo {
+  max-width: 280px;
+  max-height: 140px;
+  object-fit: contain;
+  margin-bottom: 12px;
+}
+
