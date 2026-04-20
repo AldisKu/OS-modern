@@ -145,13 +145,13 @@ if [[ "$VERBOSE" == true ]]; then
   echo "[VERBOSE] Removing hashed files..."
 fi
 
-# Remove hashed files (old build artifacts)
-rm -f "$WEBROOT/modern/app."[a-f0-9]*.js
-rm -f "$WEBROOT/modern/styles."[a-f0-9]*.css
-rm -f "$WEBROOT/modern/customer."[a-f0-9]*.js
-rm -f "$WEBROOT/modern/customer."[a-f0-9]*.css
-rm -f "$WEBROOT/modern/customer-old."[a-f0-9]*.js
-rm -f "$WEBROOT/modern/customer-old."[a-f0-9]*.css
+# Remove hashed files (old build artifacts) - only match 8+ hex chars to avoid versioned files
+rm -f "$WEBROOT/modern/app."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.js
+rm -f "$WEBROOT/modern/styles."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.css
+rm -f "$WEBROOT/modern/customer."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.js
+rm -f "$WEBROOT/modern/customer."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.css
+rm -f "$WEBROOT/modern/customer-old."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.js
+rm -f "$WEBROOT/modern/customer-old."[a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9][a-f0-9]*.css
 
 if [[ "$VERBOSE" == true ]]; then
   echo "[VERBOSE] Removing non-versioned files..."
