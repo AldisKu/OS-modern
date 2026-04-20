@@ -111,9 +111,9 @@ chown -R "$WEBOWNER:$WEBGROUP" "$WEBROOT/modern"
 # Deploy from git repository to webroot using rsync
 echo "Deploying modern files from git repository..."
 if [[ "$VERBOSE" == true ]]; then
-  echo "[VERBOSE] Executing: rsync -a $ROOT_DIR/modern/ $WEBROOT/modern/ --exclude=.git --exclude=node_modules"
+  echo "[VERBOSE] Executing: rsync -a --delete $ROOT_DIR/modern/ $WEBROOT/modern/ --exclude=.git --exclude=node_modules"
 fi
-rsync -a "$ROOT_DIR/modern/" "$WEBROOT/modern/" \
+rsync -a --delete "$ROOT_DIR/modern/" "$WEBROOT/modern/" \
   --exclude='.git' \
   --exclude='node_modules'
 
