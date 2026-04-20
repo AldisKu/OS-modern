@@ -203,6 +203,19 @@ download_sources() {
     return 0
   fi
   
+  # If folder exists but is not a git repo, ask to clean it up
+  if [[ -d "$git_folder" ]]; then
+    log_warn "Folder already exists at $git_folder (not a git repo)"
+    if confirm "Delete existing folder and download fresh?"; then
+      echo "[DEBUG] Removing existing folder: $git_folder"
+      rm -rf "$git_folder"
+      echo "[DEBUG] Folder removed"
+    else
+      log_error "Cannot proceed with existing folder"
+      return 1
+    fi
+  fi
+  
   log_info "Downloading repository to $git_folder..."
   mkdir -p "$(dirname "$git_folder")"
   
