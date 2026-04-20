@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ROOT_DIR is where the deploy script is located (the git repository)
+# ROOT_DIR is where the deploy script is located (the git repository root)
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 WEBROOT="${WEBROOT:-}"
@@ -63,9 +63,15 @@ fi
 
 mkdir -p "$WEBROOT/modern"
 
-# Deploy from git repository to webroot - copy EVERYTHING
+# Deploy from git repository to webroot - copy all files
 echo "Deploying modern files from git repository..."
-cp -a "$ROOT_DIR/modern"/* "$WEBROOT/modern/"
+for file in "$ROOT_DIR/modern"/*; do
+  if [[ -f "$file" ]]; then
+    cp "$file" "$WEBROOT/modern/"
+  elif [[ -d "$file" ]] && [[ "$(basename "$file")" != ".git" ]] && [[ "$(basename "$file")" != "node_modules" ]]; then
+    cp -a "$file" "$WEBROOT/modern/"
+  fi
+done
 
 # Clean up old/unused asset files in deployment folder
 echo "Cleaning up old/unused files..."
