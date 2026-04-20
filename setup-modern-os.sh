@@ -5,6 +5,7 @@ set -euo pipefail
 # Downloads sources, installs dependencies, deploys, and starts services
 # Usage: bash setup-modern-os.sh
 
+SCRIPT_VERSION="39"
 REPO_URL="https://github.com/AldisKu/OS-modern.git"
 REPO_BRANCH="main"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -511,7 +512,7 @@ EOF
 main() {
   echo ""
   echo "╔════════════════════════════════════════════════════════════════╗"
-  echo "║    OrderSprinter Modern Interface - Setup Script v39          ║"
+  echo "║    OrderSprinter Modern Interface - Setup Script v${SCRIPT_VERSION}          ║"
   echo "╚════════════════════════════════════════════════════════════════╝"
   echo ""
   
@@ -546,6 +547,12 @@ main() {
   if ! confirm "Use git folder: $GIT_FOLDER?"; then
     read -p "Enter git repository folder path: " GIT_FOLDER
     echo "[DEBUG] User entered GIT_FOLDER: $GIT_FOLDER"
+  fi
+  
+  # Convert relative paths to absolute paths
+  if [[ "$GIT_FOLDER" != /* ]]; then
+    GIT_FOLDER="$HOME/$GIT_FOLDER"
+    echo "[DEBUG] Converted relative path to absolute: $GIT_FOLDER"
   fi
   
   echo "[DEBUG] Final GIT_FOLDER: $GIT_FOLDER"
