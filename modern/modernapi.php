@@ -287,7 +287,7 @@ if ($cmd == "config") {
 	$brokerWs = $wsScheme . '://' . $host . ':3077';
 	$brokerHttp = 'http://' . $host . ':3077/event';
 	$clientPollMs = 120000;
-	$cfgFile = __DIR__ . '/config.json';
+	$cfgFile = __DIR__ . '/../modern/config.json';
 	if (file_exists($cfgFile)) {
 		$rawCfg = file_get_contents($cfgFile);
 		$cfg = json_decode($rawCfg, true);
