@@ -63,11 +63,9 @@ fi
 
 mkdir -p "$WEBROOT/modern"
 
-# Deploy from git repository to webroot
+# Deploy from git repository to webroot - copy EVERYTHING
 echo "Deploying modern files from git repository..."
-rsync -a "$ROOT_DIR/modern/" "$WEBROOT/modern/" \
-  --exclude='.git' \
-  --exclude='node_modules'
+cp -a "$ROOT_DIR/modern"/* "$WEBROOT/modern/"
 
 # Clean up old/unused asset files in deployment folder
 echo "Cleaning up old/unused files..."
