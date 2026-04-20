@@ -350,6 +350,14 @@ EOF
   echo "[DEBUG] Broker config file contents:"
   sudo cat "$broker_config"
   
+  # Install broker dependencies
+  log_info "Installing broker dependencies..."
+  echo "[DEBUG] Running: npm install in $broker_dir"
+  cd "$broker_dir"
+  sudo npm install
+  cd - > /dev/null
+  log_success "Broker dependencies installed"
+  
   # Create systemd service file
   local service_file="/etc/systemd/system/ordersprinter-broker.service"
   
