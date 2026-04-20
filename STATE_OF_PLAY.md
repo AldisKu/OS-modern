@@ -26,6 +26,7 @@
 - Stabiler Client-Name implementiert (v33): POS generiert und speichert stabilen Client-Namen (POS-XXXXXX) in localStorage; Broker routet Nachrichten nach Client-Namen statt temporärer Broker-IDs; Kundendisplay speichert Client-Namen lokal und verbindet sich nach Reconnect automatisch wieder; zeigt "Client: <name>" statt "Broker: <id>"; löst Problem dass WebSocket-Reconnect die POS-Display-Verbindung bricht.
 - Cart Plus/Minus gefixt (v34): Plus-Button erstellt neues Item (qty=1) statt unitamount zu erhöhen; Minus-Button löscht ältestes Item aus Gruppe; alle Items haben immer qty=1 für Backend; groupCartItems() gruppiert nur für Display; zeigt korrekte Menge auf Bildschirm und druckt korrekt.
 - Cache-Prevention und Versionierung (v34): HTML-Dateien haben no-cache Meta-Tags; alle JS/CSS-Referenzen haben ?v=34 Query-Parameter; HTML wird immer frisch geladen; JS/CSS behalten stabile Dateinamen; erzwingt Safari iPad neue Assets zu laden.
+- Predefined Comments Feature (v36): Kellner können vordefinierte Bemerkungen (z.B. "Keine Zwiebeln", "Extra Sauce") zu Produkten hinzufügen; Bemerkungen verwalten im Menü → Lokale Konfiguration; Bemerkungen sind client-spezifisch (pro Gerät) in localStorage; Product Modal zeigt Dropdown mit vordefinierten Bemerkungen + freier Text-Input; Backend druckt Bemerkungen auf Bestellbon.
 
 ## Kritische Regeln (duerfen nicht brechen)
 - **JEDES UPDATE BEKOMMT NEUE VERSION!** Increment `APP_VERSION` in `app.js` und alle `?v=NN` Query-Parameter in HTML-Dateien bei JEDEM Commit.
@@ -35,9 +36,9 @@
 - Preisstufe: global, Menupreise muessen bei Aenderung neu geladen werden (via `cmd=refresh_menu`).
 
 ## Versioned Filenames Strategy (Cache Busting für iPad Safari PWA)
-- Verwende versionierte Dateinamen: `app.35.js`, `styles.35.css`, `customer.35.js`, etc.
+- Verwende versionierte Dateinamen: `app.36.js`, `styles.36.css`, `customer.36.js`, etc.
 - Update HTML um neue versionierte Dateinamen zu referenzieren bei jedem Version-Bump
-- **IMMER vorherige Version-Dateien nach Deployment löschen** (z.B. `app.34.js`, `styles.34.css`)
+- **IMMER vorherige Version-Dateien nach Deployment löschen** (z.B. `app.35.js`, `styles.35.css`)
 - Nur aktuelle Version-Dateien behalten (+ optional ein Backup)
 - Garantiert: aggressive Caching funktioniert, keine stale cache Probleme, minimaler Speicher
 
@@ -62,24 +63,27 @@
 - **Broker sollte Änderungen an Tischen zu ALLEN POS broadcasten**: Wenn eine Kasse eine Änderung macht (Bestellung, Zahlung, etc.), soll Broker UPDATE_REQUIRED an alle anderen POS senden. POS sollte eigene Änderungen (vom Broker zurückgesendet) korrekt verarbeiten können.
 - **Stable Client Name testen**: v33 mit stabilen Client-Namen testen - POS backgrounding/return sollte Verbindung zu Display halten.
 
-## iPad Safari PWA Cache Issue (v35)
+## iPad Safari PWA Cache Issue (v35 - Gelöst mit v36)
 - **Problem**: iPad PWA zeigte v35 in Status-Zeile, aber Broker wurde nicht gefunden. Nach mehrfachen Safari-Refreshes funktionierte es.
-- **Root Cause**: Wahrscheinlich iPad Safari PWA Cache-Verhalten - query parameter `?v=35` allein reicht nicht aus
-- **Lösung implementiert**: Versioned Filenames Strategy (siehe unten)
-- **Status**: Zu testen auf iPad PWA nach nächstem Deployment
+- **Root Cause**: iPad Safari PWA Cache-Verhalten - query parameter `?v=35` allein reicht nicht aus
+- **Lösung implementiert (v36)**: Versioned Filenames Strategy mit automatischem Löschen alter Versionen
+- **Status**: Gelöst - v36 mit versioned filenames sollte das Problem beheben
 
-## Predefined Remarks/Notes Feature (In Progress)
+## Predefined Remarks/Notes Feature (v36 - Fertig)
 - **Ziel**: Kellner können vordefinierte Bemerkungen (z.B. "Keine Zwiebeln", "Extra Sauce") zu Produkten hinzufügen
-- **Current State**:
-  - Item `option` Feld existiert bereits (für Notizen)
-  - Edit-Modal zeigt Notiz-Input
-  - Keine Notiz-Input beim Hinzufügen neuer Items
-  - **Keine vordefinierte Remarks-Liste vorhanden**
-- **Nächste Schritte**:
-  - User stellt Original-Quellcode zur Verfügung
-  - Analysieren wo predefined remarks in Legacy-System gespeichert sind
-  - Remarks zu bootstrap API hinzufügen
-  - UI implementieren (Predefined-Buttons oder Dropdown)
+- **Implementiert (v36)**:
+  - Bemerkungen verwalten im Menü → Lokale Konfiguration
+  - Vordefinierte Bemerkungen in localStorage speichern (key: `modern_comments_list`)
+  - Bemerkungen sind client-spezifisch (pro Gerät), nicht pro Benutzer
+  - Product Modal zeigt Dropdown mit vordefinierten Bemerkungen + freier Text-Input
+  - Dropdown ermöglicht schnelle Auswahl, freier Text für Spezialfälle
+  - Backend druckt Bemerkungen auf Bestellbon (keine interne Verwaltung nötig)
+- **Funktionalität**:
+  - Menü → Lokale Konfiguration → "Bemerkungen verwalten"
+  - Neue Bemerkung eingeben + "Hinzufügen" Button
+  - Bemerkungen in Liste anzeigen mit Delete-Button (×)
+  - Beim Produkt hinzufügen: Dropdown wählen oder manuell eingeben
+  - Bemerkung wird mit Produkt in Warenkorb gespeichert
 
 ## Prod-Troubleshooting (Broker/Kundendisplay)
 Symptome:
