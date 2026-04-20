@@ -102,6 +102,12 @@ fi
 
 mkdir -p "$WEBROOT/modern"
 
+# Fix ownership of deployment folder BEFORE copying (in case previous run left root-owned files)
+if [[ "$VERBOSE" == true ]]; then
+  echo "[VERBOSE] Fixing ownership before copy: chown -R $WEBOWNER:$WEBGROUP $WEBROOT/modern"
+fi
+chown -R "$WEBOWNER:$WEBGROUP" "$WEBROOT/modern"
+
 # Deploy from git repository to webroot - copy all files
 echo "Deploying modern files from git repository..."
 if [[ "$VERBOSE" == true ]]; then
