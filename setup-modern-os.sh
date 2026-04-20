@@ -260,25 +260,25 @@ run_deploy() {
   local original_dir="$(pwd)"
   
   log_info "Running deployment script..."
-  log_info "[DEBUG] git_folder=$git_folder"
-  log_info "[DEBUG] webroot=$webroot"
-  log_info "[DEBUG] original_dir=$original_dir"
+  echo "[DEBUG] git_folder=$git_folder"
+  echo "[DEBUG] webroot=$webroot"
+  echo "[DEBUG] original_dir=$original_dir"
   
   if [[ ! -f "$git_folder/deploy-modern.sh" ]]; then
     log_error "Deploy script not found at $git_folder/deploy-modern.sh"
     return 1
   fi
   
-  log_info "[DEBUG] Changing to git_folder: $git_folder"
+  echo "[DEBUG] Changing to git_folder: $git_folder"
   cd "$git_folder"
-  log_info "[DEBUG] Current directory after cd: $(pwd)"
+  echo "[DEBUG] Current directory after cd: $(pwd)"
   
-  log_info "[DEBUG] Running: WEBROOT=$webroot sudo bash deploy-modern.sh --v"
+  echo "[DEBUG] Running: WEBROOT=$webroot sudo bash deploy-modern.sh --v"
   WEBROOT="$webroot" sudo bash deploy-modern.sh --v
   
-  log_info "[DEBUG] Deployment script completed, returning to: $original_dir"
+  echo "[DEBUG] Deployment script completed, returning to: $original_dir"
   cd "$original_dir"
-  log_info "[DEBUG] Current directory after return: $(pwd)"
+  echo "[DEBUG] Current directory after return: $(pwd)"
   
   log_success "Deployment complete"
   return 0
@@ -291,34 +291,33 @@ setup_broker_service() {
   local webroot="$1"
   
   log_info "Setting up broker systemd service..."
-  log_info "[DEBUG] setup_broker_service called with webroot=$webroot"
-  log_info "[DEBUG] webroot length: ${#webroot}"
-  log_info "[DEBUG] webroot is empty: [[ -z \"$webroot\" ]] = $(if [[ -z "$webroot" ]]; then echo "YES"; else echo "NO"; fi)"
+  echo "[DEBUG] setup_broker_service called with webroot=$webroot"
+  echo "[DEBUG] webroot length: ${#webroot}"
   
   local broker_path="${webroot}/modern/broker/server.js"
   local broker_dir="${webroot}/modern/broker"
   local broker_config="${broker_dir}/broker-config.json"
   
-  log_info "[DEBUG] broker_path=$broker_path"
-  log_info "[DEBUG] broker_dir=$broker_dir"
-  log_info "[DEBUG] broker_config=$broker_config"
-  log_info "[DEBUG] Checking if broker_path exists: [[ -f \"$broker_path\" ]]"
+  echo "[DEBUG] broker_path=$broker_path"
+  echo "[DEBUG] broker_dir=$broker_dir"
+  echo "[DEBUG] broker_config=$broker_config"
   
   if [[ ! -f "$broker_path" ]]; then
     log_error "Broker server not found at $broker_path"
-    log_error "[DEBUG] File does not exist. Checking directory: ls -la $broker_dir"
+    echo "[DEBUG] File does not exist at: $broker_path"
+    echo "[DEBUG] Checking directory: $broker_dir"
     ls -la "$broker_dir" 2>&1 || log_error "[DEBUG] Directory listing failed"
     return 1
   fi
   
-  log_info "[DEBUG] Broker file found, proceeding with service setup"
+  echo "[DEBUG] Broker file found, proceeding with service setup"
   
   # Create broker config file if it doesn't exist
   log_info "Creating broker configuration file..."
-  log_info "[DEBUG] broker_config=$broker_config"
+  echo "[DEBUG] broker_config=$broker_config"
   
   if [[ ! -f "$broker_config" ]]; then
-    log_info "[DEBUG] Creating new broker-config.json"
+    echo "[DEBUG] Creating new broker-config.json"
     sudo tee "$broker_config" > /dev/null <<EOF
 {
   "port": 3077,
@@ -331,18 +330,17 @@ setup_broker_service() {
 EOF
     log_success "Broker config file created"
   else
-    log_info "[DEBUG] Broker config file already exists"
+    echo "[DEBUG] Broker config file already exists"
   fi
   
-  log_info "[DEBUG] Broker config contents:"
-  sudo cat "$broker_config" | sed 's/^/[DEBUG] /'
+  echo "[DEBUG] Broker config file contents:"
+  sudo cat "$broker_config"
   
   # Create systemd service file
   local service_file="/etc/systemd/system/ordersprinter-broker.service"
   
   log_info "Creating systemd service file..."
-  log_info "[DEBUG] service_file=$service_file"
-  log_info "[DEBUG] Writing service file with broker_dir=${broker_dir} and broker_path=${broker_path}"
+  echo "[DEBUG] service_file=$service_file"
   
   sudo tee "$service_file" > /dev/null <<EOF
 [Unit]
@@ -364,20 +362,18 @@ WantedBy=multi-user.target
 EOF
   
   log_success "Service file created"
-  log_info "[DEBUG] Service file contents:"
-  sudo cat "$service_file" | sed 's/^/[DEBUG] /'
+  echo "[DEBUG] Service file contents:"
+  sudo cat "$service_file"
   
   # Reload systemd
   log_info "Reloading systemd..."
-  log_info "[DEBUG] Running: sudo systemctl daemon-reload"
   sudo systemctl daemon-reload
-  log_info "[DEBUG] systemctl daemon-reload completed"
+  echo "[DEBUG] systemctl daemon-reload completed"
   
   # Enable service
   log_info "Enabling broker service..."
-  log_info "[DEBUG] Running: sudo systemctl enable ordersprinter-broker.service"
   sudo systemctl enable ordersprinter-broker.service
-  log_info "[DEBUG] systemctl enable completed"
+  echo "[DEBUG] systemctl enable completed"
   
   log_success "Broker service configured"
   return 0
@@ -530,15 +526,14 @@ main() {
     exit 1
   }
   
-  log_info "[DEBUG] After detect_webroot: WEBROOT=$WEBROOT"
-  log_info "[DEBUG] WEBROOT length: ${#WEBROOT}"
+  echo "[DEBUG] After detect_webroot: WEBROOT=$WEBROOT"
   
   if ! confirm "Use WEBROOT: $WEBROOT?"; then
     read -p "Enter WEBROOT path: " WEBROOT
-    log_info "[DEBUG] User entered WEBROOT: $WEBROOT"
+    echo "[DEBUG] User entered WEBROOT: $WEBROOT"
   fi
   
-  log_info "[DEBUG] Final WEBROOT before git folder detection: $WEBROOT"
+  echo "[DEBUG] Final WEBROOT before git folder detection: $WEBROOT"
   
   # Step 2: Detect or ask for git folder
   GIT_FOLDER=$(detect_git_folder) || {
@@ -546,15 +541,15 @@ main() {
     GIT_FOLDER="${GIT_FOLDER:-$HOME/ordersprinter}"
   }
   
-  log_info "[DEBUG] After detect_git_folder: GIT_FOLDER=$GIT_FOLDER"
+  echo "[DEBUG] After detect_git_folder: GIT_FOLDER=$GIT_FOLDER"
   
   if ! confirm "Use git folder: $GIT_FOLDER?"; then
     read -p "Enter git repository folder path: " GIT_FOLDER
-    log_info "[DEBUG] User entered GIT_FOLDER: $GIT_FOLDER"
+    echo "[DEBUG] User entered GIT_FOLDER: $GIT_FOLDER"
   fi
   
-  log_info "[DEBUG] Final GIT_FOLDER: $GIT_FOLDER"
-  log_info "[DEBUG] Final WEBROOT: $WEBROOT"
+  echo "[DEBUG] Final GIT_FOLDER: $GIT_FOLDER"
+  echo "[DEBUG] Final WEBROOT: $WEBROOT"
   
   # Step 3: Check dependencies
   check_dependencies || {
@@ -576,18 +571,17 @@ main() {
   }
   
   # Step 6: Run deploy script
-  log_info "[DEBUG] Before run_deploy: WEBROOT=$WEBROOT, GIT_FOLDER=$GIT_FOLDER"
+  echo "[DEBUG] Before run_deploy: WEBROOT=$WEBROOT, GIT_FOLDER=$GIT_FOLDER"
   run_deploy "$GIT_FOLDER" "$WEBROOT" || {
     log_error "Deployment failed"
     exit 1
   }
   
-  log_info "[DEBUG] After run_deploy: WEBROOT=$WEBROOT"
-  log_info "[DEBUG] WEBROOT length: ${#WEBROOT}"
-  log_info "[DEBUG] Current directory: $(pwd)"
+  echo "[DEBUG] After run_deploy: WEBROOT=$WEBROOT"
+  echo "[DEBUG] Current directory: $(pwd)"
   
   # Step 7: Setup broker service
-  log_info "[DEBUG] Before setup_broker_service: WEBROOT=$WEBROOT"
+  echo "[DEBUG] Before setup_broker_service: WEBROOT=$WEBROOT"
   setup_broker_service "$WEBROOT" || {
     log_error "Failed to setup broker service"
     exit 1
