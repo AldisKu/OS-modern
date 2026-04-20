@@ -108,34 +108,18 @@ if [[ "$VERBOSE" == true ]]; then
 fi
 chown -R "$WEBOWNER:$WEBGROUP" "$WEBROOT/modern"
 
-# Deploy from git repository to webroot - copy all files
+# Deploy from git repository to webroot using rsync
 echo "Deploying modern files from git repository..."
 if [[ "$VERBOSE" == true ]]; then
-  echo "[VERBOSE] Starting file copy..."
+  echo "[VERBOSE] Executing: rsync -a $ROOT_DIR/modern/ $WEBROOT/modern/ --exclude=.git --exclude=node_modules"
 fi
-
-COPY_COUNT=0
-for file in "$ROOT_DIR/modern"/*; do
-  if [[ -f "$file" ]]; then
-    FILENAME=$(basename "$file")
-    if [[ "$VERBOSE" == true ]]; then
-      echo "[VERBOSE] Copying file: $FILENAME"
-    fi
-    cp "$file" "$WEBROOT/modern/"
-    ((COPY_COUNT++))
-  elif [[ -d "$file" ]] && [[ "$(basename "$file")" != ".git" ]] && [[ "$(basename "$file")" != "node_modules" ]]; then
-    DIRNAME=$(basename "$file")
-    if [[ "$VERBOSE" == true ]]; then
-      echo "[VERBOSE] Copying directory: $DIRNAME"
-    fi
-    cp -a "$file" "$WEBROOT/modern/"
-    ((COPY_COUNT++))
-  fi
-done
+rsync -a "$ROOT_DIR/modern/" "$WEBROOT/modern/" \
+  --exclude='.git' \
+  --exclude='node_modules'
 
 if [[ "$VERBOSE" == true ]]; then
-  echo "[VERBOSE] ✓ Copied $COPY_COUNT items"
-  echo "[VERBOSE] Deployment folder contents after copy:"
+  echo "[VERBOSE] ✓ Rsync complete"
+  echo "[VERBOSE] Deployment folder contents after rsync:"
   ls -lh "$WEBROOT/modern/" | head -20
 fi
 
