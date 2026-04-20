@@ -1,12 +1,42 @@
 import http from "http";
 import { WebSocketServer } from "ws";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
-const TOKEN = process.env.BROKER_TOKEN || "";
-const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/modern/modernapi.php?cmd=state";
-const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
-const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/modern/modernapi.php?cmd=pricelevel_state";
-const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/modern/modernapi.php?cmd=printer_status";
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const configPath = path.join(__dirname, "broker-config.json");
+
+// Load configuration from file
+let config = {
+  port: 3077,
+  broker_token: "",
+  poll_url: "http://127.0.0.1/modern/modernapi.php?cmd=state",
+  poll_interval_ms: 4000,
+  pricelevel_url: "http://127.0.0.1/modern/modernapi.php?cmd=pricelevel_state",
+  printer_url: "http://127.0.0.1/modern/modernapi.php?cmd=printer_status"
+};
+
+try {
+  if (fs.existsSync(configPath)) {
+    const configData = fs.readFileSync(configPath, "utf8");
+    config = { ...config, ...JSON.parse(configData) };
+    console.log("[CONFIG] Loaded broker-config.json");
+  } else {
+    console.log("[CONFIG] broker-config.json not found, using defaults");
+  }
+} catch (err) {
+  console.error("[CONFIG] Error loading broker-config.json:", err.message);
+  console.log("[CONFIG] Using default configuration");
+}
+
+// Allow environment variables to override config file
+const PORT = process.env.PORT ? Number(process.env.PORT) : config.port;
+const TOKEN = process.env.BROKER_TOKEN || config.broker_token;
+const POLL_URL = process.env.POLL_URL || config.poll_url;
+const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : config.poll_interval_ms;
+const PRICELEVEL_URL = process.env.PRICELEVEL_URL || config.pricelevel_url;
+const PRINTER_URL = process.env.PRINTER_URL || config.printer_url;
 const clients = new Set();
 let nextId = 1;
 const clientsByName = new Map(); // Map of clientName -> ws

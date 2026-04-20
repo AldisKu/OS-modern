@@ -1,0 +1,8 @@
+{
+  "port": 3077,
+  "broker_token": "",
+  "poll_url": "http://127.0.0.1/modern/modernapi.php?cmd=state",
+  "poll_interval_ms": 4000,
+  "pricelevel_url": "http://127.0.0.1/modern/modernapi.php?cmd=pricelevel_state",
+  "printer_url": "http://127.0.0.1/modern/modernapi.php?cmd=printer_status"
+}

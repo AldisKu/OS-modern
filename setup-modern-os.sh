@@ -297,9 +297,11 @@ setup_broker_service() {
   
   local broker_path="${webroot}/modern/broker/server.js"
   local broker_dir="${webroot}/modern/broker"
+  local broker_config="${broker_dir}/broker-config.json"
   
   log_info "[DEBUG] broker_path=$broker_path"
   log_info "[DEBUG] broker_dir=$broker_dir"
+  log_info "[DEBUG] broker_config=$broker_config"
   log_info "[DEBUG] Checking if broker_path exists: [[ -f \"$broker_path\" ]]"
   
   if [[ ! -f "$broker_path" ]]; then
@@ -310,6 +312,30 @@ setup_broker_service() {
   fi
   
   log_info "[DEBUG] Broker file found, proceeding with service setup"
+  
+  # Create broker config file if it doesn't exist
+  log_info "Creating broker configuration file..."
+  log_info "[DEBUG] broker_config=$broker_config"
+  
+  if [[ ! -f "$broker_config" ]]; then
+    log_info "[DEBUG] Creating new broker-config.json"
+    sudo tee "$broker_config" > /dev/null <<EOF
+{
+  "port": 3077,
+  "broker_token": "",
+  "poll_url": "http://127.0.0.1/modern/modernapi.php?cmd=state",
+  "poll_interval_ms": 4000,
+  "pricelevel_url": "http://127.0.0.1/modern/modernapi.php?cmd=pricelevel_state",
+  "printer_url": "http://127.0.0.1/modern/modernapi.php?cmd=printer_status"
+}
+EOF
+    log_success "Broker config file created"
+  else
+    log_info "[DEBUG] Broker config file already exists"
+  fi
+  
+  log_info "[DEBUG] Broker config contents:"
+  sudo cat "$broker_config" | sed 's/^/[DEBUG] /'
   
   # Create systemd service file
   local service_file="/etc/systemd/system/ordersprinter-broker.service"
@@ -327,15 +353,6 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=${broker_dir}
-
-# Environment variables for broker
-Environment="PORT=3077"
-Environment="BROKER_TOKEN="
-Environment="POLL_URL=http://127.0.0.1/php/modernapi.php?cmd=state"
-Environment="POLL_INTERVAL_MS=4000"
-Environment="PRICELEVEL_URL=http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state"
-Environment="PRINTER_URL=http://127.0.0.1/php/modernapi.php?cmd=printer_status"
-
 ExecStart=/usr/bin/node ${broker_path}
 Restart=always
 RestartSec=10
