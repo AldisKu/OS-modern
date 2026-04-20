@@ -273,7 +273,7 @@ run_deploy() {
   local webroot="$2"
   local original_dir="$(pwd)"
   
-  log_info "Running deployment script..."
+  echo "[DEBUG] Running deployment script..."
   echo "[DEBUG] git_folder=$git_folder"
   echo "[DEBUG] webroot=$webroot"
   echo "[DEBUG] original_dir=$original_dir"
