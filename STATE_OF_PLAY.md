@@ -55,13 +55,28 @@
 - Browser-Cache (iPad Home-Screen) kann alte Assets behalten.
 - iPad Safari WebSocket: Kann in CONNECTING-State steckenbleiben (v24/v25 Fixes implementiert).
 
-## Offene Punkte / To-Do
-- Lokale Konfiguration (Menuepunkt Lokale Konfiguration): dauerhaft speichern (IndexedDB oder localStorage).
-- Kasse-Fehler-Handling bei Doppelzahlung: UI + Tischliste refreshen.
-- iPad Broker-Registrierung: Testen auf problematischem iPad mit v25 um zu verifizieren dass Race-Condition behoben ist.
-- iPad Broker-Registrierung: Broker Logs sammeln um Root-Cause zu identifizieren (siehe DEBUGGING_GUIDE_iPad_Broker.md).
-- **Broker sollte Änderungen an Tischen zu ALLEN POS broadcasten**: Wenn eine Kasse eine Änderung macht (Bestellung, Zahlung, etc.), soll Broker UPDATE_REQUIRED an alle anderen POS senden. POS sollte eigene Änderungen (vom Broker zurückgesendet) korrekt verarbeiten können.
-- **Stable Client Name testen**: v33 mit stabilen Client-Namen testen - POS backgrounding/return sollte Verbindung zu Display halten.
+## Folder Reorganization (v38 - In Progress)
+- **Goal**: Consolidate all OrderSprinter Modern files into single `modern/` folder
+- **Current state (v37)**: Separate `modern/`, `php/`, `broker/` folders in repository
+- **Target state (v38)**: Everything in `modern/` folder:
+  - `modern/` - UI files (HTML, JS, CSS)
+  - `modern/modernapi.php` - API file (moved from `php/`)
+  - `modern/broker/` - Broker server (moved from `broker/`)
+- **Deployment**: Everything deploys to `/var/www/webapp/modern/` on target system
+- **Changes made (v38)**:
+  - Copied `php/modernapi.php` → `modern/modernapi.php`
+  - Copied `broker/` → `modern/broker/`
+  - Updated API path in `app.js`: `../php/modernapi.php` → `./modernapi.php`
+  - Updated broker URLs: `http://127.0.0.1/php/modernapi.php` → `http://127.0.0.1/modern/modernapi.php`
+  - Updated `deploy-modern.sh` to deploy everything from `modern/` folder
+  - Renamed versioned files: v37 → v38
+  - Updated all HTML files to reference v38
+- **Next steps**:
+  - Commit and push changes
+  - Update systemd service on server to point to `/var/www/webapp/modern/broker/server.js`
+  - Update systemd service environment variables (POLL_URL, PRICELEVEL_URL)
+  - Test deployment on server
+  - Delete old `php/` and `broker/` folders from repository (after testing)
 
 ## iPad Safari PWA Cache Issue (v35 - Gelöst mit v36)
 - **Problem**: iPad PWA zeigte v35 in Status-Zeile, aber Broker wurde nicht gefunden. Nach mehrfachen Safari-Refreshes funktionierte es.

@@ -54,7 +54,7 @@ fi
 
 mkdir -p "$WEBROOT/modern"
 
-# Deploy modern UI
+# Deploy everything from modern folder (UI + API + Broker)
 rsync -a "$ROOT_DIR/modern/" "$WEBROOT/modern/"
 
 # Clean up old versioned files from previous version
@@ -68,15 +68,8 @@ if [[ -n "$PREVIOUS_VERSION" ]] && [[ "$PREVIOUS_VERSION" != "$CURRENT_VERSION" 
   rm -f "$WEBROOT/modern/customer-old.${PREVIOUS_VERSION}.css"
 fi
 
-# Deploy modern API
-cp -a "$ROOT_DIR/php/modernapi.php" "$WEBROOT/php/modernapi.php"
-
-# Deploy broker under webroot
-mkdir -p "$WEBROOT/broker"
-rsync -a "$ROOT_DIR/broker/" "$WEBROOT/broker/"
-
 # Fix ownership
-chown -R "$WEBOWNER:$WEBGROUP" "$WEBROOT/modern" "$WEBROOT/php/modernapi.php" "$WEBROOT/broker"
+chown -R "$WEBOWNER:$WEBGROUP" "$WEBROOT/modern"
 
 cat <<EOF
 
@@ -87,8 +80,11 @@ Version: $CURRENT_VERSION
 Previous: ${PREVIOUS_VERSION:-none}
 
 Notes:
+- All files (UI, API, Broker) deployed to $WEBROOT/modern/
 - Old version files (v$PREVIOUS_VERSION) have been cleaned up
-- If broker path changed, update systemd service to point to $WEBROOT/broker/server.js
+- Broker is now at $WEBROOT/modern/broker/server.js
+- Update systemd service to point to: $WEBROOT/modern/broker/server.js
+- Update POLL_URL and PRICELEVEL_URL in systemd service to: http://127.0.0.1/modern/modernapi.php
 - Restart broker after updates:
   sudo systemctl restart ordersprinter-broker
 EOF
