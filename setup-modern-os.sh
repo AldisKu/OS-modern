@@ -354,7 +354,7 @@ EOF
   log_info "Installing broker dependencies..."
   echo "[DEBUG] Running: npm install in $broker_dir"
   cd "$broker_dir"
-  sudo npm install
+  sudo -u www-data npm install
   cd - > /dev/null
   log_success "Broker dependencies installed"
   
