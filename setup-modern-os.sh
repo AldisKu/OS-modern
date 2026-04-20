@@ -257,6 +257,7 @@ download_sources() {
 run_deploy() {
   local git_folder="$1"
   local webroot="$2"
+  local original_dir="$(pwd)"
   
   log_info "Running deployment script..."
   
@@ -267,6 +268,7 @@ run_deploy() {
   
   cd "$git_folder"
   WEBROOT="$webroot" sudo bash deploy-modern.sh --v
+  cd "$original_dir"
   
   log_success "Deployment complete"
   return 0
