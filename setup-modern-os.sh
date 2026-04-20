@@ -5,7 +5,7 @@ set -euo pipefail
 # Downloads sources, installs dependencies, deploys, and starts services
 # Usage: bash setup-modern-os.sh
 
-REPO_URL="https://github.com/AldisKu/orders.git"
+REPO_URL="https://github.com/AldisKu/OS-modern.git"
 REPO_BRANCH="main"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
