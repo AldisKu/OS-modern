@@ -9,6 +9,7 @@
 !install.md
 !deploy-modern.sh
 !setup-runtime.sh
+!setup-ordersprinter.sh
 !CONTEXT.md
 !WORKFLOW.md
 !QUICKSTART.md
@@ -23,3 +24,5 @@
 !DEPLOYMENT_SCRIPT_MIGRATION_v38.md
 !DEPLOYMENT_QUICK_REFERENCE.md
 !MIGRATION_COMPLETED_v38.md
+!SETUP_GUIDE_DE.md
+!DEPLOYMENT_FIX_v38.md
