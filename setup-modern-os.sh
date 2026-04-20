@@ -327,6 +327,15 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=${broker_dir}
+
+# Environment variables for broker
+Environment="PORT=3077"
+Environment="BROKER_TOKEN="
+Environment="POLL_URL=http://127.0.0.1/php/modernapi.php?cmd=state"
+Environment="POLL_INTERVAL_MS=4000"
+Environment="PRICELEVEL_URL=http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state"
+Environment="PRINTER_URL=http://127.0.0.1/php/modernapi.php?cmd=printer_status"
+
 ExecStart=/usr/bin/node ${broker_path}
 Restart=always
 RestartSec=10
