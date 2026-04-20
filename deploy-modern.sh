@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ROOT_DIR is where the deploy script is located (the git repository)
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 WEBROOT="${WEBROOT:-}"
@@ -39,6 +40,8 @@ STAMP="$(date +%Y%m%d_%H%M%S)"
 # Get current version from source (versioned filename)
 CURRENT_VERSION=$(ls "$ROOT_DIR/modern/app."*.js 2>/dev/null | grep -oP 'app\.\K[0-9]+' | head -1 || echo "unknown")
 echo "Deploying version: $CURRENT_VERSION"
+echo "Source: $ROOT_DIR/modern"
+echo "Target: $WEBROOT/modern"
 
 # Detect old structure (v37 and earlier)
 HAS_OLD_BROKER=false
@@ -60,20 +63,13 @@ fi
 
 mkdir -p "$WEBROOT/modern"
 
-# Deploy only non-asset files (HTML, PHP, broker, config)
-# Assets (JS/CSS) come from git pull
-echo "Deploying modern files (excluding old assets)..."
+# Deploy from git repository to webroot
+echo "Deploying modern files from git repository..."
 rsync -a "$ROOT_DIR/modern/" "$WEBROOT/modern/" \
-  --exclude='*.js' \
-  --exclude='*.css' \
-  --include='app.*.js' \
-  --include='styles.*.css' \
-  --include='customer.*.js' \
-  --include='customer.*.css' \
-  --include='customer-old.*.js' \
-  --include='customer-old.*.css'
+  --exclude='.git' \
+  --exclude='node_modules'
 
-# Clean up old/unused asset files
+# Clean up old/unused asset files in deployment folder
 echo "Cleaning up old/unused files..."
 # Remove hashed files (old build artifacts)
 rm -f "$WEBROOT/modern/app."[a-f0-9]*.js
@@ -131,14 +127,13 @@ Owner:   $WEBOWNER:$WEBGROUP
 Version: $CURRENT_VERSION
 
 === DEPLOYMENT SUMMARY ===
-✓ Core files deployed (HTML, PHP, Broker, Config)
+✓ All files deployed from git repository
 ✓ Old/unused asset files cleaned up
-✓ Versioned assets ready (from git pull)
+✓ Versioned assets in place (app.$CURRENT_VERSION.js, etc.)
 $(if [[ "$HAS_OLD_BROKER" == true ]]; then echo "✓ Old broker structure removed (backup: broker.backup.${STAMP})"; fi)
 $(if [[ "$HAS_OLD_API" == true ]]; then echo "✓ Old API file removed (backup: php/modernapi.php.backup.${STAMP})"; fi)
 
 === IMPORTANT ===
-- Versioned asset files (app.$CURRENT_VERSION.js, etc.) must be present from git pull
 - Broker is at: $WEBROOT/modern/broker/server.js
 - API is at: $WEBROOT/modern/modernapi.php
 - Old backups saved with timestamp: $STAMP
