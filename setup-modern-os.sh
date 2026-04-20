@@ -199,55 +199,56 @@ download_sources() {
       git pull origin "$REPO_BRANCH"
       log_success "Repository updated"
     fi
-  else
-    log_info "Downloading repository to $git_folder..."
-    mkdir -p "$(dirname "$git_folder")"
+    return 0
+  fi
+  
+  log_info "Downloading repository to $git_folder..."
+  mkdir -p "$(dirname "$git_folder")"
+  
+  # Primary method: Download as ZIP (works without git)
+  log_info "Downloading repository as ZIP..."
+  local zip_url="${REPO_URL%.git}/archive/refs/heads/$REPO_BRANCH.zip"
+  local temp_zip="/tmp/os-modern-$RANDOM.zip"
+  
+  if curl -fsSL -o "$temp_zip" "$zip_url"; then
+    log_success "ZIP downloaded, extracting..."
     
-    # Try git clone first (HTTPS, no auth needed for public repos)
-    if command -v git &> /dev/null; then
-      log_info "Using git to clone repository..."
-      if git clone --branch "$REPO_BRANCH" "$REPO_URL" "$git_folder" 2>/dev/null; then
-        log_success "Repository cloned with git"
-        return 0
-      else
-        log_warn "Git clone failed, trying ZIP download..."
-      fi
+    # Extract and move to target folder
+    local extract_dir="/tmp/os-modern-extract-$RANDOM"
+    mkdir -p "$extract_dir"
+    unzip -q "$temp_zip" -d "$extract_dir"
+    
+    # Find the extracted folder (usually OS-modern-main or similar)
+    local extracted=$(find "$extract_dir" -maxdepth 1 -type d -name "OS-modern-*" | head -1)
+    if [[ -z "$extracted" ]]; then
+      extracted=$(find "$extract_dir" -maxdepth 1 -type d ! -name "." | head -1)
     fi
     
-    # Fallback: Download as ZIP
-    log_info "Downloading repository as ZIP..."
-    local zip_url="${REPO_URL%.git}/archive/refs/heads/$REPO_BRANCH.zip"
-    local temp_zip="/tmp/os-modern-$RANDOM.zip"
-    
-    if curl -fsSL -o "$temp_zip" "$zip_url"; then
-      log_success "ZIP downloaded, extracting..."
-      
-      # Extract and move to target folder
-      local extract_dir="/tmp/os-modern-extract-$RANDOM"
-      mkdir -p "$extract_dir"
-      unzip -q "$temp_zip" -d "$extract_dir"
-      
-      # Find the extracted folder (usually OS-modern-main or similar)
-      local extracted=$(find "$extract_dir" -maxdepth 1 -type d -name "OS-modern-*" | head -1)
-      if [[ -z "$extracted" ]]; then
-        extracted=$(find "$extract_dir" -maxdepth 1 -type d ! -name "." | head -1)
-      fi
-      
-      if [[ -n "$extracted" ]]; then
-        mv "$extracted" "$git_folder"
-        rm -rf "$extract_dir" "$temp_zip"
-        log_success "Repository extracted to $git_folder"
-        return 0
-      else
-        log_error "Failed to extract repository"
-        rm -rf "$extract_dir" "$temp_zip"
-        return 1
-      fi
+    if [[ -n "$extracted" ]]; then
+      mv "$extracted" "$git_folder"
+      rm -rf "$extract_dir" "$temp_zip"
+      log_success "Repository extracted to $git_folder"
+      return 0
     else
-      log_error "Failed to download repository"
+      log_error "Failed to extract repository"
+      rm -rf "$extract_dir" "$temp_zip"
       return 1
     fi
+  else
+    log_warn "ZIP download failed, trying git clone..."
   fi
+  
+  # Fallback: Try git clone if ZIP fails
+  if command -v git &> /dev/null; then
+    log_info "Using git to clone repository..."
+    if git clone --branch "$REPO_BRANCH" "$REPO_URL" "$git_folder" 2>&1; then
+      log_success "Repository cloned with git"
+      return 0
+    fi
+  fi
+  
+  log_error "Failed to download repository (both ZIP and git methods failed)"
+  return 1
 }
 
 # ============================================================================
@@ -276,7 +277,8 @@ run_deploy() {
 # ============================================================================
 setup_broker_service() {
   local webroot="$1"
-  local broker_path="$webroot/modern/broker/server.js"
+  local broker_path="${webroot}/modern/broker/server.js"
+  local broker_dir="${webroot}/modern/broker"
   
   log_info "Setting up broker systemd service..."
   
@@ -297,8 +299,8 @@ After=network.target
 [Service]
 Type=simple
 User=www-data
-WorkingDirectory=$webroot/modern/broker
-ExecStart=/usr/bin/node $broker_path
+WorkingDirectory=${broker_dir}
+ExecStart=/usr/bin/node ${broker_path}
 Restart=always
 RestartSec=10
 StandardOutput=journal

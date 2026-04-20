@@ -17,8 +17,8 @@ OrderSprinter Modern ist ein modernes POS-System mit WebSocket-Broker für Echtz
 ### Schritt 1: Setup-Skript herunterladen und ausführen
 
 ```bash
-curl -O https://raw.githubusercontent.com/AldisKu/orders/main/setup-ordersprinter.sh
-bash setup-ordersprinter.sh
+curl -O https://raw.githubusercontent.com/AldisKu/OS-modern/main/setup-modern-os.sh
+bash setup-modern-os.sh
 ```
 
 Das Skript wird Sie durch folgende Schritte führen:
@@ -259,8 +259,8 @@ A: In der Datenbank des bestehenden OrderSprinter-Systems (nicht in Modern).
 
 ## Support und Dokumentation
 
-- **Repository**: https://github.com/AldisKu/orders
-- **Issues**: https://github.com/AldisKu/orders/issues
+- **Repository**: https://github.com/AldisKu/OS-modern
+- **Issues**: https://github.com/AldisKu/OS-modern/issues
 - **Dokumentation**: Siehe README.md im Repository
 
 ## Lizenz
