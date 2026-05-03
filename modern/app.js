@@ -393,17 +393,31 @@ function ensureClientName() {
     if (existing) {
       return existing;
     }
-    // Generate new stable client name: POS-XXXXXX (6 random chars)
-    const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const clientName = `POS-${rnd}`;
-    localStorage.setItem("modern_client_name", clientName);
-    if (DEBUG_BROKER) console.log(`[BROKER] Generated new stable client name: ${clientName}`);
-    return clientName;
   } catch (_) {
-    // localStorage might be blocked; generate session-scoped name
-    const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return `POS-${rnd}`;
+    // localStorage blocked, try sessionStorage
+    try {
+      const existing = sessionStorage.getItem("modern_client_name");
+      if (existing) {
+        return existing;
+      }
+    } catch (_) {}
   }
+  
+  // Generate new stable client name: POS-XXXXXX (6 random chars)
+  const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const clientName = `POS-${rnd}`;
+  
+  // Try to persist in localStorage first, then sessionStorage
+  try {
+    localStorage.setItem("modern_client_name", clientName);
+  } catch (_) {
+    try {
+      sessionStorage.setItem("modern_client_name", clientName);
+    } catch (_) {}
+  }
+  
+  if (DEBUG_BROKER) console.log(`[BROKER] Generated new stable client name: ${clientName}`);
+  return clientName;
 }
 
 function registerBrokerUnknown() {
