@@ -1,5 +1,5 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "35";
+const APP_VERSION = "36";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = true; // Enable broker registration logging
@@ -132,7 +132,8 @@ const state = {
   lastServerVersionAt: 0,
   lastBrokerUpdateAt: 0,
   pendingRoomRefresh: false,
-  priceEntry: null
+  priceEntry: null,
+  orderSending: false
 };
 
 // Expose for on-device debugging (e.g., iPad Web Inspector)
@@ -1812,8 +1813,18 @@ async function handleMenuAction(action, btn) {
 async function sendOrder(workprint, goStart) {
   const table = state.selectedTable;
   if (!table) return;
+  
+  // Prevent double-click on slow networks
+  if (state.orderSending) return;
+  state.orderSending = true;
+  disableOrderButtons();
+  
   const cart = state.cartByTable[table.id] || [];
-  if (cart.length === 0) return;
+  if (cart.length === 0) {
+    state.orderSending = false;
+    enableOrderButtons();
+    return;
+  }
   const prods = cart.map(c => ({
     name: c.name,
     option: c.option || "",
@@ -1848,6 +1859,58 @@ async function sendOrder(workprint, goStart) {
       show(els.startScreen);
     }
     alert(msg);
+    // Re-enable buttons on error
+    state.orderSending = false;
+    enableOrderButtons();
+  }
+  
+  // Clear flag after successful order
+  if (res.status === "OK") {
+    state.orderSending = false;
+  }
+}
+
+function disableOrderButtons() {
+  // Disable "Arbeitsbon" and "Bestellung beenden" buttons
+  document.querySelectorAll('[data-action="workprint"], [data-action="send"]').forEach(btn => {
+    btn.disabled = true;
+    btn.style.opacity = "0.5";
+    btn.style.cursor = "not-allowed";
+  });
+  // Also disable modal add buttons (Bestellen in product modal and price modal)
+  const modalAddBtn = document.getElementById("modal-add");
+  const priceConfirmBtn = document.getElementById("price-confirm");
+  if (modalAddBtn) {
+    modalAddBtn.disabled = true;
+    modalAddBtn.style.opacity = "0.5";
+    modalAddBtn.style.cursor = "not-allowed";
+  }
+  if (priceConfirmBtn) {
+    priceConfirmBtn.disabled = true;
+    priceConfirmBtn.style.opacity = "0.5";
+    priceConfirmBtn.style.cursor = "not-allowed";
+  }
+}
+
+function enableOrderButtons() {
+  // Re-enable "Arbeitsbon" and "Bestellung beenden" buttons
+  document.querySelectorAll('[data-action="workprint"], [data-action="send"]').forEach(btn => {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+  });
+  // Also re-enable modal add buttons
+  const modalAddBtn = document.getElementById("modal-add");
+  const priceConfirmBtn = document.getElementById("price-confirm");
+  if (modalAddBtn) {
+    modalAddBtn.disabled = false;
+    modalAddBtn.style.opacity = "1";
+    modalAddBtn.style.cursor = "pointer";
+  }
+  if (priceConfirmBtn) {
+    priceConfirmBtn.disabled = false;
+    priceConfirmBtn.style.opacity = "1";
+    priceConfirmBtn.style.cursor = "pointer";
   }
 }
 
