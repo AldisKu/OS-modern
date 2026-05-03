@@ -2435,7 +2435,8 @@ async function openMenuModal() {
     });
     const recordsBtn = `<button class="menu-link-btn" data-records="1">Tischprotokoll</button>`;
     const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
-    els.menuItems.innerHTML = recordsBtn + localBtn + items.map(m => {
+    const brokerBtn = `<button class="menu-link-btn" data-broker="1">Broker Debug</button>`;
+    els.menuItems.innerHTML = recordsBtn + localBtn + brokerBtn + items.map(m => {
       const link = normalizeMenuLink(m.link || "");
       return `<button class="menu-link-btn" data-link="${link}">${m.name}</button>`;
     }).join("");
@@ -2450,6 +2451,11 @@ async function openMenuModal() {
           closeMenuModal();
           openLocalConfigModal();
         };
+      } else if (b.dataset.broker) {
+        b.onclick = () => {
+          closeMenuModal();
+          openBrokerDebugModal();
+        };
       } else {
         b.onclick = () => {
           closeMenuModal();
@@ -2463,6 +2469,70 @@ async function openMenuModal() {
 
 function closeMenuModal() {
   if (els.menuModal) els.menuModal.classList.add("hidden");
+}
+
+function openBrokerDebugModal() {
+  // Get broker status info
+  const wsState = state.brokerWs ? {
+    "CONNECTING": 0,
+    "OPEN": 1,
+    "CLOSING": 2,
+    "CLOSED": 3
+  }[["CONNECTING", "OPEN", "CLOSING", "CLOSED"][state.brokerWs.readyState]] : "N/A";
+  
+  const brokerInfo = `
+    <div style="font-family: monospace; font-size: 12px; line-height: 1.6; padding: 10px; background: #f5f5f5; border-radius: 4px;">
+      <div><b>Broker Status:</b></div>
+      <div>URL: ${brokerUrl || "Not set"}</div>
+      <div>WebSocket State: ${wsState}</div>
+      <div>Broker Label: ${state.brokerLabel}</div>
+      <div>Broker ID: ${state.brokerId || "Not set"}</div>
+      <div>Client Name: ${state.clientName || "Not set"}</div>
+      <div>Device ID: ${state.deviceId || "Not set"}</div>
+      <div>Registered as Unknown: ${state.brokerRegisteredAsUnknown}</div>
+      <div>Registered as POS: ${state.brokerRegisteredAsPos}</div>
+      <div>Display Connected: ${state.displayConnected}</div>
+      <div style="margin-top: 10px; border-top: 1px solid #ccc; padding-top: 10px;">
+        <b>Debug Console:</b>
+        <div>Check browser console (F12) for detailed broker logs</div>
+        <div>Enable DEBUG_BROKER in code for verbose logging</div>
+      </div>
+    </div>
+  `;
+  
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Broker Debug";
+  els.confirmBody.innerHTML = brokerInfo;
+  els.confirmActions.innerHTML = `
+    <button class="primary" id="broker-reconnect">Reconnect</button>
+    <button class="ghost" id="broker-close">Close</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  
+  document.getElementById("broker-reconnect").onclick = () => {
+    // Force broker reconnection
+    if (state.brokerWs) {
+      try {
+        state.brokerWs.close();
+      } catch (_) {}
+    }
+    state.brokerWs = null;
+    state.brokerRegisteredAsUnknown = false;
+    state.brokerRegisteredAsPos = false;
+    if (state.brokerReconnectTimer) clearTimeout(state.brokerReconnectTimer);
+    if (state.brokerRegistrationRetryTimer) clearTimeout(state.brokerRegistrationRetryTimer);
+    
+    // Reinitialize broker
+    initBroker();
+    
+    // Show status
+    alert("Broker reconnection initiated. Check console for details.");
+    openBrokerDebugModal(); // Refresh the modal
+  };
+  
+  document.getElementById("broker-close").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+  };
 }
 
 async function openTableRecords() {
