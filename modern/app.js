@@ -869,6 +869,9 @@ async function openOrderForTable(table) {
   await fetchNotDelivered();
   renderOrderItems();
   renderCategories();
+  // Reset order sending flag and re-enable buttons when entering order screen
+  state.orderSending = false;
+  enableOrderButtons();
   show(els.orderScreen);
 }
 
@@ -1848,6 +1851,9 @@ async function sendOrder(workprint, goStart) {
     updateStatus();
     // Cart is now empty — tell customer display immediately
     sendDisplayIdle();
+    // Clear flag and re-enable buttons after successful order
+    state.orderSending = false;
+    enableOrderButtons();
     if (goStart) {
       setStartMessage(`Tisch ${table.name}: Bestellung abgeschickt`, cart);
       show(els.startScreen);
@@ -1862,11 +1868,6 @@ async function sendOrder(workprint, goStart) {
     // Re-enable buttons on error
     state.orderSending = false;
     enableOrderButtons();
-  }
-  
-  // Clear flag after successful order
-  if (res.status === "OK") {
-    state.orderSending = false;
   }
 }
 
