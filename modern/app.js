@@ -1,8 +1,8 @@
 const API = "../php/modernapi.php";
-const APP_VERSION = "40";
+const APP_VERSION = "41";
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
-const DEBUG_BROKER = true; // Enable broker registration logging
+const DEBUG_BROKER = false;
 
 const els = {
   loginScreen: document.getElementById("login-screen"),
@@ -317,7 +317,6 @@ function initBroker() {
         state.lastBrokerUpdateAt = Date.now();
         const scope = String(payload.scope || "").toUpperCase();
         if (scope.includes("MENU") || scope.includes("PRICE") || scope.includes("PRICES")) {
-          console.debug("Preisstufe geändert");
           await refreshMenuPrices();
           showStatusMessage("Price level updated (broker)");
         } else {
@@ -779,7 +778,6 @@ function shouldEnterPrice(prod) {
 }
 
 function renderTables() {
-  console.debug("renderTables invoked", new Date().toISOString());
   if (!state.rooms?.roomstables) return;
   const cards = [];
   const layout = state.tableLayout;
@@ -835,7 +833,6 @@ function renderTables() {
   });
   els.tablesGrid.innerHTML = cards.join("");
   const metas = Array.from(els.tablesGrid.querySelectorAll(".table-card .meta")).map(el => el.textContent.trim());
-  console.debug("renderTables metas", metas);
   els.tablesGrid.querySelectorAll(".table-card").forEach(el => {
     el.addEventListener("click", () => openOrderForTable({ id: Number(el.dataset.id), name: el.dataset.name }));
   });

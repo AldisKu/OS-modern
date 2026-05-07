@@ -256,7 +256,6 @@ if ($cmd == "state") {
 		"version" => $version
 	);
 	echo json_encode($response);
-	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -274,7 +273,6 @@ if ($cmd == "pricelevel_state") {
 		"version" => $version
 	);
 	echo json_encode($response);
-	logApi($cmd, $requestForLog, $response);
 	return;
 }
 
@@ -334,6 +332,8 @@ if (!requireLogin()) {
 
 switch ($cmd) {
 	case "menu_items":
+		header("Cache-Control: public, max-age=86400");
+		header_remove("Pragma");
 		$admin = new Admin();
 		$response = captureJson(function() use ($admin) {
 			$admin->getJsonMenuItemsAndVersion();
