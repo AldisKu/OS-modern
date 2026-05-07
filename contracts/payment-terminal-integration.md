@@ -382,3 +382,188 @@ function sendOPI(ip, port, xmlPayload) {
 2. Second test: send a small amount (€0.01) CardPayment → verify terminal shows card prompt
 3. Third test: full flow from iPad → broker → terminal → response → iPad
 4. Use the Broker Debug menu (already in app.js) to verify WebSocket connectivity
+
+
+---
+
+## Fake Terminal (Test Simulator)
+
+### Purpose
+
+A lightweight OPI terminal simulator running on a Raspberry Pi (second Linux server on the local network). Allows full end-to-end testing of the payment flow without the real Nexi hardware or live cards.
+
+### Hardware
+
+- **Device:** Raspberry Pi (Linux, on same WiFi network as POS server)
+- **Static IP:** to be assigned (e.g., 192.168.0.60)
+- **Port:** 20002 (same as real terminal)
+- **Runtime:** Node.js (no additional dependencies)
+
+### What it simulates
+
+| OPI Request | Behavior |
+|-------------|----------|
+| Login | Always succeeds, instant response |
+| CardPayment | Random delay (2–8s typical), random outcome |
+| Logoff | Always succeeds, instant response |
+
+### Random outcomes (configurable)
+
+| Result | Default probability | Meaning |
+|--------|-------------------|---------|
+| Success | 80% | Payment approved |
+| Aborted | 10% | Customer cancelled / removed card |
+| Failure | 10% | Declined by issuer |
+
+### Realistic timing simulation
+
+- **Fast tap (contactless):** 2–4 seconds
+- **Chip + PIN:** 5–8 seconds
+- **Slow network / issuer:** 12–20 seconds (occasional, ~5% of transactions)
+- **Timeout simulation:** configurable chance of no response at all (tests broker timeout handling)
+- **TCP disconnect:** configurable chance of dropping connection mid-transaction (tests error recovery)
+
+### Configuration
+
+File: `fake-terminal-config.json` (on the Pi)
+
+```json
+{
+  "port": 20002,
+  "successRate": 0.80,
+  "abortRate": 0.10,
+  "failRate": 0.10,
+  "minDelayMs": 2000,
+  "maxDelayMs": 8000,
+  "slowChance": 0.05,
+  "slowDelayMs": 18000,
+  "disconnectChance": 0.02,
+  "logToConsole": true
+}
+```
+
+### Response XML templates
+
+**Success:**
+```xml
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<CardServiceResponse RequestType="CardPayment" WorkstationID="1" RequestID="2" OverallResult="Success">
+   <Terminal TerminalID="12345678" STAN="000042"/>
+   <Tender>
+      <TotalAmount>12.50</TotalAmount>
+      <Authorisation AcquirerID="000001" AuthorisationCode="A12345" TimeStamp="2026-05-07T12:00:05+02:00"/>
+   </Tender>
+   <CardValue>
+      <CardPAN>************1234</CardPAN>
+      <CardCircuit>Mastercard</CardCircuit>
+   </CardValue>
+</CardServiceResponse>
+```
+
+**Aborted:**
+```xml
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<CardServiceResponse RequestType="CardPayment" WorkstationID="1" RequestID="2" OverallResult="Aborted">
+   <Terminal TerminalID="12345678"/>
+</CardServiceResponse>
+```
+
+**Failure:**
+```xml
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<CardServiceResponse RequestType="CardPayment" WorkstationID="1" RequestID="2" OverallResult="Failure">
+   <Terminal TerminalID="12345678"/>
+   <ErrorDetail>Card declined by issuer</ErrorDetail>
+</CardServiceResponse>
+```
+
+### Implementation sketch (Node.js, ~80 lines)
+
+```javascript
+import net from 'net';
+import { readFileSync } from 'fs';
+
+const config = JSON.parse(readFileSync('./fake-terminal-config.json', 'utf8'));
+
+const server = net.createServer((socket) => {
+  let buffer = Buffer.alloc(0);
+  
+  socket.on('data', (chunk) => {
+    buffer = Buffer.concat([buffer, chunk]);
+    while (buffer.length >= 4) {
+      const msgLen = buffer.readUInt32BE(0);
+      if (buffer.length < 4 + msgLen) break;
+      const xml = buffer.slice(4, 4 + msgLen).toString();
+      buffer = buffer.slice(4 + msgLen);
+      handleMessage(socket, xml);
+    }
+  });
+});
+
+function handleMessage(socket, xml) {
+  if (config.logToConsole) console.log(`← ${xml.substring(0, 120)}...`);
+  
+  if (xml.includes('RequestType="Login"')) {
+    respond(socket, loginResponse(), 100);
+  } else if (xml.includes('RequestType="CardPayment"')) {
+    const delay = pickDelay();
+    const result = pickResult();
+    if (config.logToConsole) console.log(`  [SIM] delay=${delay}ms result=${result}`);
+    
+    // Simulate disconnect?
+    if (Math.random() < config.disconnectChance) {
+      setTimeout(() => socket.destroy(), delay / 2);
+      return;
+    }
+    respond(socket, cardPaymentResponse(xml, result), delay);
+  } else if (xml.includes('RequestType="Logoff"')) {
+    respond(socket, logoffResponse(), 100);
+  }
+}
+
+function respond(socket, xml, delayMs) {
+  setTimeout(() => {
+    if (socket.destroyed) return;
+    const buf = Buffer.alloc(4);
+    buf.writeUInt32BE(xml.length);
+    socket.write(buf);
+    socket.write(xml);
+    if (config.logToConsole) console.log(`→ ${xml.substring(0, 80)}...`);
+  }, delayMs);
+}
+
+function pickDelay() {
+  if (Math.random() < config.slowChance) return config.slowDelayMs;
+  return config.minDelayMs + Math.random() * (config.maxDelayMs - config.minDelayMs);
+}
+
+function pickResult() {
+  const r = Math.random();
+  if (r < config.successRate) return "Success";
+  if (r < config.successRate + config.abortRate) return "Aborted";
+  return "Failure";
+}
+
+// XML response builders (loginResponse, logoffResponse, cardPaymentResponse)
+// ... generate XML strings with OverallResult attribute
+
+server.listen(config.port, () => {
+  console.log(`Fake OPI terminal listening on :${config.port}`);
+});
+```
+
+### Usage
+
+1. Copy `fake-terminal.js` + `fake-terminal-config.json` to the Pi
+2. Run: `node fake-terminal.js`
+3. Point `payment-config.json` on the POS server to the Pi's IP
+4. Test the full flow from iPad
+
+### What this enables
+
+- Develop and debug the entire payment integration without real hardware
+- Test edge cases: timeouts, disconnects, declined cards
+- Adjust success/failure rates to stress-test error handling
+- Verify the waiting mode UI on the iPad
+- Run automated/repeated tests (e.g., 100 payments in a row)
+- Later: switch config to real terminal IP when ready for live testing
