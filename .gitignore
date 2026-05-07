@@ -6,6 +6,8 @@
 !broker/**
 !php/
 !php/modernapi.php
+!contracts/
+!contracts/**
 !install.md
 !deploy-modern.sh
 !setup-runtime.sh
