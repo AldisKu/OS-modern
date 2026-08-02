@@ -196,19 +196,30 @@ async function api(cmd, body) {
     body: JSON.stringify(body || {})
   });
   const text = await res.text();
+  let data;
   try {
-    return JSON.parse(text);
+    data = JSON.parse(text);
   } catch (e) {
     const start = text.indexOf("{");
     const end = text.lastIndexOf("}");
     if (start !== -1 && end !== -1 && end > start) {
       try {
-        return JSON.parse(text.slice(start, end + 1));
+        data = JSON.parse(text.slice(start, end + 1));
       } catch (_) {}
     }
-    console.error("API JSON parse failed:", cmd, text);
-    throw e;
+    if (!data) {
+      console.error("API JSON parse failed:", cmd, text);
+      throw e;
+    }
   }
+  // Detect expired session — redirect to login instead of showing cryptic error
+  if (data && data.status === "ERROR" && data.code === "2" && cmd !== "login" && cmd !== "session") {
+    console.warn("Session expired, redirecting to login screen");
+    state.user = null;
+    show(els.loginScreen);
+    els.loginHint.textContent = "Sitzung abgelaufen – bitte erneut anmelden";
+  }
+  return data;
 }
 
 async function init() {

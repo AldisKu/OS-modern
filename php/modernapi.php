@@ -441,7 +441,12 @@ switch ($cmd) {
 	case "order":
 		$userrights = new Userrights();
 		if (!$userrights->hasCurrentUserRight('right_waiter')) {
-			$response = array("status" => "ERROR","msg" => "Benutzerrechte nicht ausreichend!");
+			// Distinguish between expired session and genuinely missing rights
+			if (!isset($_SESSION['angemeldet']) || !$_SESSION['angemeldet']) {
+				$response = array("status" => "ERROR", "code" => ERROR_NOT_AUTHOTRIZED, "msg" => ERROR_NOT_AUTHOTRIZED_MSG);
+			} else {
+				$response = array("status" => "ERROR", "msg" => "Benutzerrechte nicht ausreichend!");
+			}
 			echo json_encode($response);
 			logApi($cmd, $requestForLog, $response);
 			return;

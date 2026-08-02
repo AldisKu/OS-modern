@@ -1,5 +1,11 @@
 # Changelog (Modern Client)
 
+## 2026-08-01 – Session Expiry Fix
+- Fixed: iPad/Safari users getting "Benutzerrechte nicht ausreichend" after device sleep. Root cause: PHP session expired server-side (was 24 min), client still assumed logged-in state.
+- Server: Increased `session.gc_maxlifetime` from 1440s (24 min) to 25200s (7 hours) in `/etc/php/8.1/apache2/php.ini`.
+- Client (`app.js`): `api()` function now detects session expiry (error code "2") and redirects to login screen with message "Sitzung abgelaufen – bitte erneut anmelden" instead of showing a cryptic error.
+- Server (`modernapi.php`): Order command now distinguishes between expired session and genuinely missing `right_waiter` permission — expired sessions return the standard auth error (code "2") so the client can handle it properly.
+
 ## 2026-04-16 (v23)
 - Fixed: customer display now receives idle signal when POS finishes a task (order sent, payment completed).
 - Fixed: customer display auto-idles after 30s of no updates (missing `startIdleTimer()` in `customer.js`).
