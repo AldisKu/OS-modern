@@ -1,3 +1,24 @@
 {
-  "client_poll_interval_ms": 120000
+  "client_poll_interval_ms": 120000,
+  "voucher_enabled": true,
+  "voucher_api_url": "https://voucher.cafekomine.de/api/v1",
+  "zvt_enabled": true,
+  "zvt": {
+    "password": "000000",
+    "configByte": 154,
+    "registrationTlvPermitPrint": true,
+    "registrationIncludeCurrency": true,
+    "receiptMode": "broker",
+    "receiptParam1F04": 161,
+    "pollIntervalSeconds": 60,
+    "discoveryIntervalHours": 24,
+    "recoveryScanCooldownSeconds": 300,
+    "connectTimeoutMs": 400,
+    "responseTimeoutMs": 2000,
+    "transactionTimeoutSeconds": 120,
+    "scanPorts": [20007, 20011, 40007],
+    "cidrs": ["192.168.0.0/24"],
+    "maxConcurrency": 32,
+    "currency": "EUR"
+  }
 }

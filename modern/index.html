@@ -9,7 +9,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <title>OrderSprinter Modern</title>
-  <link rel="stylesheet" href="./styles.css?v=40" />
+  <link rel="stylesheet" href="./styles.63.css" />
 </head>
 <body>
   <div id="app">
@@ -240,8 +240,51 @@
         <div class="modal-body records-body" id="records-body"></div>
       </div>
     </div>
+    <div class="modal hidden" id="voucher-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="voucher-modal-title">Gutschein</h2>
+        </div>
+        <div class="modal-body">
+          <div id="voucher-input-section">
+            <div class="voucher-input-row">
+              <input type="text" id="voucher-number-input" placeholder="Nummer oder Code (CK-XXXX-XXXX-XXXX)" autocomplete="off" inputmode="text" />
+              <button type="button" class="voucher-scan-btn" id="voucher-scan-btn">📷</button>
+            </div>
+            <div id="voucher-scanner-container" class="hidden">
+              <div id="voucher-qr-reader"></div>
+              <button type="button" class="ghost" id="voucher-scan-stop">Scanner schließen</button>
+            </div>
+          </div>
+          <div id="voucher-result-section" class="hidden">
+            <div id="voucher-result"></div>
+          </div>
+        </div>
+        <div class="modal-footer" id="voucher-actions">
+          <button class="ghost" id="voucher-cancel">Abbrechen</button>
+          <button class="primary" id="voucher-check">Prüfen</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="voucher-sell-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Gutschein verkaufen</h2>
+        </div>
+        <div class="modal-body">
+          <div id="voucher-sell-info"></div>
+          <div id="voucher-sell-result" class="hidden"></div>
+        </div>
+        <div class="modal-footer" id="voucher-sell-actions">
+          <button class="ghost" id="voucher-sell-cancel">Abbrechen</button>
+          <button class="primary" id="voucher-sell-confirm">Bestätigen</button>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <script type="module" src="./app.js?v=40"></script>
+  <script src="./html5-qrcode.min.js"></script>
+  <script type="module" src="./app.63.js"></script>
 </body>
 </html>

@@ -46,6 +46,77 @@ function tableColumnExists($pdo, $table, $col) {
 	}
 }
 
+// True if a (non-aliased) table name exists in the current database.
+function tableExistsRaw($pdo, $tableName) {
+	try {
+		$stmt = $pdo->prepare("SHOW TABLES LIKE ?");
+		$stmt->execute(array($tableName));
+		return $stmt->rowCount() > 0;
+	} catch (Exception $e) {
+		return false;
+	}
+}
+
+// Creates/repairs the change-monitoring state table + triggers for the given
+// (already prefixed) table names. Config-driven: the caller passes real table
+// names derived from TAB_PREFIX, so nothing is hardcoded. Idempotent.
+function installChangeTriggers($pdo, $state, $log, $tRecords, $tQueue, $tBill, $tProducts, $tProdnames, $tResttables) {
+	$done = array();
+	$exec = function($sql) use ($pdo, &$done) { $pdo->exec($sql); };
+	try {
+		// State table (fixed size, one row per scope).
+		$exec("CREATE TABLE IF NOT EXISTS `$state` (scope VARCHAR(20) NOT NULL, last_change DATETIME(6) NOT NULL, PRIMARY KEY(scope)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+		$exec("INSERT INTO `$state` (scope,last_change) VALUES
+			('orders','2000-01-01 00:00:00.000000'),('payments','2000-01-01 00:00:00.000000'),
+			('moving','2000-01-01 00:00:00.000000'),('cancel','2000-01-01 00:00:00.000000'),
+			('products','2000-01-01 00:00:00.000000'),('tables','2000-01-01 00:00:00.000000')
+			ON DUPLICATE KEY UPDATE scope=scope");
+		// Debug event log (append-only, off the hot path).
+		$exec("CREATE TABLE IF NOT EXISTS `$log` (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, scope VARCHAR(20) NOT NULL, event VARCHAR(10) NOT NULL, src_table VARCHAR(64) NOT NULL, ref_id BIGINT NULL, ts DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6), PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+		// Drop existing triggers (idempotent).
+		$triggers = array(
+			'trg_change_records_ai','trg_change_queue_ai','trg_change_queue_au','trg_change_bill_ai',
+			'trg_change_products_ai','trg_change_products_au','trg_change_products_ad',
+			'trg_change_prodnames_ai','trg_change_prodnames_au','trg_change_prodnames_ad',
+			'trg_change_resttables_ai','trg_change_resttables_au','trg_change_resttables_ad'
+		);
+		foreach ($triggers as $t) { $exec("DROP TRIGGER IF EXISTS `$t`"); }
+
+		// Helper to build a scope-update trigger body.
+		$mk = function($name, $timing, $table, $scopeExpr, $event, $idcol) use ($state, $log) {
+			return "CREATE TRIGGER `$name` AFTER $timing ON `$table` FOR EACH ROW BEGIN "
+				. "DECLARE v_scope VARCHAR(20); SET v_scope = $scopeExpr; "
+				. "UPDATE `$state` SET last_change = NOW(6) WHERE scope = v_scope; "
+				. "INSERT INTO `$log` (scope,event,src_table,ref_id) VALUES (v_scope,'$event','$table',$idcol); END";
+		};
+		// records: action -> scope
+		$recScope = "CASE WHEN NEW.action=0 THEN 'orders' WHEN NEW.action IN (1,7) THEN 'payments' WHEN NEW.action IN (5,6) THEN 'moving' ELSE 'cancel' END";
+		$exec($mk('trg_change_records_ai','INSERT',$tRecords,$recScope,'insert','NEW.id'));
+		// queue: any insert/update = orders activity (paid/cancel/move touch it too)
+		$exec($mk('trg_change_queue_ai','INSERT',$tQueue,"'orders'",'insert','NEW.id'));
+		$exec($mk('trg_change_queue_au','UPDATE',$tQueue,"'orders'",'update','NEW.id'));
+		// bill: payment safety net
+		$exec($mk('trg_change_bill_ai','INSERT',$tBill,"'payments'",'insert','NEW.id'));
+		// products
+		$exec($mk('trg_change_products_ai','INSERT',$tProducts,"'products'",'insert','NEW.id'));
+		$exec($mk('trg_change_products_au','UPDATE',$tProducts,"'products'",'update','NEW.id'));
+		$exec($mk('trg_change_products_ad','DELETE',$tProducts,"'products'",'delete','OLD.id'));
+		// prodnames
+		$exec($mk('trg_change_prodnames_ai','INSERT',$tProdnames,"'products'",'insert','NEW.id'));
+		$exec($mk('trg_change_prodnames_au','UPDATE',$tProdnames,"'products'",'update','NEW.id'));
+		$exec($mk('trg_change_prodnames_ad','DELETE',$tProdnames,"'products'",'delete','OLD.id'));
+		// resttables
+		$exec($mk('trg_change_resttables_ai','INSERT',$tResttables,"'tables'",'insert','NEW.id'));
+		$exec($mk('trg_change_resttables_au','UPDATE',$tResttables,"'tables'",'update','NEW.id'));
+		$exec($mk('trg_change_resttables_ad','DELETE',$tResttables,"'tables'",'delete','OLD.id'));
+
+		return array("status" => "OK", "prefix_state_table" => $state, "triggers_on" => array($tRecords,$tQueue,$tBill,$tProducts,$tProdnames,$tResttables));
+	} catch (Exception $e) {
+		return array("status" => "ERROR", "msg" => $e->getMessage());
+	}
+}
+
 function safeRoomsAndTables($pdo) {
 	$roomsSql = "select R.id as id,roomname from %room% R
 		left join %resttables% T on R.id=T.roomid
@@ -276,6 +347,59 @@ if ($cmd == "pricelevel_state") {
 	return;
 }
 
+// Change-state poll for the broker. PURE READ: returns the fixed set of scope
+// rows (one per logical scope) with their microsecond last_change timestamp
+// (written by the DB triggers, see db/install-change-triggers.sql). No writes,
+// no deletes, no parameters. The broker keeps a per-scope watermark and decides
+// what changed. If the state table is missing (triggers not installed), fail
+// soft so the broker can fall back to the legacy state poll.
+if ($cmd == "changes") {
+	$pdo = DbUtils::openDbAndReturnPdoStatic();
+	$stateTable = TAB_PREFIX . "change_state";
+	if (!tableExistsRaw($pdo, $stateTable)) {
+		echo json_encode(array("status" => "ERROR", "code" => "NO_CHANGELOG", "scopes" => array()));
+		return;
+	}
+	$rows = CommonUtils::fetchSqlAll($pdo, "SELECT scope, last_change FROM $stateTable", null);
+	$scopes = array();
+	foreach ($rows as $r) {
+		// last_change is returned as an opaque fixed-width string
+		// ("YYYY-MM-DD HH:MM:SS.ffffff"); the broker compares it as a string.
+		$scopes[$r["scope"]] = $r["last_change"];
+	}
+	echo json_encode(array(
+		"status" => "OK",
+		"scopes" => $scopes
+	));
+	return;
+}
+
+// Install/repair the change-monitoring triggers using the app's REAL table
+// prefix (TAB_PREFIX) — no hardcoded table names, so it works on any server
+// regardless of prefix (os_ vs ordersprinter_ etc.). Idempotent: drops and
+// recreates our triggers + state table. Requires admin rights.
+if ($cmd == "install_triggers") {
+	$userrights = new Userrights();
+	if (!$userrights->hasCurrentUserRight('right_manager')) {
+		echo json_encode(array("status" => "ERROR", "msg" => "Nur Manager/Administrator darf Trigger installieren"));
+		return;
+	}
+	$pdo = DbUtils::openDbAndReturnPdoStatic();
+	$P = TAB_PREFIX;                       // e.g. "ordersprinter_" or "os_"
+	$state = $P . "change_state";
+	$log   = $P . "change_log";
+	$tRecords    = $P . "records";
+	$tQueue      = $P . "queue";
+	$tBill       = $P . "bill";
+	$tProducts   = $P . "products";
+	$tProdnames  = $P . "prodnames";
+	$tResttables = $P . "resttables";
+
+	$result = installChangeTriggers($pdo, $state, $log, $tRecords, $tQueue, $tBill, $tProducts, $tProdnames, $tResttables);
+	echo json_encode($result);
+	return;
+}
+
 if ($cmd == "config") {
 	$serverAddr = $_SERVER['SERVER_ADDR'] ?? '127.0.0.1';
 	$host = $_SERVER['HTTP_HOST'] ?? $serverAddr;
@@ -503,6 +627,14 @@ switch ($cmd) {
 		if ($toIsTogo) {
 			$toTableId = null;
 		}
+		// ToGo has no real table row, so its id must be stored as NULL in
+		// os_records.tableid. Without this, moving an order FROM ToGo to a
+		// table inserts tableid=0 and violates the os_records_ibfk_2 foreign
+		// key (SQLSTATE 23000 / 1452). The $fromIsTogo flag above is already
+		// captured for the togo=0 update below, so nulling here is safe.
+		if ($fromIsTogo) {
+			$fromTableId = null;
+		}
 		$queueids = $_POST["queueids"] ?? "";
 		$response = captureJson(function() use ($queue, $fromTableId, $toTableId, $queueids) {
 			$queue->changeTable($fromTableId, $toTableId, $queueids);
@@ -517,8 +649,14 @@ switch ($cmd) {
 					$sql = "UPDATE %queue% SET togo=1 WHERE id IN($placeholders)";
 					CommonUtils::execSql($pdo, $sql, $ids);
 				} else if ($fromIsTogo) {
-					$sql = "UPDATE %queue% SET togo=0 WHERE id IN($placeholders)";
-					CommonUtils::execSql($pdo, $sql, $ids);
+					// Moving FROM ToGo TO a real table: a ToGo order has
+					// tablenr=NULL in the queue, so QueueContent::changeTable's
+					// "UPDATE ... SET tablenr=? WHERE tablenr=?" never matches
+					// (NULL comparison fails) and the target table is not set,
+					// leaving the order orphaned (togo=0, tablenr=NULL).
+					// Set both togo=0 AND the target tablenr explicitly here.
+					$sql = "UPDATE %queue% SET togo=0, tablenr=? WHERE id IN($placeholders)";
+					CommonUtils::execSql($pdo, $sql, array_merge(array($toTableId), $ids));
 				}
 			}
 		}

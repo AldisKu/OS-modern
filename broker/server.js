@@ -1,15 +1,58 @@
 import http from "http";
 import { WebSocketServer } from "ws";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
 const TOKEN = process.env.BROKER_TOKEN || "";
 const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd=state";
+const CHANGES_URL = process.env.CHANGES_URL || "http://127.0.0.1/modern/modernapi.php?cmd=changes";
 const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
 const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state";
 const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
+// Debug: log change-detection + push timing (journalctl -u ordersprinter-broker).
+const DEBUG_UPDATES = process.env.DEBUG_UPDATES ? process.env.DEBUG_UPDATES !== "0" : true;
+function dbgU(...a) { if (DEBUG_UPDATES) console.log("[UPD]", new Date().toISOString(), ...a); }
+
+// Map DB change-state logical scopes -> client UPDATE_REQUIRED scope.
+// orders/payments/moving/cancel/tables all affect the table view -> "TABLES".
+// products affects the menu/catalog -> "MENU".
+function mapChangeScope(scope) {
+  if (scope === "products") return "MENU";
+  return "TABLES";
+}
+let changeLogAvailable = true;
+// Per-scope watermark: greatest last_change (DATETIME(6) string) seen so far.
+// Compared as opaque fixed-width strings (never parsed to a JS Date, which
+// would lose microseconds). Empty on start -> first poll pushes one refresh.
+const changeWatermark = {};
 const clients = new Set();
 let nextId = 1;
 const clientsByName = new Map(); // Map of clientName -> ws
+
+// --- Load config.json for optional modules ---
+let brokerConfig = {};
+try {
+  const cfgPath = path.join(__dirname, "..", "config.json");
+  if (fs.existsSync(cfgPath)) {
+    brokerConfig = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+  }
+} catch (_) {}
+
+// --- Conditionally load ZVT module ---
+let zvtHandler = null;
+if (brokerConfig.zvt_enabled) {
+  try {
+    const { initZvt } = await import("./zvt/index.js");
+    zvtHandler = initZvt(brokerConfig.zvt || {}, clients, __dirname);
+    console.log("[BROKER] ZVT payment module loaded");
+  } catch (e) {
+    console.log(`[BROKER] ZVT module failed to load: ${e.message}`);
+  }
+}
 
 function sendAll(msg) {
   const data = JSON.stringify(msg);
@@ -131,6 +174,7 @@ wss.on("connection", (ws, req) => {
 
   ws.on("message", (raw) => {
     let msg = null;
+    console.log("[MSG] raw:", raw.toString().substring(0,200));
     try { msg = JSON.parse(raw.toString()); } catch (_) { msg = null; }
     if (!msg || !msg.type) return;
     if (msg.type === "REGISTER") {
@@ -213,6 +257,21 @@ wss.on("connection", (ws, req) => {
         client.send(data);
       }
     }
+    // --- ZVT/Payment message routing ---
+    if (zvtHandler && (
+      msg.type === "REQUEST_TERMINALS" ||
+      msg.type === "PAYMENT_REQUEST" ||
+      msg.type === "PAYMENT_CANCEL" ||
+      msg.type === "PAYMENT_CHANGE_AMOUNT" ||
+      msg.type === "PAYMENT_STATUS_REQUEST" ||
+      msg.type === "PRINT_CUSTOMER_RECEIPT" ||
+      msg.type === "PRINT_MERCHANT_RECEIPT" ||
+      msg.type === "TRIGGER_DISCOVERY" ||
+      msg.type === "LIST_CARD_RECEIPTS" ||
+      msg.type === "PRINT_CARD_RECEIPT"
+    )) {
+      zvtHandler.handleMessage(ws, msg).catch(e => console.log("[ZVT] handleMessage error:", e.message));
+    }
   });
 
   ws.on("close", () => {
@@ -246,7 +305,40 @@ server.listen(PORT, () => {
 let lastVersion = null;
 let lastStatus = null;
 let lastPriceLevelVersion = null;
-async function pollState() {
+// Preferred: poll the trigger-fed change-log. Returns DISTINCT logical scopes
+// changed since last poll and clears them server-side. Push one UPDATE_REQUIRED
+// per affected client-scope. If change-log not installed, fall back to legacy.
+async function pollChangeLog() {
+  const resp = await fetch(CHANGES_URL);
+  if (!resp.ok) return false;
+  const data = await resp.json();
+  if (data.status === "ERROR" && data.code === "NO_CHANGELOG") {
+    return false;
+  }
+  if (data.status !== "OK") return true;
+  const scopes = data.scopes || {};
+  const changedClientScopes = new Set();
+  const changedDbScopes = [];
+  for (const scope of Object.keys(scopes)) {
+    const lastChange = scopes[scope]; // opaque fixed-width string
+    if (!lastChange) continue;
+    if (!changeWatermark[scope] || lastChange > changeWatermark[scope]) {
+      changedDbScopes.push(`${scope}@${lastChange}`);
+      changeWatermark[scope] = lastChange;
+      changedClientScopes.add(mapChangeScope(scope));
+    }
+  }
+  if (changedClientScopes.size > 0) {
+    dbgU("change detected:", changedDbScopes.join(","), "-> push scopes:",
+         [...changedClientScopes].join(","), "| clients:", clients.size);
+    for (const cs of changedClientScopes) {
+      sendAll({ type: "UPDATE_REQUIRED", scope: cs, event: "CHANGELOG", ts: Date.now() });
+    }
+  }
+  return true;
+}
+
+async function pollStateLegacy() {
   try {
     const resp = await fetch(POLL_URL);
     if (!resp.ok) return;
@@ -256,6 +348,19 @@ async function pollState() {
       sendAll({ type: "UPDATE_REQUIRED", scope: "TABLES", event: "POLL_CHANGE", ts: Date.now() });
     }
     lastVersion = data.version;
+  } catch (_) {
+    // ignore polling errors
+  }
+}
+
+async function pollState() {
+  try {
+    if (changeLogAvailable) {
+      const ok = await pollChangeLog();
+      if (ok) return;
+      changeLogAvailable = false;
+    }
+    await pollStateLegacy();
   } catch (_) {
     // ignore polling errors
   }

@@ -2,8 +2,16 @@
 !.gitignore
 !modern/
 !modern/**
+# Never commit secrets / certificates
+modern/*.p12
+modern/*.pem
+modern/*.key
 !broker/
 !broker/**
+# ZVT card-terminal implementation spec docs
+!ordersprinter_nexi_a920_zvt_implementation_spec.md
+!ordersprinter_zvt_reconnect_notification_spec.md
+!ordersprinter_zvt_session_architecture_spec.md
 !php/
 !php/modernapi.php
 !contracts/
