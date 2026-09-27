@@ -286,16 +286,50 @@ export class ZvtSession {
   async repeatReceipt(opts = {}) {
     await this.connect();
     const cmd = buildRepeatReceipt(this.password, opts);
-    await this.sendAndWaitAck(cmd);
+    this.send(cmd);
 
+    // Repeat-Receipt is an administration-style operation and this A960 has
+    // been observed to take >3s just to ACK. Use a generous, dedicated timeout
+    // (default 10s) for BOTH the initial ACK and each subsequent frame. Do NOT
+    // fall back to a short responseTimeout — a premature give-up here would let
+    // the caller start another command while this operation is still active on
+    // the serialized session (the bug that made two 06 20 operations overlap
+    // and misattributed a merchant receipt to a customer request).
+    const rcptTimeout = this.receiptTimeout || Math.max(this.responseTimeout * 5, 10000);
+
+    // Result: collected lines and the receipt type declared by the terminal
+    // via TLV 1F07 (0x01=merchant, 0x02=customer, 0x03=admin) — authoritative,
+    // rather than assuming based on which copy we requested.
     const lines = [];
-    const deadline = Date.now() + Math.max(this.responseTimeout * 4, 8000);
-    while (Date.now() < deadline) {
+    let receiptType = null;
+    let ackSeen = false;
+    let completed = false;
+
+    // Overall guard: initial ACK within rcptTimeout, then the whole receipt
+    // stream through 06 0F within a bounded window.
+    const overallDeadline = Date.now() + rcptTimeout + Math.max(this.responseTimeout * 5, 10000);
+
+    while (!completed && Date.now() < overallDeadline) {
+      // Before the ACK, allow the full rcptTimeout; after the ACK, frames
+      // should stream quickly but still allow a comfortable per-frame window.
+      const perFrame = ackSeen ? Math.max(this.responseTimeout * 3, 6000) : rcptTimeout;
       let frame;
       try {
-        frame = await this.waitFrame(Math.min(this.responseTimeout, deadline - Date.now()));
-      } catch (_) {
-        break; // no more frames
+        frame = await this.waitFrame(Math.min(perFrame, overallDeadline - Date.now()));
+      } catch (e) {
+        // Timeout. The session state is now UNCERTAIN for this operation — we
+        // must NOT return control such that the caller issues another command
+        // blindly. Signal the uncertainty explicitly so the caller can
+        // resynchronise (e.g. drop/reconnect the session) instead of pipelining.
+        const err = new Error(ackSeen ? "Repeat-Receipt frame timeout" : "Repeat-Receipt ACK timeout");
+        err.zvtUncertain = true;
+        throw err;
+      }
+
+      // Positive ACK (80 00): the terminal accepted the 06 20; keep reading.
+      if (frame.cmdClass === 0x80 && frame.cmdInstr === 0x00) {
+        ackSeen = true;
+        continue;
       }
       // Print Line (06 D1): collect text, ACK
       if (frame.cmdClass === 0x06 && frame.cmdInstr === 0xD1) {
@@ -304,27 +338,41 @@ export class ZvtSession {
         lines.push(text);
         continue;
       }
-      // Print Text-Block (06 D3): collect via existing parser, ACK
+      // Print Text-Block (06 D3): collect lines + receipt type, ACK
       if (frame.cmdClass === 0x06 && frame.cmdInstr === 0xD3) {
         this.send(ACK);
         const pd = parsePrintCommand(0xD3, frame.payload);
+        if (pd.receiptType !== null && receiptType === null) receiptType = pd.receiptType;
         lines.push(...pd.lines);
         continue;
       }
-      // Intermediate status: ACK, continue
+      // Intermediate status (04 FF): ACK, continue
       if (frame.cmdClass === 0x04 && frame.cmdInstr === 0xFF) {
         this.send(ACK);
         continue;
       }
-      // Completion (06 0F): end of receipt stream
+      // Completion (06 0F): end of the Repeat-Receipt operation.
       if (frame.cmdClass === 0x06 && frame.cmdInstr === 0x0F) {
         this.send(ACK);
+        completed = true;
         break;
       }
-      // Bare ACK or anything else: ACK and continue
+      // Negative/abort (06 1E or 84 xx): operation ended without a receipt.
+      if ((frame.cmdClass === 0x06 && frame.cmdInstr === 0x1E) || frame.cmdClass === 0x84) {
+        this.send(ACK);
+        completed = true;
+        break;
+      }
+      // Anything else: ACK and continue.
       this.send(ACK);
     }
-    return lines;
+
+    if (!completed) {
+      const err = new Error("Repeat-Receipt did not complete (no 06 0F)");
+      err.zvtUncertain = true;
+      throw err;
+    }
+    return { lines, receiptType };
   }
 
   /**

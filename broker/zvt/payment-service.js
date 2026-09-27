@@ -327,16 +327,47 @@ export class PaymentService {
     if (!session) return;
     const ta = tx.traceNumber != null ? parseInt(tx.traceNumber, 10) : null;
     const targetTA = Number.isInteger(ta) ? (ta & 0xFF) : null;
-    // Receipt 1: merchant (1F01 = 02) — send, wait for its completion.
+
+    // Classify a returned receipt by the terminal's OWN declaration (TLV 1F07:
+    // 0x01=merchant, 0x02=customer), not by which copy we requested. Falls back
+    // to the requested kind when the terminal omits 1F07.
+    const store = (res, requestedKind) => {
+      if (!res || !res.lines || res.lines.length === 0) return;
+      let kind = requestedKind;
+      if (res.receiptType === 0x01) kind = "merchant";
+      else if (res.receiptType === 0x02) kind = "customer";
+      if (kind === "customer") tx.receipts.customerReceipt.lines = res.lines;
+      else tx.receipts.merchantReceipt.lines = res.lines;
+    };
+
+    // ZVT is a strict master/slave protocol: only ONE 06 20 may be active at a
+    // time. Each Repeat-Receipt must run fully (ACK -> D1/D3 -> 06 0F) before
+    // the next is sent. repeatReceipt() waits through 06 0F; on a timeout it
+    // throws with err.zvtUncertain — in that case the session state is unknown,
+    // so we DO NOT pipeline another command: we drop the session (forcing a
+    // clean reconnect+register on next use) and stop pulling.
+    // Receipt 1: merchant (1F01 = 02).
     try {
       const m = await session.repeatReceipt({ type: 0x02, fromTA: targetTA, toTA: targetTA });
-      if (m && m.length) tx.receipts.merchantReceipt.lines = m;
-    } catch (e) { this.onLog(`PAYMENT ${tx.requestId}: merchant receipt pull failed: ${e.message}`); }
-    // Receipt 2: customer (1F01 = 03) — send, wait for its completion.
+      store(m, "merchant");
+    } catch (e) {
+      this.onLog(`PAYMENT ${tx.requestId}: merchant receipt pull failed: ${e.message}`);
+      if (e.zvtUncertain) {
+        this.tm.invalidateSession(tx.terminalId);
+        this.onLog(`PAYMENT ${tx.requestId}: session uncertain after merchant pull — dropped, skipping customer pull`);
+        return;
+      }
+    }
+    // Receipt 2: customer (1F01 = 03).
     try {
       const c = await session.repeatReceipt({ type: 0x03, fromTA: targetTA, toTA: targetTA });
-      if (c && c.length) tx.receipts.customerReceipt.lines = c;
-    } catch (e) { this.onLog(`PAYMENT ${tx.requestId}: customer receipt pull failed: ${e.message}`); }
+      store(c, "customer");
+    } catch (e) {
+      this.onLog(`PAYMENT ${tx.requestId}: customer receipt pull failed: ${e.message}`);
+      if (e.zvtUncertain) {
+        this.tm.invalidateSession(tx.terminalId);
+      }
+    }
     if (tx.receipts.merchantReceipt.lines.length || tx.receipts.customerReceipt.lines.length) {
       tx.receipts.pulled = true;
       this.onLog(`PAYMENT ${tx.requestId}: pulled receipts (merchant=${tx.receipts.merchantReceipt.lines.length} lines, customer=${tx.receipts.customerReceipt.lines.length} lines)`);

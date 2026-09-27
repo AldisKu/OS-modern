@@ -533,9 +533,18 @@ export function parsePrintCommand(cmdInstr, payload) {
     
     // Check if payload starts with container marker 0x06 (TLV container indicator)
     if (data.length > 2 && data[0] === 0x06) {
-      // Skip the container tag and length
-      const containerLen = data[1];
-      data = data.slice(2, 2 + containerLen);
+      // Skip the container tag and its length. ZVT TLV uses extended length:
+      //   0x00..0x7F      -> single-byte length
+      //   0x81 <b>        -> length in next 1 byte
+      //   0x82 <hi> <lo>  -> length in next 2 bytes (big-endian)
+      let p = 1;
+      let containerLen = data[p]; p += 1;
+      if (containerLen === 0x81) {
+        containerLen = data[p]; p += 1;
+      } else if (containerLen === 0x82) {
+        containerLen = (data[p] << 8) | data[p + 1]; p += 2;
+      }
+      data = data.slice(p, p + containerLen);
     }
 
     // Parse the TLV fields within
@@ -568,10 +577,15 @@ export function parsePrintCommand(cmdInstr, payload) {
         if (offset >= data.length) break;
         let containerLength = data[offset];
         offset += 1;
+        // Extended length: 0x81 <b> = 1-byte, 0x82 <hi> <lo> = 2-byte length.
         if (containerLength === 0x81) {
           if (offset >= data.length) break;
           containerLength = data[offset];
           offset += 1;
+        } else if (containerLength === 0x82) {
+          if (offset + 1 >= data.length) break;
+          containerLength = (data[offset] << 8) | data[offset + 1];
+          offset += 2;
         }
         const end = Math.min(offset + containerLength, data.length);
 
