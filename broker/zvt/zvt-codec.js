@@ -4,6 +4,17 @@
  * Reference: ECR-Interface ZVT-Protocol, Revision 13.07
  */
 
+// --- Receipt text decoding ---
+// This A960 emits print-line / print-text-block text in a Latin-1 / CP850
+// compatible encoding where German characters map directly: 0xC4=Ä, 0xD6=Ö,
+// 0xDC=Ü, 0xE4=ä, 0xF6=ö, 0xFC=ü, 0xDF=ß (confirmed on the wire: "HÄNDLERBELEG"
+// arrives with 0xC4 for Ä). Decoding as ASCII mangled these, and the old
+// latin1+ASCII-strip DELETED them. We decode as latin1 (which is exactly this
+// mapping for the German set) and drop NUL padding, preserving umlauts.
+function decodeReceiptText(buf) {
+  return Buffer.from(buf).toString("latin1").replace(/\x00/g, "");
+}
+
 // --- BCD Encoding/Decoding ---
 
 /**
@@ -397,7 +408,9 @@ export function buildRepeatReceipt(password, opts = {}) {
 export function parsePrintLine(payload) {
   if (!payload || payload.length === 0) return { text: "", sectionEnd: false };
   const attr = payload[0];
-  const text = payload.slice(1).toString("latin1").replace(/[^\x20-\x7e]/g, "");
+  // Text is CP437-encoded; decode so umlauts survive (was latin1 + ASCII strip,
+  // which deleted every German character).
+  const text = decodeReceiptText(payload.slice(1)).replace(/\s+$/,"");
   return { text, sectionEnd: (attr & 0x80) !== 0 };
 }
 
@@ -605,11 +618,11 @@ export function parsePrintCommand(cmdInstr, payload) {
               result.complete = true;
             }
           } else if (innerTag === 0x07) {
-            // Text line
+            // Text line (CP437-encoded)
             if (innerLen === 0) {
               result.lines.push("");
             } else {
-              result.lines.push(data.slice(offset, offset + innerLen).toString("ascii"));
+              result.lines.push(decodeReceiptText(data.slice(offset, offset + innerLen)));
             }
             offset += innerLen;
           } else {
@@ -629,8 +642,9 @@ export function parsePrintCommand(cmdInstr, payload) {
       offset += len;
     }
   } else if (cmdInstr === 0xD1) {
-    // Print Line — simpler format, typically just text
-    result.lines = [payload.toString("utf8").replace(/\x00/g, "").trim()];
+    // Print Line — simpler format: [attribute byte] + CP437 text.
+    const body = payload.length > 0 ? payload.slice(1) : payload;
+    result.lines = [decodeReceiptText(body).replace(/\s+$/,"")];
   }
 
   return result;
