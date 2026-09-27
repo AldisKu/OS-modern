@@ -41,6 +41,7 @@ export class TerminalManager {
     this.sessions = new Map(); // terminalId -> ZvtSession
     this.pollTimer = null;
     this.discoveryTimer = null;
+    this.lockReaperTimer = null;
     this.lastDiscoveryAt = 0;
     this.lastRecoveryScanAt = 0;
     this.locks = new Map(); // terminalId -> { requestId, posId, lockedAt }
@@ -249,9 +250,35 @@ export class TerminalManager {
     if (this.pollTimer) return;
     const interval = this.config.pollIntervalSeconds * 1000;
     this.pollTimer = setInterval(() => this.pollAll(), interval);
-    // Initial discovery if no terminals known
+    // Safety net: reap stale locks so a terminal can never be held forever if
+    // an operation's promise somehow neither resolves nor rejects. Every op is
+    // already bounded by connect/response/transaction timeouts and unlocked in
+    // a finally, so this should never fire in practice — it is purely defensive.
+    if (!this.lockReaperTimer) {
+      this.lockReaperTimer = setInterval(() => this.reapStaleLocks(), 30000);
+    }
+    // Initial discovery if no terminals known, otherwise run one poll now so
+    // each known terminal's persistent session is established + registered
+    // immediately (register-and-hold) instead of waiting a full interval.
     if (this.registry.terminals.length === 0) {
       this.discover();
+    } else {
+      this.pollAll().catch(() => {});
+    }
+  }
+
+  /**
+   * Force-release any lock older than the transaction timeout plus a margin.
+   * Defensive only (see startPolling). Logs when it fires.
+   */
+  reapStaleLocks() {
+    const maxAgeMs = (this.config.transactionTimeoutSeconds * 1000) + 30000;
+    const now = Date.now();
+    for (const [terminalId, lock] of this.locks) {
+      if (now - lock.lockedAt > maxAgeMs) {
+        this.onLog(`LOCK: reaping stale lock on ${terminalId} (held ${Math.round((now - lock.lockedAt) / 1000)}s by ${lock.posId || "unknown"})`);
+        this.unlock(terminalId);
+      }
     }
   }
 
@@ -260,20 +287,26 @@ export class TerminalManager {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+    if (this.lockReaperTimer) {
+      clearInterval(this.lockReaperTimer);
+      this.lockReaperTimer = null;
+    }
   }
 
   async pollAll() {
     for (const terminal of this.registry.terminals) {
       if (this.isLocked(terminal.id)) continue; // Skip busy terminals
       try {
-        const session = new ZvtSession(terminal.network.ip, terminal.network.port, {
-          password: this.config.password,
-          connectTimeout: this.config.connectTimeoutMs,
-          responseTimeout: this.config.responseTimeoutMs,
-          onLog: this.config.debug ? (dir, ...a) => this.onLog(`poll ${terminal.id} ${dir}:`, ...a) : undefined
-        });
-        const status = await session.statusEnquiry();
-        session.disconnect();
+        // 8a "register-and-hold": every known terminal is backed by ONE
+        // persistent, registered session that stays open 24/7. Poll ENSURES
+        // that session exists (connect + register once if missing/dropped) and
+        // then sends a Status-Enquiry on it as the keepalive. There is NO
+        // throwaway session and NO connect/disconnect churn ("login/logout")
+        // per poll — poll rides the single live session and also acts as the
+        // reconnect driver when the socket has dropped.
+        const session = await this.getRegisteredSession(terminal.id);
+        if (!session) continue; // unknown terminal (shouldn't happen here)
+        const status = await session.statusEnquiry(); // 04 01 on the live socket
 
         // Verify identity
         if (status.terminalIdentifier && status.terminalIdentifier !== terminal.identity.terminalIdentifier) {
@@ -281,13 +314,16 @@ export class TerminalManager {
           this.onLog(`POLL: ${terminal.id} identity mismatch! Expected ${terminal.identity.terminalIdentifier}, got ${status.terminalIdentifier}`);
         } else {
           terminal.lastSeenAt = new Date().toISOString();
+          // ATTENTION (e.g. after an UNKNOWN payment) is cleared by a clean poll.
           terminal.runtimeStatus = status.deviceState === 0x00 ? "AVAILABLE" : "NOT_READY";
         }
       } catch (e) {
+        // The persistent session failed — evict it so the NEXT poll reconnects
+        // and re-registers from scratch. Mark OFFLINE + trigger recovery scan.
+        this.invalidateSession(terminal.id);
         if (terminal.runtimeStatus !== "OFFLINE") {
           terminal.runtimeStatus = "OFFLINE";
           this.onLog(`POLL: ${terminal.id} (${terminal.name}) → OFFLINE: ${e.message}`);
-          // Trigger recovery scan
           this.triggerRecoveryScan();
         }
       }
@@ -332,12 +368,24 @@ export class TerminalManager {
     return this.locks.get(terminalId) || null;
   }
 
-  // --- Session management ---
+  // --- Session management (8a: persistent per-terminal session cache) ---
+  //
+  // One long-lived ZvtSession per known terminal is cached in this.sessions.
+  // A payment/receipt caller obtains it via getRegisteredSession(), which
+  // connects + registers exactly ONCE per connection and thereafter reuses the
+  // same live socket. The cache entry is dropped automatically when the socket
+  // closes or errors (see _makeSession), so the next call transparently
+  // reconnects and re-registers — covering Wi-Fi drops, DHCP changes, reboots.
+  //
+  // Discovery probes (probeEndpoint) and lightweight poll fallbacks build their
+  // OWN throwaway sessions and never touch this cache.
 
-  getSession(terminalId) {
-    const terminal = this.getTerminal(terminalId);
-    if (!terminal) return null;
-    return new ZvtSession(terminal.network.ip, terminal.network.port, {
+  /**
+   * Build a fresh ZvtSession for a known terminal, wired so that a socket
+   * close/error evicts it from the cache. NOT connected yet.
+   */
+  _makeSession(terminal) {
+    const session = new ZvtSession(terminal.network.ip, terminal.network.port, {
       password: this.config.password,
       configByte: this.config.configByte,
       registrationTlvPermitPrint: this.config.registrationTlvPermitPrint,
@@ -349,6 +397,74 @@ export class TerminalManager {
       transactionTimeout: this.config.transactionTimeoutSeconds * 1000,
       onLog: (dir, ...args) => this.onLog(`ZVT ${terminal.id} ${dir}:`, ...args)
     });
+    // registered flag lets getRegisteredSession() skip a second Registration
+    // while the socket stays up. Cleared on disconnect (fresh object each time).
+    session.registered = false;
+    return session;
+  }
+
+  /**
+   * Return whether a cached session exists AND its socket is currently alive.
+   */
+  hasLiveSession(terminalId) {
+    const s = this.sessions.get(terminalId);
+    return !!(s && s.socket && !s.socket.destroyed);
+  }
+
+  /**
+   * Get (or create) the cached session for a known terminal. Does NOT connect
+   * or register — callers decide. Returns null for unknown terminals.
+   * If the cached session's socket is dead, it is replaced with a fresh one.
+   */
+  getSession(terminalId) {
+    const terminal = this.getTerminal(terminalId);
+    if (!terminal) return null;
+    let session = this.sessions.get(terminalId);
+    if (session && session.socket && !session.socket.destroyed) {
+      return session; // healthy cached session
+    }
+    // Stale or none: (re)create and cache. Also re-point at the current
+    // network endpoint in case discovery updated the terminal's IP/port.
+    session = this._makeSession(terminal);
+    this.sessions.set(terminalId, session);
+    return session;
+  }
+
+  /**
+   * Drop the cached session for a terminal (destroy socket, evict). Safe to
+   * call when none exists. Used on protocol error / UNKNOWN so the next
+   * operation starts from a clean reconnect+registration.
+   */
+  invalidateSession(terminalId) {
+    const s = this.sessions.get(terminalId);
+    if (s) {
+      try { s.disconnect(); } catch (_) {}
+    }
+    this.sessions.delete(terminalId);
+  }
+
+  /**
+   * Payment/receipt accessor: return a cached session that is CONNECTED and
+   * REGISTERED, performing connect+registration only ONCE per connection.
+   * On any failure the session is invalidated and the error rethrown.
+   * Returns null for unknown terminals.
+   */
+  async getRegisteredSession(terminalId) {
+    const terminal = this.getTerminal(terminalId);
+    if (!terminal) return null;
+    let session = this.getSession(terminalId);
+    try {
+      await session.connect(); // no-op if already connected
+      if (!session.registered) {
+        await session.registration();
+        session.registered = true;
+        this.onLog(`ZVT ${terminal.id}: registered (session cached for reuse)`);
+      }
+      return session;
+    } catch (e) {
+      this.invalidateSession(terminalId);
+      throw e;
+    }
   }
 
   /**
@@ -361,14 +477,13 @@ export class TerminalManager {
     if (!terminal) return false;
 
     try {
-      const session = new ZvtSession(terminal.network.ip, terminal.network.port, {
-        password: this.config.password,
-        connectTimeout: this.config.connectTimeoutMs,
-        responseTimeout: this.config.responseTimeoutMs,
-        onLog: this.config.debug ? (dir, ...a) => this.onLog(`verify ${terminal.id} ${dir}:`, ...a) : undefined
-      });
+      // Use the SINGLE persistent registered session (register-and-hold). This
+      // ensures it exists / re-establishes it if the socket dropped, then does
+      // a Status-Enquiry on that same live socket — no second TCP connection,
+      // no throwaway. Never disconnect it here.
+      const session = await this.getRegisteredSession(terminalId);
+      if (!session) return false;
       const status = await session.statusEnquiry();
-      session.disconnect();
 
       // If terminal has a synthetic ID (simulator), just verify it responds
       if (terminal.identity.terminalIdentifier.startsWith("sim-")) {
@@ -382,6 +497,8 @@ export class TerminalManager {
       }
       return false;
     } catch (_) {
+      // The persistent session errored — evict it so the next op reconnects.
+      this.invalidateSession(terminalId);
       return false;
     }
   }

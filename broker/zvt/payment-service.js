@@ -143,25 +143,26 @@ export class PaymentService {
         }
       }
 
-      // Phase 2: Get a session and register
-      const session = this.tm.getSession(tx.terminalId);
-      if (!session) {
-        tx.state = STATE.FAILED;
-        tx.error = "TERMINAL_UNAVAILABLE";
-        tx.completedAt = new Date().toISOString();
-        this.tm.unlock(tx.terminalId);
-        return;
-      }
-
+      // Phase 2: Get a CONNECTED + REGISTERED session (8a). The terminal
+      // manager caches one long-lived session per terminal and registers only
+      // once per connection — subsequent payments reuse the same socket with
+      // no reconnect/re-registration churn.
       tx.state = STATE.REGISTERING;
+      let session;
       try {
-        await session.connect();
-        await session.registration();
+        session = await this.tm.getRegisteredSession(tx.terminalId);
       } catch (e) {
         tx.state = STATE.FAILED;
         tx.error = "PROTOCOL_ERROR";
         tx.completedAt = new Date().toISOString();
-        session.disconnect();
+        this.tm.invalidateSession(tx.terminalId);
+        this.tm.unlock(tx.terminalId);
+        return;
+      }
+      if (!session) {
+        tx.state = STATE.FAILED;
+        tx.error = "TERMINAL_UNAVAILABLE";
+        tx.completedAt = new Date().toISOString();
         this.tm.unlock(tx.terminalId);
         return;
       }
@@ -268,26 +269,30 @@ export class PaymentService {
             }
           }
 
-          // Done with the terminal session (payment + both receipt pulls).
-          session.disconnect();
+          // Payment + both receipt pulls complete. 8a: DO NOT disconnect — the
+          // session stays cached in the terminal manager (registered) so the
+          // next payment reuses it with no reconnect/re-registration.
 
           // Receipts ready — NOW mark success so the PAYMENT_RESULT the POS
           // receives carries the correct receipt-availability flags.
           tx.state = STATE.SUCCESS;
           tx.completedAt = new Date().toISOString();
         } else {
-          session.disconnect();
+          // Declined/cancelled by terminal: session is still healthy and
+          // registered — keep it cached for reuse (no disconnect).
           tx.state = result.resultCode === 0x63 ? STATE.CANCELLED : STATE.DECLINED;
           tx.resultCode = result.resultCode;
           tx.completedAt = new Date().toISOString();
         }
       } catch (e) {
-        // Connection lost AFTER authorisation sent — UNKNOWN state
+        // Connection lost AFTER authorisation sent — UNKNOWN state. The socket
+        // is unreliable now, so evict the cached session; the next operation
+        // will reconnect + re-register from scratch.
         tx.state = STATE.UNKNOWN;
         tx.error = "UNKNOWN_TRANSACTION_STATE";
         tx.completedAt = new Date().toISOString();
         this.onLog(`PAYMENT ${tx.requestId}: UNKNOWN STATE — ${e.message}. DO NOT RETRY.`);
-        session.disconnect();
+        this.tm.invalidateSession(tx.terminalId);
         const terminal = this.tm.getTerminal(tx.terminalId);
         if (terminal) terminal.runtimeStatus = "ATTENTION";
       }
@@ -342,14 +347,17 @@ export class PaymentService {
       return { error: "ALREADY_COMPLETED", state: tx.state };
     }
 
-    // Only abort if authorisation was sent
+    // Only abort if authorisation was sent. The Abort (06 B0) must travel on
+    // the SAME live socket the authorisation is running on, so use the cached
+    // session and do NOT disconnect it — the in-flight authorisation loop will
+    // receive the terminal's 06 1E abort and return, and the session stays
+    // cached for reuse. Only connect if there is no live socket yet.
     if (tx.authorisationSentAt) {
       const session = this.tm.getSession(tx.terminalId);
       if (session) {
         try {
-          await session.connect();
+          await session.connect(); // no-op if already connected
           await session.abort();
-          session.disconnect();
         } catch (_) {}
       }
     }
