@@ -139,4 +139,64 @@ export class ReceiptStore {
       return fs.readFileSync(path.join(dir, file), "utf8").split("\n");
     } catch (_) { return null; }
   }
+
+  /**
+   * All merchant receipts (oldest first) as one array of lines, concatenated
+   * for a single "print all" CUPS job. Each receipt is separated by blank
+   * lines. Returns { lines, count }.
+   */
+  getAllMerchantReceiptsCombined() {
+    const idx = this._loadIndex();
+    const entries = idx.receipts.filter(e => e.merchantFile); // oldest first (index order)
+    const lines = [];
+    let count = 0;
+    for (const e of entries) {
+      try {
+        const txt = fs.readFileSync(path.join(this.merchantDir, e.merchantFile), "utf8");
+        if (count > 0) lines.push("", "");
+        lines.push(...txt.split("\n"));
+        count++;
+      } catch (_) {}
+    }
+    return { lines, count };
+  }
+
+  /**
+   * Delete all customer receipt files and clear their index references.
+   * Called after a successful "print all merchant" per the agreed workflow.
+   * @returns {number} number of customer files removed
+   */
+  deleteAllCustomerReceipts() {
+    const idx = this._loadIndex();
+    let removed = 0;
+    for (const e of idx.receipts) {
+      if (e.customerFile) {
+        try { fs.unlinkSync(path.join(this.customerDir, e.customerFile)); removed++; } catch (_) {}
+        e.customerFile = null;
+      }
+    }
+    try { this._saveIndex(idx); } catch (e) { this.onLog(`RECEIPTS: index save failed: ${e.message}`); }
+    this.onLog(`RECEIPTS: deleted ${removed} customer receipt(s)`);
+    return removed;
+  }
+
+  /**
+   * Permanently delete a merchant receipt by id (manual admin action).
+   * Removes the merchant file and its index entry (if no customer file remains).
+   * @returns {boolean} true if something was removed
+   */
+  deleteMerchant(id) {
+    const idx = this._loadIndex();
+    const entry = idx.receipts.find(r => r.id === id);
+    if (!entry || !entry.merchantFile) return false;
+    try { fs.unlinkSync(path.join(this.merchantDir, entry.merchantFile)); } catch (_) {}
+    entry.merchantFile = null;
+    // If neither copy remains, drop the index entry entirely.
+    if (!entry.customerFile) {
+      idx.receipts = idx.receipts.filter(r => r.id !== id);
+    }
+    try { this._saveIndex(idx); } catch (e) { this.onLog(`RECEIPTS: index save failed: ${e.message}`); }
+    this.onLog(`RECEIPTS: deleted merchant receipt ${id}`);
+    return true;
+  }
 }

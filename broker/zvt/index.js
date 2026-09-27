@@ -279,6 +279,32 @@ export function initZvt(config, clients, brokerDir) {
           }
           break;
         }
+
+        case "PRINT_ALL_MERCHANT": {
+          // Print ALL stored merchant receipts as one CUPS job (no cuts between).
+          // On success, delete all customer receipt files (agreed workflow).
+          const { lines, count } = receiptStore.getAllMerchantReceiptsCombined();
+          if (count === 0) {
+            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count: 0, success: true, deletedCustomer: 0, ts: Date.now() }));
+            break;
+          }
+          try {
+            await printViaCups(lines, "merchant");
+            // Only after a successful print job do we delete customer copies.
+            const deleted = receiptStore.deleteAllCustomerReceipts();
+            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: true, deletedCustomer: deleted, ts: Date.now() }));
+          } catch (e) {
+            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: false, error: e.message, ts: Date.now() }));
+          }
+          break;
+        }
+
+        case "DELETE_MERCHANT_RECEIPT": {
+          // Permanent manual delete of a single merchant receipt.
+          const okDel = receiptStore.deleteMerchant(msg.id);
+          ws.send(JSON.stringify({ type: "MERCHANT_RECEIPT_DELETED", id: msg.id, success: okDel, ts: Date.now() }));
+          break;
+        }
       }
     }
   };
