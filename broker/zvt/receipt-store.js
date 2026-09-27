@@ -77,10 +77,14 @@ export class ReceiptStore {
     const date = new Date();
     const stamp = ReceiptStore.stamp(date);
     const term = (tx.terminalId || "terminal").replace(/[^a-zA-Z0-9_-]/g, "");
-    const baseName = `${stamp}-${term}.txt`;
+    // TA (trace number) makes the id unique per transaction, not just per
+    // second: id = <YYYYMMDDHHMMSS>-<TA>-<terminalId>. TA is digits-only;
+    // fall back to "000000" when the terminal didn't report one.
+    const ta = String(tx.traceNumber != null ? tx.traceNumber : "").replace(/\D/g, "") || "000000";
+    const baseName = `${stamp}-${ta}-${term}.txt`;
 
     const entry = {
-      id: `${stamp}-${term}`,
+      id: `${stamp}-${ta}-${term}`,
       requestId: tx.requestId || null,
       timestamp: date.toISOString(),
       terminalId: tx.terminalId || null,
