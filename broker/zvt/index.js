@@ -6,12 +6,37 @@
 
 import { exec, execFileSync } from "child_process";
 import { appendFileSync } from "fs";
+import net from "net";
 import { TerminalManager } from "./terminal-manager.js";
 import { PaymentService, STATE } from "./payment-service.js";
 import { ReceiptStore } from "./receipt-store.js";
 
 const CUPS_PRINTER = process.env.ZVT_CUPS_PRINTER || "EPSON_TM-T20II";
 const RAW_LOG = process.env.ZVT_RAW_LOG || "/tmp/zvt-raw.log";
+
+// ESC/POS trailer: feed a few lines, partial cut (GS V 66 10), reset (ESC @).
+const ESCPOS_CUT = Buffer.from([0x1d, 0x56, 0x42, 0x0a, 0x1b, 0x40]);
+
+/**
+ * Build the print configuration (one-time setup, from config.json zvt.print).
+ * Two modes:
+ *   "cups" — spool via `lp` to a CUPS queue. cupsHost null = local cupsd;
+ *            set cupsHost to reach a remote (possibly unadvertised) queue.
+ *   "lan"  — open a raw TCP socket to the printer (JetDirect, default 9100)
+ *            and write the ESC/POS bytes directly. No CUPS, no print agent.
+ * Environment variables still override for quick ops changes.
+ */
+function buildPrintConfig(zvtConfig) {
+  const p = (zvtConfig && zvtConfig.print) || {};
+  return {
+    mode: process.env.ZVT_PRINT_MODE || p.mode || "cups",
+    cupsPrinter: process.env.ZVT_CUPS_PRINTER || p.cupsPrinter || CUPS_PRINTER,
+    cupsHost: process.env.ZVT_CUPS_HOST || p.cupsHost || null, // null = local lp
+    lanHost: process.env.ZVT_PRINT_LAN_HOST || p.lanHost || null,
+    lanPort: Number(process.env.ZVT_PRINT_LAN_PORT || p.lanPort || 9100),
+    timeoutMs: Number(p.timeoutMs || 10000)
+  };
+}
 
 // Path to OrderSprinter's PHP config (for DSFinV-K company lookup at startup).
 // Override with ZVT_OS_CONFIG_PHP if the webroot differs.
@@ -104,6 +129,15 @@ export function initZvt(config, clients, brokerDir) {
   const companyHeader = loadCompanyHeader(config, log);
   log(`Receipt header: ${companyHeader.length ? companyHeader.join(" | ") : "(none — reconstruction will omit header)"}`);
 
+  // One-time print setup from config.json (zvt.print). Two modes: "cups" and
+  // "lan" (direct TCP to printer:9100). Env overrides still apply.
+  PRINT_CONFIG = buildPrintConfig(config);
+  printLog = log;
+  log(`Printing: mode=${PRINT_CONFIG.mode}` +
+      (PRINT_CONFIG.mode === "lan"
+        ? ` lan=${PRINT_CONFIG.lanHost || "(unset!)"}:${PRINT_CONFIG.lanPort}`
+        : ` cups=${PRINT_CONFIG.cupsPrinter}${PRINT_CONFIG.cupsHost ? "@" + PRINT_CONFIG.cupsHost : " (local)"}`));
+
   // Persistent card-receipt store (files + index under <brokerDir>/receipts).
   const receiptStore = new ReceiptStore(brokerDir, { onLog: log });
 
@@ -115,7 +149,7 @@ export function initZvt(config, clients, brokerDir) {
     receiptMode: config.receiptMode || "terminal",
     receiptHeaderLines: companyHeader,
     receiptStore,
-    printReceipt: (lines, type, tx) => printViaCups(lines, type, tx)
+    printReceipt: (lines, type, tx) => printReceipt(lines, type, tx)
   });
 
   // Start polling and discovery
@@ -213,7 +247,7 @@ export function initZvt(config, clients, brokerDir) {
           const lines = ps.getCustomerReceipt(msg.requestId);
           if (lines && lines.length > 0) {
             try {
-              await printViaCups(lines, "customer");
+              await printReceipt(lines, "customer");
               ws.send(JSON.stringify({ type: "RECEIPT_PRINTED", requestId: msg.requestId, receiptType: "customer", success: true, ts: Date.now() }));
             } catch (e) {
               ws.send(JSON.stringify({ type: "RECEIPT_PRINTED", requestId: msg.requestId, receiptType: "customer", success: false, error: e.message, ts: Date.now() }));
@@ -228,7 +262,7 @@ export function initZvt(config, clients, brokerDir) {
           const lines = ps.getMerchantReceipt(msg.requestId);
           if (lines && lines.length > 0) {
             try {
-              await printViaCups(lines, "merchant");
+              await printReceipt(lines, "merchant");
               ws.send(JSON.stringify({ type: "RECEIPT_PRINTED", requestId: msg.requestId, receiptType: "merchant", success: true, ts: Date.now() }));
             } catch (e) {
               ws.send(JSON.stringify({ type: "RECEIPT_PRINTED", requestId: msg.requestId, receiptType: "merchant", success: false, error: e.message, ts: Date.now() }));
@@ -269,7 +303,7 @@ export function initZvt(config, clients, brokerDir) {
           const lines = receiptStore.getReceiptLines(msg.id, copyType);
           if (lines && lines.length > 0) {
             try {
-              await printViaCups(lines, copyType);
+              await printReceipt(lines, copyType);
               ws.send(JSON.stringify({ type: "CARD_RECEIPT_PRINTED", id: msg.id, copyType, success: true, ts: Date.now() }));
             } catch (e) {
               ws.send(JSON.stringify({ type: "CARD_RECEIPT_PRINTED", id: msg.id, copyType, success: false, error: e.message, ts: Date.now() }));
@@ -290,7 +324,7 @@ export function initZvt(config, clients, brokerDir) {
             break;
           }
           try {
-            await printViaCups(lines, "merchant");
+            await printReceipt(lines, "merchant");
             ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: true, ts: Date.now() }));
           } catch (e) {
             ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: false, error: e.message, ts: Date.now() }));
@@ -361,26 +395,67 @@ function broadcastTerminalList(clients, tm) {
   }
 }
 
+// Active print configuration, set once in initZvt() from config.json.
+let PRINT_CONFIG = { mode: "cups", cupsPrinter: CUPS_PRINTER, cupsHost: null, lanHost: null, lanPort: 9100, timeoutMs: 10000 };
+let printLog = () => {};
+
 /**
- * Print receipt lines via CUPS.
- * Formats as plain text with ESC/POS cut command and sends to the configured thermal printer.
+ * Print receipt lines. Dispatches to the configured mode ("cups" or "lan").
+ * Builds the raw ESC/POS payload (text + cut) once and hands it to the
+ * transport. Returns a promise that resolves on success, rejects on failure.
  */
-async function printViaCups(lines, type, tx) {
+async function printReceipt(lines, type, tx) {
   const text = lines.join("\n") + "\n\n\n";
-  // ESC/POS: GS V 66 10 = partial cut with 10 dot feed, ESC @ = reset
-  const cutCmd = Buffer.from([0x1d, 0x56, 0x42, 0x0a, 0x1b, 0x40]);
-  const payload = Buffer.concat([Buffer.from(text, "utf8"), cutCmd]);
-  const printer = CUPS_PRINTER;
-  
+  const payload = Buffer.concat([Buffer.from(text, "utf8"), ESCPOS_CUT]);
+  const cfg = PRINT_CONFIG;
+  if (cfg.mode === "lan") {
+    return printViaLan(payload, cfg);
+  }
+  return printViaCups(payload, cfg);
+}
+
+/**
+ * CUPS transport: spool raw bytes via `lp`. Optional remote host via `-h`.
+ * The printer/host are validated to a safe charset to avoid shell injection.
+ */
+async function printViaCups(payload, cfg) {
+  const safe = (s) => String(s).replace(/[^A-Za-z0-9._:-]/g, "");
+  const printer = safe(cfg.cupsPrinter);
+  const hostArg = cfg.cupsHost ? ` -h ${safe(cfg.cupsHost)}` : "";
+  const cmd = `lp${hostArg} -d "${printer}" -o raw`;
   return new Promise((resolve, reject) => {
-    const lp = exec(`lp -d "${printer}" -o raw`, { timeout: 10000 }, (error) => {
-      if (error) {
-        reject(new Error(`CUPS print failed: ${error.message}`));
-      } else {
-        resolve();
-      }
+    const lp = exec(cmd, { timeout: cfg.timeoutMs }, (error) => {
+      if (error) reject(new Error(`CUPS print failed: ${error.message}`));
+      else resolve();
     });
     lp.stdin.write(payload);
     lp.stdin.end();
+  });
+}
+
+/**
+ * LAN transport: open a raw TCP socket to the printer (JetDirect / port 9100)
+ * and write the ESC/POS bytes directly. No CUPS and no print agent involved.
+ */
+async function printViaLan(payload, cfg) {
+  if (!cfg.lanHost) return Promise.reject(new Error("LAN print: lanHost not configured"));
+  return new Promise((resolve, reject) => {
+    const socket = new net.Socket();
+    let done = false;
+    const finish = (err) => {
+      if (done) return; done = true;
+      try { socket.destroy(); } catch (_) {}
+      if (err) reject(err); else resolve();
+    };
+    socket.setTimeout(cfg.timeoutMs);
+    socket.on("timeout", () => finish(new Error(`LAN print timeout ${cfg.lanHost}:${cfg.lanPort}`)));
+    socket.on("error", (e) => finish(new Error(`LAN print failed: ${e.message}`)));
+    socket.connect(cfg.lanPort, cfg.lanHost, () => {
+      socket.write(payload, () => {
+        // Give the printer a moment to consume, then close cleanly.
+        socket.end();
+      });
+    });
+    socket.on("close", () => finish(null));
   });
 }
