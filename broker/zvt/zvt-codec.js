@@ -445,22 +445,29 @@ export function parseCompletion(payload) {
     } catch (_) {}
   }
 
-  // Parse BMPs — look for BMP 27 (result code)
+  // Determine the result code up-front. This terminal frames the
+  // Status-Information (04 0F) two ways depending on config/receipt mode:
+  //   - long form:  payload starts with BMP 27 result tag: "27 00 29 ..."
+  //   - short form: payload starts with a BARE result byte: "00 29 ..."
+  // In both cases byte 0 (27-tag value) or byte 0 (bare) is the result.
   let offset = 0;
+  if (payload[0] === 0x27 && payload.length > 1) {
+    result.resultCode = payload[1];
+    offset = 2; // walk BMPs after the 27-tagged result
+  } else {
+    // Bare leading result byte (not a BMP tag); walk BMPs after it.
+    result.resultCode = payload[0];
+    offset = 1;
+  }
+
+  // Parse BMPs — for TID only. The result code is ALREADY set from the leading
+  // byte above and must NOT be overridden by a mid-stream byte that happens to
+  // equal 0x27/0x19 (the BMP walk is drift-prone on vendor data). We only look
+  // for BMP 29 (Terminal-ID) and stop at TLV; everything else is skipped.
   while (offset < payload.length) {
     const bmp = payload[offset];
-    
-    if (bmp === 0x27 && offset + 1 < payload.length) {
-      // BMP 27: Result code (1 byte) — authoritative
-      result.resultCode = payload[offset + 1];
-      offset += 2;
-    } else if (bmp === 0x19 && offset + 1 < payload.length) {
-      // BMP 19: Result-code-AS / status byte (1 byte). Used e.g. in the
-      // Registration Completion (06 0F: 19 00 29 ...). 0x00 = OK.
-      // Use it as result code only if BMP 27 hasn't set one.
-      if (result.resultCode === null) result.resultCode = payload[offset + 1];
-      offset += 2;
-    } else if (bmp === 0x29 && offset + 1 < payload.length) {
+
+    if (bmp === 0x29 && offset + 1 < payload.length) {
       // BMP 29: Terminal ID (4 bytes BCD)
       if (offset + 4 < payload.length) {
         const tidBuf = payload.slice(offset + 1, offset + 5);
@@ -666,6 +673,15 @@ export function parseStatusInformation(payload) {
   // We walk known fixed BMPs and stop cleanly at the first non-fixed/vendor BMP;
   // the remaining vendor fields are recovered by pattern in Phase 3.
   let o = 0;
+  // Leading result code: either "27 <rc>" (long form) or a BARE <rc> byte
+  // (short form, e.g. "00 29 ..."). Handle both, then walk the fixed BMPs.
+  if (payload[0] === 0x27 && len > 1) {
+    r.resultCode = payload[1];
+    o = 2;
+  } else {
+    r.resultCode = payload[0];
+    o = 1;
+  }
   const fixed = {
     0x27: 1, 0x29: 4, 0x04: 6, 0x0B: 3, 0x0C: 3, 0x0D: 2, 0x0E: 2,
     0x17: 2, 0x19: 1, 0x87: 2, 0x49: 2
