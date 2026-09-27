@@ -90,9 +90,9 @@ export function initZvt(config, clients, brokerDir) {
   // chunk (hex, timestamped) to a raw log so we can analyse the exact byte
   // stream offline without any more card transactions.
   if (DEBUG) {
-    tm.onRawCapture = (chunk) => {
+    tm.onRawCapture = (chunk, dir = "RX") => {
       try {
-        appendFileSync(RAW_LOG, `${new Date().toISOString()} RX ${chunk.toString("hex")}\n`);
+        appendFileSync(RAW_LOG, `${new Date().toISOString()} ${dir} ${chunk.toString("hex")}\n`);
       } catch (_) {}
     };
     log(`Raw ZVT capture -> ${RAW_LOG}`);

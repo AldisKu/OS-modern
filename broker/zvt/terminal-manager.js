@@ -45,6 +45,11 @@ export class TerminalManager {
     this.lastDiscoveryAt = 0;
     this.lastRecoveryScanAt = 0;
     this.locks = new Map(); // terminalId -> { requestId, posId, lockedAt }
+    // Reconnect/registration backoff: min interval between fresh connect+
+    // Registration attempts per terminal, so a refusing/duplicate/again-dropping
+    // terminal can never be hammered in a tight loop (register-and-hold safety).
+    this.registerBackoff = new Map(); // terminalId -> lastAttemptMs
+    this.registerBackoffMs = (config.registerBackoffSeconds || 10) * 1000;
     this.onLog = config.onLog || console.log;
     this.onTerminalStatusChange = null; // callback
 
@@ -168,12 +173,47 @@ export class TerminalManager {
    * Reconcile discovered terminals with registry.
    */
   reconcile(found) {
-    // Deduplicate by terminalIdentifier
-    const byId = new Map();
+    // A ZVT terminal typically listens on several ports (e.g. 20011 and 40007)
+    // and a probe that only gets an ACK (no full Status-Information) cannot read
+    // the real Terminal-ID. Previously we synthesized a per-port fake identity
+    // ("sim-<ip>-<port>"), which turned ONE physical terminal into several
+    // registry entries — and with register-and-hold those entries then fought
+    // over the single ECR session the terminal allows (tight reconnect loop).
+    //
+    // Dedup rules:
+    //  1) Prefer a real (non-sim) Terminal-ID; a real ID for an IP wins over any
+    //     synthetic/ACK-only result for the same IP.
+    //  2) Never register more than one terminal per physical device: collapse
+    //     all results for the same IP to a single entry.
+    //  3) Drop a synthetic (sim-) result entirely if a real ID exists for that
+    //     IP (this run) or a terminal already exists at that IP in the registry.
+    const isSim = (id) => typeof id === "string" && id.startsWith("sim-");
+
+    // First pass: pick the best result per IP (real ID beats sim; among reals,
+    // first wins; among sims, first wins).
+    const byIp = new Map(); // ip -> chosen result
     for (const f of found) {
-      const existing = byId.get(f.terminalIdentifier);
-      if (existing) {
-        // Duplicate identity — mark as problem
+      const cur = byIp.get(f.ip);
+      if (!cur) { byIp.set(f.ip, f); continue; }
+      if (isSim(cur.terminalIdentifier) && !isSim(f.terminalIdentifier)) {
+        byIp.set(f.ip, f); // upgrade to the real-ID result
+      }
+      // else keep current (real already, or both sim)
+    }
+
+    // Second pass: build the id-keyed map, but suppress sim results when a
+    // terminal already exists at that IP in the registry (same physical device).
+    const byId = new Map();
+    for (const f of byIp.values()) {
+      if (isSim(f.terminalIdentifier)) {
+        const existingAtIp = this.registry.terminals.find(t => t.network && t.network.ip === f.ip);
+        if (existingAtIp) {
+          this.onLog(`DISCOVERY: skip synthetic ${f.terminalIdentifier} at ${f.ip}:${f.port} — terminal ${existingAtIp.id} already known at this IP`);
+          continue;
+        }
+      }
+      if (byId.has(f.terminalIdentifier)) {
+        const existing = byId.get(f.terminalIdentifier);
         this.onLog(`DISCOVERY: DUPLICATE_IDENTITY ${f.terminalIdentifier} at ${existing.ip}:${existing.port} and ${f.ip}:${f.port}`);
         continue;
       }
@@ -452,6 +492,26 @@ export class TerminalManager {
   async getRegisteredSession(terminalId) {
     const terminal = this.getTerminal(terminalId);
     if (!terminal) return null;
+
+    // Fast path: a live, already-registered session — reuse is free, no backoff.
+    const existing = this.sessions.get(terminalId);
+    if (existing && existing.socket && !existing.socket.destroyed && existing.registered) {
+      return existing;
+    }
+
+    // Slow path: we need a fresh connect + Registration. Guard it with a
+    // per-terminal backoff so that a terminal which refuses / immediately
+    // drops the ECR session (e.g. it only permits one session, or it is in its
+    // config menu, or there are stale duplicate registry entries) can NEVER be
+    // hammered in a tight connect/register loop. If we attempted too recently,
+    // fail fast without touching the terminal.
+    const now = Date.now();
+    const last = this.registerBackoff.get(terminalId) || 0;
+    if (now - last < this.registerBackoffMs) {
+      throw new Error(`Register backoff active for ${terminalId} (${Math.round((this.registerBackoffMs - (now - last)) / 1000)}s left)`);
+    }
+    this.registerBackoff.set(terminalId, now);
+
     let session = this.getSession(terminalId);
     try {
       await session.connect(); // no-op if already connected
@@ -460,8 +520,11 @@ export class TerminalManager {
         session.registered = true;
         this.onLog(`ZVT ${terminal.id}: registered (session cached for reuse)`);
       }
+      // Success — clear the backoff so a later legitimate reconnect isn't delayed.
+      this.registerBackoff.delete(terminalId);
       return session;
     } catch (e) {
+      // Keep the backoff timestamp (set above) so repeated failures are spaced.
       this.invalidateSession(terminalId);
       throw e;
     }

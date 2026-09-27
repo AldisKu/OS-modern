@@ -223,9 +223,16 @@ export class PaymentService {
             tx.receiptNumber = result.statusInfo.receiptNumber || null;
           }
 
-          // PRIMARY: pull the real merchant + customer receipts on the SAME
-          // session (already registered; idle after the payment completion).
-          // Sequential 06 20 commands — each waits for its completion.
+          // PRIMARY receipt source is now the receipts PUSHED by the terminal
+          // during authorisation (06 D1/06 D3 between 04 0F and 06 0F), which
+          // authorisation() collects via onPrint. Those land in
+          // tx.receipts.*.lines above.
+          //
+          // FALLBACK PULL: only if the terminal pushed NO merchant lines do we
+          // pull via Repeat-Receipt (06 20). This now runs strictly AFTER
+          // authorisation() returned on 06 0F — i.e. the terminal has released
+          // master rights — so there is no overlapping-command conflict (the
+          // earlier premature return at 04 0F caused the merchant-pull timeout).
           if (tx.receipts.merchantReceipt.lines.length === 0) {
             await this.pullReceipts(tx, session);
           }

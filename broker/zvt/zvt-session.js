@@ -76,7 +76,7 @@ export class ZvtSession {
         // Raw capture (read-only, for debugging): record every chunk exactly as
         // it arrives, BEFORE any parsing. ZVT over TCP is a byte stream, so a
         // chunk may hold part of an APDU, one APDU, or several concatenated.
-        if (this.onRaw) { try { this.onRaw(data); } catch (_) {} }
+        if (this.onRaw) { try { this.onRaw(data, "RX"); } catch (_) {} }
         this.rxBuffer = Buffer.concat([this.rxBuffer, data]);
         this.processReceiveBuffer();
       });
@@ -151,6 +151,10 @@ export class ZvtSession {
     if (!this.socket || this.socket.destroyed) {
       throw new Error("Not connected");
     }
+    // Raw capture (TX) BEFORE the write, so the trace shows the exact bytes we
+    // put on the wire (e.g. every 80 00 00 ACK) interleaved with RX. This makes
+    // per-line receipt ACK provable in the raw log.
+    if (this.onRaw) { try { this.onRaw(data, "TX"); } catch (_) {} }
     this.socket.write(data);
     this.onLog("TX", data);
   }
@@ -348,9 +352,31 @@ export class ZvtSession {
     };
 
     const deadline = Date.now() + this.transactionTimeout;
+    // Post-04-0F grace window: after the Status-Information is received, the
+    // remaining sequence (receipt push + 06 0F) should follow quickly. If a
+    // terminal (or simulator) sends NOTHING further, we must not hang for the
+    // whole transaction timeout — so once status is known we wait per-frame
+    // only this long before treating 04 0F as final. Each received frame
+    // resets the wait (there is no fixed sleep).
+    const postStatusFrameTimeout = Math.max(this.responseTimeout * 2, 5000);
 
     while (Date.now() < deadline) {
-      const frame = await this.waitFrame(this.transactionTimeout - (Date.now() - (deadline - this.transactionTimeout)));
+      const waitMs = result.statusReceived
+        ? postStatusFrameTimeout
+        : (deadline - Date.now());
+      let frame;
+      try {
+        frame = await this.waitFrame(waitMs);
+      } catch (e) {
+        // Timeout waiting for a frame.
+        if (result.statusReceived) {
+          // We already have the financial result; the terminal simply didn't
+          // send a separate 06 0F (or any receipt). Treat 04 0F as final.
+          result.success = (result.resultCode === 0x00);
+          return result;
+        }
+        throw e; // no status yet -> genuine transaction timeout
+      }
 
       // ACK (80 00) — just continue waiting for actual response
       if (frame.cmdClass === 0x80 && frame.cmdInstr === 0x00) {
@@ -388,7 +414,18 @@ export class ZvtSession {
         continue;
       }
 
-      // Status-Information (04 0F) — final status
+      // Status-Information (04 0F) — the financial RESULT of the transaction.
+      // Per ZVT (PA00P015) the defined authorisation sequence is:
+      //   06 01 -> (04 FF intermediate)* -> 04 0F Status-Information
+      //         -> (06 D1/06 D3 receipt push)* -> 06 0F Completion
+      // The ECR does NOT regain master rights (and MUST NOT send another
+      // command such as 06 20) until it has received AND acknowledged 06 0F.
+      // Therefore we ACK 04 0F, remember the result, optionally surface an
+      // early "approved" state to the caller, but we DO NOT return here — we
+      // keep looping to collect any pushed receipt lines and to consume the
+      // final 06 0F. Returning at 04 0F was a protocol bug that both missed
+      // pushed receipts and caused an overlapping-command timeout on the
+      // subsequent 06 20 pull.
       if (frame.cmdClass === 0x04 && frame.cmdInstr === 0x0F) {
         this.send(ACK);
         const parsed = parseCompletion(frame.payload);
@@ -397,31 +434,25 @@ export class ZvtSession {
         // Read-only: parse receipt fields from a COPY of the payload. This must
         // never mutate the buffer or affect the payment outcome.
         try { result.statusInfo = parseStatusInformation(Buffer.from(frame.payload)); } catch (_) { result.statusInfo = null; }
-        // Some simulators send 04 0F as the final message (no separate Completion)
-        // Wait briefly for a Completion, but accept this as final if nothing follows
-        try {
-          const next = await this.waitFrame(2000);
-          if (next.cmdClass === 0x06 && next.cmdInstr === 0x0F) {
-            this.send(ACK);
-            if (next.payload.length > 0) {
-              const comp = parseCompletion(next.payload);
-              if (comp.resultCode !== null) result.resultCode = comp.resultCode;
-            }
-          } else {
-            this.send(ACK);
-          }
-        } catch (_) {
-          // No Completion followed — 04 0F was the final response (simulator behavior)
+        result.statusReceived = true;
+        // Let the caller surface the financial result early (terminal stays
+        // BUSY until 06 0F). This does NOT end the ZVT operation.
+        if (callbacks.onStatusInfo) {
+          try { callbacks.onStatusInfo(result.statusInfo, result.resultCode); } catch (_) {}
         }
-        result.success = (result.resultCode === 0x00);
-        return result;
+        continue; // keep consuming receipt push + 06 0F
       }
 
-      // Completion (06 0F)
+      // Completion (06 0F) — the ZVT operation is now finished and master
+      // rights return to the ECR. This is the ONLY place authorisation()
+      // returns for a completed transaction.
       if (frame.cmdClass === 0x06 && frame.cmdInstr === 0x0F) {
         this.send(ACK);
         const parsed = parseCompletion(frame.payload);
-        if (result.resultCode === null) result.resultCode = parsed.resultCode;
+        // 06 0F may be a bare completion (no result code); keep the 04 0F result.
+        if (result.resultCode === null && parsed.resultCode !== null && parsed.resultCode !== undefined) {
+          result.resultCode = parsed.resultCode;
+        }
         result.terminalIdentifier = parsed.terminalIdentifier || result.terminalIdentifier;
         result.success = (result.resultCode === 0x00);
         return result;
