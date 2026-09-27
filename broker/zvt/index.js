@@ -281,21 +281,28 @@ export function initZvt(config, clients, brokerDir) {
         }
 
         case "PRINT_ALL_MERCHANT": {
-          // Print ALL stored merchant receipts as one CUPS job (no cuts between).
-          // On success, delete all customer receipt files (agreed workflow).
+          // Print ALL active merchant receipts as one CUPS job (no cuts).
+          // Does NOT archive/delete here — the POS asks the user to confirm the
+          // printout, then sends ARCHIVE_MERCHANT_RECEIPTS.
           const { lines, count } = receiptStore.getAllMerchantReceiptsCombined();
           if (count === 0) {
-            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count: 0, success: true, deletedCustomer: 0, ts: Date.now() }));
+            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count: 0, success: true, ts: Date.now() }));
             break;
           }
           try {
             await printViaCups(lines, "merchant");
-            // Only after a successful print job do we delete customer copies.
-            const deleted = receiptStore.deleteAllCustomerReceipts();
-            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: true, deletedCustomer: deleted, ts: Date.now() }));
+            ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: true, ts: Date.now() }));
           } catch (e) {
             ws.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT_DONE", count, success: false, error: e.message, ts: Date.now() }));
           }
+          break;
+        }
+
+        case "ARCHIVE_MERCHANT_RECEIPTS": {
+          // Called after the user confirms the print-all actually printed.
+          // Moves merchant receipts to the archive folder + deletes customer copies.
+          const res = receiptStore.archivePrintedMerchants();
+          ws.send(JSON.stringify({ type: "MERCHANT_RECEIPTS_ARCHIVED", ...res, success: true, ts: Date.now() }));
           break;
         }
 

@@ -24,12 +24,15 @@ export class ReceiptStore {
     this.merchantDir = path.join(this.baseDir, "merchant");
     this.customerDir = path.join(this.baseDir, "customer");
     this.indexPath = path.join(this.baseDir, "index.json");
+    // Archive lives under the modern/ folder (broker dir is modern/broker),
+    // so archived single receipt text files sit at modern/receipts-archive/.
+    this.archiveDir = options.archiveDir || path.join(brokerDir, "..", "receipts-archive");
     this.onLog = options.onLog || (() => {});
     this._ensureDirs();
   }
 
   _ensureDirs() {
-    for (const d of [this.baseDir, this.merchantDir, this.customerDir]) {
+    for (const d of [this.baseDir, this.merchantDir, this.customerDir, this.archiveDir]) {
       try { fs.mkdirSync(d, { recursive: true }); } catch (_) {}
     }
   }
@@ -162,22 +165,48 @@ export class ReceiptStore {
   }
 
   /**
-   * Delete all customer receipt files and clear their index references.
-   * Called after a successful "print all merchant" per the agreed workflow.
-   * @returns {number} number of customer files removed
+   * Archive all active merchant receipts (MOVE the single .txt files into the
+   * archive folder) and delete the customer copies. Removes archived entries
+   * from the active index so the active list only holds not-yet-archived
+   * receipts. Called only AFTER the user confirms the print-all actually
+   * printed. Returns { archived, deletedCustomer }.
    */
-  deleteAllCustomerReceipts() {
+  archivePrintedMerchants() {
     const idx = this._loadIndex();
-    let removed = 0;
+    let archived = 0;
+    let deletedCustomer = 0;
+    const remaining = [];
     for (const e of idx.receipts) {
+      let handled = false;
+      if (e.merchantFile) {
+        try {
+          fs.renameSync(
+            path.join(this.merchantDir, e.merchantFile),
+            path.join(this.archiveDir, e.merchantFile)
+          );
+          archived++;
+          handled = true;
+        } catch (err) {
+          this.onLog(`RECEIPTS: archive move failed for ${e.id}: ${err.message}`);
+          remaining.push(e); // keep it active if the move failed
+          continue;
+        }
+      }
+      // Delete the customer copy (convenience copy, not retained).
       if (e.customerFile) {
-        try { fs.unlinkSync(path.join(this.customerDir, e.customerFile)); removed++; } catch (_) {}
-        e.customerFile = null;
+        try { fs.unlinkSync(path.join(this.customerDir, e.customerFile)); deletedCustomer++; } catch (_) {}
+      }
+      // If it had a merchant file we archived it -> drop from active index.
+      // If it had no merchant file (customer-only), also drop after deletion.
+      if (!handled && !e.merchantFile) {
+        // customer-only entry with no merchant file: remove
       }
     }
-    try { this._saveIndex(idx); } catch (e) { this.onLog(`RECEIPTS: index save failed: ${e.message}`); }
-    this.onLog(`RECEIPTS: deleted ${removed} customer receipt(s)`);
-    return removed;
+    // Active index now only keeps entries whose merchant move failed.
+    idx.receipts = remaining;
+    try { this._saveIndex(idx); } catch (err) { this.onLog(`RECEIPTS: index save failed: ${err.message}`); }
+    this.onLog(`RECEIPTS: archived ${archived} merchant receipt(s), deleted ${deletedCustomer} customer receipt(s)`);
+    return { archived, deletedCustomer };
   }
 
   /**
