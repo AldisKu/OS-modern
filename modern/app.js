@@ -1,8 +1,15 @@
-const API = "../php/modernapi.php";
-const APP_VERSION = "41";
+const API = "modernapi.php";
+const APP_VERSION = "70";
+// Debug: update/refresh timing. Toggle in browser console: window.DEBUG_UPDATES=false
+window.DEBUG_UPDATES = true;
+function dbgU(...a) { if (window.DEBUG_UPDATES) console.log("[UPD]", new Date().toISOString(), ...a); }
 let brokerUrl = "ws://127.0.0.1:3077";
 const BROKER_MISS_GRACE_MS = 6000;
 const DEBUG_BROKER = false;
+let VOUCHER_API_URL = "";
+const VOUCHER_REDEEM_PATTERNS = ["Gutschein einlösen", "Gutschein einloesen"];
+const VOUCHER_SELL_PATTERNS = ["Gutschein (Kauf)", "Gutschein(Kauf)", "Gutschein Kauf"];
+const VOUCHER_VARIABLE_PATTERN = "XXX Gutschein";
 
 const els = {
   loginScreen: document.getElementById("login-screen"),
@@ -82,7 +89,24 @@ const els = {
   recordsBody: document.getElementById("records-body"),
   recordsClose: document.getElementById("records-close"),
   startMessageBody: document.getElementById("start-message-body"),
-  keyboard: document.getElementById("keyboard")
+  keyboard: document.getElementById("keyboard"),
+
+  // Voucher modals
+  voucherModal: document.getElementById("voucher-modal"),
+  voucherModalTitle: document.getElementById("voucher-modal-title"),
+  voucherNumberInput: document.getElementById("voucher-number-input"),
+  voucherInputSection: document.getElementById("voucher-input-section"),
+  voucherResultSection: document.getElementById("voucher-result-section"),
+  voucherResult: document.getElementById("voucher-result"),
+  voucherActions: document.getElementById("voucher-actions"),
+  voucherScanBtn: document.getElementById("voucher-scan-btn"),
+  voucherScannerContainer: document.getElementById("voucher-scanner-container"),
+  voucherQrReader: document.getElementById("voucher-qr-reader"),
+  voucherScanStop: document.getElementById("voucher-scan-stop"),
+  voucherSellModal: document.getElementById("voucher-sell-modal"),
+  voucherSellInfo: document.getElementById("voucher-sell-info"),
+  voucherSellResult: document.getElementById("voucher-sell-result"),
+  voucherSellActions: document.getElementById("voucher-sell-actions")
 };
 
 const state = {
@@ -131,13 +155,30 @@ const state = {
   lastServerVersion: null,
   lastServerVersionAt: 0,
   lastBrokerUpdateAt: 0,
-  pendingRoomRefresh: false,
+  // Two dirty flags for the broker-driven refresh model.
+  // TABLES -> start screen tiles; MENU -> product catalog/prices.
+  dirty: { tables: false, menu: false },
+  // Guard against overlapping refresh_tables fetches on bursts.
+  refreshingTables: false,
   priceEntry: null,
-  orderSending: false
+  orderSending: false,
+  // Voucher state
+  voucherProd: null,
+  voucherMode: null,
+  voucherExpectedCents: 0,
+  voucherSellAmountCents: 0,
+  voucherCheckedAmountCents: 0,
+  voucherVariableProd: null,
+  // ZVT Payment state
+  zvtEnabled: false,
+  terminals: [],
+  selectedTerminal: null, // { id, name } or null (manual mode)
+  paymentInProgress: null // { requestId, amountMinor, terminalId, state }
+
 };
 
 // Expose for on-device debugging (e.g., iPad Web Inspector)
-globalThis.__osState = state;
+globalThis.__osState = state; window.__osState = state;
 
 function markDisplayActivity() {
   state.displayActivity = true;
@@ -178,14 +219,33 @@ function show(screen) {
   }
   if (screen === els.startScreen) {
     sendDisplayIdle();
-    // Only refresh tables from server if broker signaled a pending change
-    if (state.pendingRoomRefresh) {
-      state.pendingRoomRefresh = false;
-      refreshTables();
-    } else {
-      // Use cached data — just re-render
-      renderTables();
-    }
+    // Focus-driven refresh: fetch if TABLES is dirty, otherwise render local.
+    refreshStartScreen("focus");
+  }
+}
+
+// Start-screen refresh policy:
+//  - Always render immediately from local state (instant, consistent).
+//  - If TABLES is dirty (a change happened), fetch fresh data then re-render
+//    and clear the flag. Overlapping fetches are coalesced via a guard.
+async function refreshStartScreen(reason) {
+  // Instant local render so the screen is never blank/stuck.
+  renderTables();
+  if (!state.dirty.tables) {
+    dbgU("startScreen render-from-local (not dirty), reason=", reason);
+    return;
+  }
+  if (state.refreshingTables) {
+    dbgU("startScreen fetch skipped (already refreshing), reason=", reason);
+    return;
+  }
+  state.refreshingTables = true;
+  try {
+    dbgU("startScreen FETCH (dirty), reason=", reason);
+    const ok = await refreshTables();   // fetches refresh_tables + renderTables
+    if (ok) state.dirty.tables = false; // clear ONLY after a successful refresh
+  } finally {
+    state.refreshingTables = false;
   }
 }
 
@@ -220,6 +280,41 @@ async function api(cmd, body) {
     els.loginHint.textContent = "Sitzung abgelaufen – bitte erneut anmelden";
   }
   return data;
+}
+
+// --- Double-submit protection ---------------------------------------------
+// Prevents an action button from being triggered again while its backend/network
+// operation is still running. Some actions (order, pay, print, table change)
+// cause backend errors if sent twice before the reply, so the button is made
+// untouchable from the first touch until the operation completes.
+// Uses the same visual style as disableOrderButtons()/enableOrderButtons().
+function setButtonBusy(el, busy) {
+  if (!el) return;
+  el.disabled = !!busy;
+  el.style.opacity = busy ? "0.5" : "1";
+  el.style.cursor = busy ? "not-allowed" : "pointer";
+  if (busy) {
+    el.setAttribute("aria-busy", "true");
+    el.dataset.busy = "1";
+  } else {
+    el.removeAttribute("aria-busy");
+    delete el.dataset.busy;
+  }
+}
+
+// Wraps an async handler so the triggering button is disabled for the whole
+// duration of the operation and re-enabled afterwards (even if it throws).
+// If the button is already busy, the new invocation is ignored.
+function guardButton(el, asyncFn) {
+  return async function (...args) {
+    if (el && el.dataset && el.dataset.busy === "1") return;
+    setButtonBusy(el, true);
+    try {
+      return await asyncFn.apply(this, args);
+    } finally {
+      setButtonBusy(el, false);
+    }
+  };
 }
 
 async function init() {
@@ -326,13 +421,103 @@ function initBroker() {
       }
       if (payload && payload.type === "UPDATE_REQUIRED") {
         state.lastBrokerUpdateAt = Date.now();
-        const scope = String(payload.scope || "").toUpperCase();
-        if (scope.includes("MENU") || scope.includes("PRICE") || scope.includes("PRICES")) {
-          await refreshMenuPrices();
-          showStatusMessage("Price level updated (broker)");
-        } else {
-          await refreshTablesWithRetry("Tables updated (broker)");
-          await refreshOrderIfVisible();
+        // Broker sends a block of affected areas (values: TABLES / MENU).
+        // Fall back to legacy single "scope" for older brokers.
+        let areas = Array.isArray(payload.areas) ? payload.areas : [];
+        if (areas.length === 0 && payload.scope) areas = [payload.scope];
+        areas = areas.map(a => String(a).toUpperCase());
+        const startVisible = els.startScreen && !els.startScreen.classList.contains("hidden");
+        dbgU("UPDATE_REQUIRED recv areas=", areas.join(","), "event=", payload.event,
+             "pushTs=", payload.ts, "latencyMs=", payload.ts ? (Date.now() - payload.ts) : "n/a",
+             "startScreenVisible=", startVisible);
+        // 1) Mark dirty flags for every affected area (loop, no if/else).
+        for (const area of areas) {
+          if (area.includes("MENU") || area.includes("PRICE")) {
+            state.dirty.menu = true;
+          } else { // TABLES (and anything else) affects the table view
+            state.dirty.tables = true;
+          }
+        }
+        // 2) Process now for whatever the current screen needs.
+        //    MENU is consumed lazily on order-screen entry (not here).
+        //    TABLES: if the start screen is in focus, refresh it live.
+        if (state.dirty.tables && startVisible) {
+          await refreshStartScreen("broker push");
+        }
+        // If an order screen is in focus, keep its submitted items fresh.
+        await refreshOrderIfVisible();
+        dbgU("UPDATE_REQUIRED handled; dirty=", JSON.stringify(state.dirty));
+      }
+      // --- ZVT Payment messages ---
+      if (payload && payload.type === "TERMINAL_LIST") {
+        state.terminals = payload.terminals || [];
+        // Restore saved terminal selection now that we have the list
+        restoreTerminalSelection();
+        renderTerminalSelector();
+      }
+      if (payload && payload.type === "PAYMENT_STATUS") {
+        handlePaymentStatus(payload);
+      }
+      if (payload && payload.type === "PAYMENT_RESULT") {
+        handlePaymentResult(payload);
+      }
+      if (payload && payload.type === "RECEIPT_PRINTED") {
+        handleReceiptPrinted(payload);
+      }
+      if (payload && payload.type === "DISCOVERY_COMPLETE") {
+        state.terminals = payload.terminals || state.terminals;
+        renderTerminalSelector();
+        showTerminalScanResult(payload.terminals);
+      }
+      // --- Kartenbelege (card receipts) ---
+      if (payload && payload.type === "CARD_RECEIPT_LIST") {
+        renderCardReceipts(payload.receipts);
+      }
+      if (payload && payload.type === "CARD_RECEIPT_PRINTED") {
+        if (!payload.success) showStatusMessage("Druck fehlgeschlagen: " + (payload.error || ""));
+      }
+      if (payload && payload.type === "PRINT_ALL_MERCHANT_DONE") {
+        if (!els.confirmModal.classList.contains("hidden")) {
+          if (!payload.success) {
+            // Print error — do NOT archive. Show error, keep everything.
+            els.confirmTitle.textContent = "Kartenbelege";
+            els.confirmBody.innerHTML = `<p>Druck fehlgeschlagen: ${escapeHtml(payload.error || "")}</p>`;
+            els.confirmActions.innerHTML = `<button class="primary" id="cr-ok">OK</button>`;
+            document.getElementById("cr-ok").onclick = () => openCardReceiptsModal();
+          } else if (payload.count === 0) {
+            els.confirmTitle.textContent = "Kartenbelege";
+            els.confirmBody.innerHTML = `<p>Keine Händlerbelege zu drucken.</p>`;
+            els.confirmActions.innerHTML = `<button class="primary" id="cr-ok">OK</button>`;
+            document.getElementById("cr-ok").onclick = () => els.confirmModal.classList.add("hidden");
+          } else {
+            // Printed OK — double-check with the user before archiving.
+            els.confirmTitle.textContent = "Belege gedruckt?";
+            els.confirmBody.innerHTML = `<p>${payload.count} Händlerbeleg(e) wurden gedruckt.<br>Sind alle korrekt ausgedruckt?</p>`;
+            els.confirmActions.innerHTML = `
+              <button class="ghost" id="cr-noarch">Nein</button>
+              <button class="primary" id="cr-arch">Ja, archivieren</button>
+            `;
+            document.getElementById("cr-noarch").onclick = () => openCardReceiptsModal();
+            document.getElementById("cr-arch").onclick = () => {
+              state.brokerWs.send(JSON.stringify({ type: "ARCHIVE_MERCHANT_RECEIPTS" }));
+              els.confirmBody.innerHTML = `<p>Wird archiviert…</p>`;
+              els.confirmActions.innerHTML = "";
+            };
+          }
+        }
+      }
+      if (payload && payload.type === "MERCHANT_RECEIPTS_ARCHIVED") {
+        if (!els.confirmModal.classList.contains("hidden")) {
+          els.confirmTitle.textContent = "Kartenbelege";
+          els.confirmBody.innerHTML = `<p>${payload.archived || 0} Händlerbeleg(e) archiviert.<br>${payload.deletedCustomer || 0} Kundenbeleg(e) gelöscht.</p>`;
+          els.confirmActions.innerHTML = `<button class="primary" id="cr-ok">OK</button>`;
+          document.getElementById("cr-ok").onclick = () => els.confirmModal.classList.add("hidden");
+        }
+      }
+      if (payload && payload.type === "MERCHANT_RECEIPT_DELETED") {
+        // Refresh the list after a delete
+        if (payload.success && state.brokerWs && state.brokerWs.readyState === WebSocket.OPEN) {
+          state.brokerWs.send(JSON.stringify({ type: "LIST_CARD_RECEIPTS" }));
         }
       }
     };
@@ -358,16 +543,6 @@ function scheduleBrokerReconnect() {
     if (DEBUG_BROKER) console.log("[BROKER] Reconnecting...");
     initBroker();
   }, 3000);
-}
-
-async function refreshTablesWithRetry(message) {
-  const attempt = async () => { await refreshTables(); };
-  await attempt();
-  // Keep a pending flag so the next navigation to start-screen refreshes again
-  state.pendingRoomRefresh = true;
-  // Single safety retry to handle backend lag after broker push
-  setTimeout(attempt, 2000);
-  if (message) showStatusMessage(message);
 }
 
 function showStatusMessage(text) {
@@ -458,6 +633,10 @@ function registerBrokerClient() {
     if (DEBUG_BROKER) console.log("[BROKER] Sending REGISTER pos:", payload);
     state.brokerWs.send(JSON.stringify(payload));
     state.brokerRegisteredAsPos = true;
+    // Request terminal list if ZVT enabled
+    if (state.zvtEnabled) {
+      state.brokerWs.send(JSON.stringify({ type: "REQUEST_TERMINALS" }));
+    }
   } catch (e) {
     // Send failed — retry
     if (DEBUG_BROKER) console.log("[BROKER] registerBrokerClient send failed:", e.message);
@@ -468,15 +647,15 @@ function registerBrokerClient() {
 
 function bindMenuButtons() {
   document.querySelectorAll(".menu-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", guardButton(btn, async () => {
       const action = btn.dataset.action;
-      handleMenuAction(action, btn);
-    });
+      await handleMenuAction(action, btn);
+    }));
   });
 }
 
 function bindLogin() {
-  els.loginBtn.addEventListener("click", doLogin);
+  els.loginBtn.addEventListener("click", guardButton(els.loginBtn, doLogin));
   els.loginClear.addEventListener("click", () => {
     els.loginPass.value = "";
   });
@@ -497,6 +676,8 @@ function bindModals() {
   if (els.priceConfirm) {
     els.priceConfirm.addEventListener("click", () => {
       if (!state.priceEntry || !state.priceEntry.prod) return;
+      // Voucher sell/variable mode — handled by their own onclick override
+      if (state.priceEntry.mode === "voucher-sell-amount" || state.priceEntry.mode === "zvt-amount" || state.priceEntry.mode === "voucher-variable") return;
       if (!state.priceEntry.raw) {
         alert("Bitte Preis eingeben.");
         return;
@@ -516,7 +697,7 @@ function bindModals() {
   if (els.recordsClose) {
     els.recordsClose.addEventListener("click", () => els.recordsModal.classList.add("hidden"));
   }
-  [els.productModal, els.confirmModal, els.menuModal, els.recordsModal, els.priceModal].filter(Boolean).forEach(modal => {
+  [els.productModal, els.confirmModal, els.menuModal, els.recordsModal, els.priceModal, els.voucherModal, els.voucherSellModal].filter(Boolean).forEach(modal => {
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.classList.add("hidden");
@@ -527,21 +708,36 @@ function bindModals() {
 }
 
 async function loadServerConfig() {
-  const data = await api("config", {});
-  if (data.status === "OK" && data.broker_ws) {
-    brokerUrl = data.broker_ws;
-    // Some installs return localhost/127.0.0.1 (valid for the server, not for clients).
-    // Rewrite to the current host so iPad Home-Screen/PWA sessions can connect reliably.
-    if (brokerUrl && (brokerUrl.includes("127.0.0.1") || brokerUrl.includes("localhost"))) {
-      try {
-        const host = window.location.hostname;
-        brokerUrl = brokerUrl.replace("127.0.0.1", host).replace("localhost", host);
-      } catch (_) {}
+  // Load local config.json first (for ZVT and voucher settings)
+  try {
+    const cfgResp = await fetch("./config.json");
+    if (cfgResp.ok) {
+      const cfg = await cfgResp.json();
+      if (cfg.voucher_enabled && cfg.voucher_api_url) VOUCHER_API_URL = cfg.voucher_api_url;
+      if (cfg.zvt_enabled) state.zvtEnabled = true;
     }
-    if (Number.isFinite(Number(data.client_poll_interval_ms))) {
-      state.clientPollMs = Math.max(10000, Number(data.client_poll_interval_ms));
+  } catch (_) {}
+
+  // Load server config (broker URL etc)
+  try {
+    const data = await api("config", {});
+    if (data.status === "OK" && data.broker_ws) {
+      brokerUrl = data.broker_ws;
+      if (brokerUrl && (brokerUrl.includes("127.0.0.1") || brokerUrl.includes("localhost"))) {
+        try {
+          const host = window.location.hostname;
+          brokerUrl = brokerUrl.replace("127.0.0.1", host).replace("localhost", host);
+        } catch (_) {}
+      }
+      // On HTTPS, use WSS via Apache proxy instead of direct ws:// connection
+      if (window.location.protocol === "https:") {
+        brokerUrl = `wss://${window.location.host}/broker-ws`;
+      }
+      if (Number.isFinite(Number(data.client_poll_interval_ms))) {
+        state.clientPollMs = Math.max(10000, Number(data.client_poll_interval_ms));
+      }
     }
-  }
+  } catch (_) {}
 }
 
 async function loadUsers() {
@@ -770,6 +966,24 @@ function renderProducts() {
         return;
       }
       markDisplayActivity();
+
+      // Voucher product detection
+      const prodName = prod.longname || prod.shortname || prod.name || "";
+      if (VOUCHER_API_URL) {
+        if (isVoucherRedeem(prodName)) {
+          openVoucherRedeemModal(prod);
+          return;
+        }
+        if (isVoucherSell(prodName)) {
+          openVoucherSellModal(prod);
+          return;
+        }
+        if (isVoucherVariable(prodName)) {
+          openPriceModalVoucher(prod);
+          return;
+        }
+      }
+
       if (shouldEnterPrice(prod)) {
         openPriceModal(prod);
       } else if (!prod.extras || prod.extras.length === 0) {
@@ -857,6 +1071,12 @@ async function openOrderForTable(table) {
     els.orderTableLabel.style.display = "inline-block";
     els.orderTableLabel.style.minWidth = `${state.maxTableLabelWidth}px`;
   }
+  // Lazy MENU refresh: the menu/prices are only used here on the order screen,
+  // so consume the dirty.menu flag on entry (full refresh_menu, then clear).
+  if (state.dirty.menu) {
+    dbgU("openOrderForTable: dirty.menu -> refreshMenuPrices");
+    try { await refreshMenuPrices(); state.dirty.menu = false; } catch (_) {}
+  }
   state.typeStack = [];
   state.selectedType = topLevelTypes()[0]?.id || null;
   loadCart(table.id);
@@ -867,6 +1087,14 @@ async function openOrderForTable(table) {
   // Reset order sending flag and re-enable buttons when entering order screen
   state.orderSending = false;
   enableOrderButtons();
+  // Table change is not available for ToGo (id 0) in either direction - see
+  // TODO_TOGO_TABLECHANGE.md. Disable the "Tisch wechseln" button for ToGo.
+  const isTogo = table.id === 0;
+  document.querySelectorAll('[data-action="changetable"]').forEach(btn => {
+    btn.disabled = isTogo;
+    btn.style.opacity = isTogo ? "0.5" : "1";
+    btn.style.cursor = isTogo ? "not-allowed" : "pointer";
+  });
   show(els.orderScreen);
 }
 
@@ -1512,7 +1740,7 @@ function showExistingItemActions(item) {
   els.confirmActions.querySelector("#cancel").onclick = () => {
     els.confirmModal.classList.add("hidden");
   };
-  els.confirmActions.querySelector("#remove").onclick = async () => {
+  removeBtn.onclick = guardButton(removeBtn, async () => {
     const qty = Math.max(1, Math.min(groupCount, Number(qtyVal.value || 1)));
     if (state.cancelUnpaidCode) {
       const codeVal = els.confirmBody.querySelector("#storno-code")?.value || "";
@@ -1563,7 +1791,7 @@ function showExistingItemActions(item) {
     await fetchExistingOrders();
     renderOrderItems();
     els.confirmModal.classList.add("hidden");
-  };
+  });
 }
 
 function editCartItem(id) {
@@ -2225,6 +2453,9 @@ els.paydeskClear?.addEventListener("click", () => {
 });
 
 async function loadPayments() {
+  // Every fresh entry into the cashier/paydesk form starts with Bewirtungsbeleg
+  // OFF — a cancelled/abandoned payment must not leave it selected next time.
+  state.paydeskHost = false;
   const data = await api("payments", {});
   const rawPayments = data.payments || [];
   const isAllowed = (id) => {
@@ -2244,12 +2475,78 @@ async function loadPayments() {
     </div>
   `).join("");
   els.paydeskPayments.querySelectorAll("button").forEach(btn => {
-    btn.onclick = async () => {
+    btn.onclick = guardButton(btn, async () => {
       const paymentId = Number(btn.dataset.pay);
       const print = Number(btn.dataset.print || 0) === 1;
+      // Check if ZVT terminal payment should be triggered
+      // Card payments (paymentId 2 = EC, paymentId 3 = Kreditkarte typically)
+      console.log("PAY CLICK", { paymentId, zvtEnabled: state.zvtEnabled, selectedTerminal: state.selectedTerminal, isCard: isCardPayment(paymentId) });
+      if (state.zvtEnabled && state.selectedTerminal && isCardPayment(paymentId)) {
+        try {
+          const total = parseFloat(els.paydeskTotal.textContent.replace(",", ".")) || 0;
+          const amountMinor = Math.round(total * 100);
+          if (amountMinor > 0) {
+            startTerminalPayment(amountMinor, paymentId, print);
+            return;
+          }
+        } catch (e) {
+          console.error("ZVT startTerminalPayment error:", e);
+        }
+      }
       await paydeskPay(paymentId, print);
-    };
+    });
   });
+  // Bewirtungsbeleg requires a printed receipt, so the non-printing payment
+  // buttons must be unusable while it is active. Apply the current state now.
+  applyBewirtungButtonLock();
+}
+
+/**
+ * When Bewirtungsbeleg (paydesk-host) is active, disable every non-printing
+ * payment button (data-print="0") across ALL payment methods; the "Bondruck"
+ * (data-print="1") buttons stay enabled. Toggling Bewirtungsbeleg off restores
+ * them. Works for any number of dynamically-rendered payment methods.
+ *
+ * Disabled buttons keep BLACK, readable text and get a leading lock icon (🔒)
+ * instead of being faded out. The Bewirtungsbeleg toggle itself shows a green
+ * check (✓) when active.
+ */
+function applyBewirtungButtonLock() {
+  const lock = !!state.paydeskHost;
+  if (els.paydeskPayments) {
+    els.paydeskPayments.querySelectorAll('button[data-print="0"]').forEach(btn => {
+      btn.disabled = lock;
+      btn.classList.toggle("locked", lock);
+      // Manage a leading lock icon without corrupting the payment name: keep a
+      // dedicated span that we add/remove.
+      let icon = btn.querySelector(".lock-icon");
+      if (lock) {
+        if (!icon) {
+          icon = document.createElement("span");
+          icon.className = "lock-icon";
+          icon.textContent = "🔒 ";
+          btn.insertBefore(icon, btn.firstChild);
+        }
+      } else if (icon) {
+        icon.remove();
+      }
+    });
+  }
+  // Bewirtungsbeleg toggle: green ✓ prefix when active.
+  if (els.paydeskHost) {
+    els.paydeskHost.classList.toggle("active", lock);
+    let chk = els.paydeskHost.querySelector(".bew-check");
+    if (lock) {
+      if (!chk) {
+        chk = document.createElement("span");
+        chk.className = "bew-check";
+        chk.textContent = "✓ ";
+        els.paydeskHost.insertBefore(chk, els.paydeskHost.firstChild);
+      }
+    } else if (chk) {
+      chk.remove();
+    }
+  }
 }
 
 async function paydeskPay(paymentId, print) {
@@ -2272,6 +2569,11 @@ async function paydeskPay(paymentId, print) {
     await selectPaydeskTable(state.paydeskTable.id, state.paydeskTable.name);
     state.paydeskHost = false;
     if (els.paydeskHost) els.paydeskHost.classList.remove("active");
+    // Re-sync the payment buttons: after a Bewirtung sale, paydeskHost is
+    // cleared above but the non-printing buttons stayed locked (🔒). If
+    // products remain and we stay on the cashier form, unlock them and remove
+    // the lock icons / green check to match the reset state.
+    applyBewirtungButtonLock();
     if (res.msg && res.msg.ebonurl && res.msg.ebonref) {
       sendDisplayEbon(res.msg.ebonurl, res.msg.ebonref);
     } else {
@@ -2338,19 +2640,27 @@ els.paydeskTableName?.addEventListener("click", async () => {
 
 els.paydeskHost?.addEventListener("click", () => {
   state.paydeskHost = !state.paydeskHost;
-  els.paydeskHost.classList.toggle("active", state.paydeskHost);
+  // Update active class, green check, lock icons, and button disabled state.
+  applyBewirtungButtonLock();
 });
 
 async function changeTableFlow() {
   resetConfirmActionsLayout();
   const table = state.selectedTable;
   if (!table) return;
+  // Table change is not available for ToGo in either direction (tax reasons -
+  // requires a fiscally correct cancel+rebook flow, see TODO_TOGO_TABLECHANGE.md).
+  // Block moving FROM ToGo entirely.
+  if (table.id === 0) {
+    alert("Tischwechsel ist für ToGo nicht möglich.");
+    return;
+  }
   const data = await api("table_open_items", { tableid: table.id });
   if (data.status !== "OK") return;
   const existing = data.msg || [];
   const cart = state.cartByTable[table.id] || [];
+  // Do NOT offer ToGo as a target (no table -> ToGo moves either).
   const tables = (state.rooms?.roomstables || []).flatMap(r => r.tables).map(t => ({ id: t.id, name: t.name }));
-  tables.push({ id: 0, name: "To-Go" });
 
   let selectedTableId = null;
   const items = [];
@@ -2391,7 +2701,8 @@ async function changeTableFlow() {
     els.confirmModal.classList.add("hidden");
   };
 
-  els.confirmBody.querySelector("#change-table-do").onclick = async () => {
+  const changeTableDoBtn = els.confirmBody.querySelector("#change-table-do");
+  changeTableDoBtn.onclick = guardButton(changeTableDoBtn, async () => {
     if (selectedTableId === null) {
       alert("Bitte Tisch auswählen");
       return;
@@ -2431,7 +2742,7 @@ async function changeTableFlow() {
     const found = tables.find(t => Number(t.id) === Number(selectedTableId));
     const targetName = found ? found.name : (selectedTableId === 0 ? "To-Go" : String(selectedTableId));
     openOrderForTable({ id: selectedTableId, name: targetName });
-  };
+  });
 }
 
 async function openMenuModal() {
@@ -2444,7 +2755,9 @@ async function openMenuModal() {
     const recordsBtn = `<button class="menu-link-btn" data-records="1">Tischprotokoll</button>`;
     const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
     const brokerBtn = `<button class="menu-link-btn" data-broker="1">Broker Debug</button>`;
-    els.menuItems.innerHTML = recordsBtn + localBtn + brokerBtn + items.map(m => {
+    const scanBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-terminalscan="1">Terminal scannen</button>` : "";
+    const cardReceiptsBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-cardreceipts="1">Kartenbelege</button>` : "";
+    els.menuItems.innerHTML = recordsBtn + localBtn + brokerBtn + scanBtn + cardReceiptsBtn + items.map(m => {
       const link = normalizeMenuLink(m.link || "");
       return `<button class="menu-link-btn" data-link="${link}">${m.name}</button>`;
     }).join("");
@@ -2463,6 +2776,16 @@ async function openMenuModal() {
         b.onclick = () => {
           closeMenuModal();
           openBrokerDebugModal();
+        };
+      } else if (b.dataset.terminalscan) {
+        b.onclick = () => {
+          closeMenuModal();
+          triggerTerminalScan();
+        };
+      } else if (b.dataset.cardreceipts) {
+        b.onclick = () => {
+          closeMenuModal();
+          openCardReceiptsModal();
         };
       } else {
         b.onclick = () => {
@@ -2816,13 +3139,25 @@ async function refreshTablesIfVisible() {
 }
 
 async function refreshTables() {
+  const t0 = Date.now();
   const data = await api("refresh_tables", {});
   if (data.status === "OK") {
     state.rooms = data.rooms;
     renderTables();
     state.lastSync = new Date().toLocaleTimeString();
     updateStatus();
+    // Summary for debugging: how many tables have unpaid products after refresh.
+    let tblCount = 0, unpaid = 0;
+    (data.rooms?.roomstables || []).forEach(r => (r.tables || []).forEach(t => {
+      tblCount++; unpaid += Number(t.unpaidprodcount || 0);
+    }));
+    const togoUnpaid = Number(data.rooms?.takeawayunpaidprodcount || 0);
+    dbgU("refreshTables done in", (Date.now() - t0) + "ms",
+         "| tables=", tblCount, "unpaidProds=", unpaid, "togoUnpaid=", togoUnpaid);
+    return true;
   }
+  dbgU("refreshTables NON-OK status=", data.status, "code=", data.code);
+  return false;
 }
 
 async function refreshOrderIfVisible() {
@@ -2831,5 +3166,1188 @@ async function refreshOrderIfVisible() {
   await fetchExistingOrders();
   renderOrderItems();
 }
+
+// ====================================================================
+// VOUCHER SYSTEM INTEGRATION
+// ====================================================================
+
+function isVoucherRedeem(name) {
+  return VOUCHER_REDEEM_PATTERNS.some(p => name.includes(p));
+}
+
+function isVoucherSell(name) {
+  return VOUCHER_SELL_PATTERNS.some(p => name.includes(p));
+}
+
+function isVoucherVariable(name) {
+  return name.startsWith(VOUCHER_VARIABLE_PATTERN);
+}
+
+async function voucherApiCall(endpoint, body) {
+  try {
+    const res = await fetch(`${VOUCHER_API_URL}${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, result_code: "network_error", message: "Verbindung zum Gutschein-System fehlgeschlagen." };
+  }
+}
+
+// --- Voucher Scanner ---
+
+let voucherScanner = null;
+let voucherScanning = false;
+
+function startVoucherScanner() {
+  if (voucherScanning) return;
+  if (typeof Html5Qrcode === "undefined") {
+    alert("QR-Scanner-Bibliothek nicht geladen.");
+    return;
+  }
+  els.voucherScannerContainer.classList.remove("hidden");
+  voucherScanner = new Html5Qrcode("voucher-qr-reader");
+  voucherScanner.start(
+    { facingMode: "environment" },
+    { fps: 30, qrbox: { width: 200, height: 200 }, formatsToSupport: [0], videoConstraints: { facingMode: "environment",  advanced: [{ zoom: 2.0 }], width: { ideal: 1280 }, height: { ideal: 720 } } },
+    (text) => {
+      els.voucherNumberInput.value = text;
+      stopVoucherScanner();
+      checkVoucher();
+    },
+    () => {}
+  ).catch(err => {
+    els.voucherScannerContainer.classList.add("hidden");
+    alert("Kamera nicht verfügbar: " + err);
+  });
+  voucherScanning = true;
+}
+
+function stopVoucherScanner() {
+  if (voucherScanner) { voucherScanner.stop().catch(() => {}); voucherScanner = null; }
+  els.voucherScannerContainer.classList.add("hidden");
+  voucherScanning = false;
+}
+
+// --- HID scanner detection (Bluetooth barcode scanner) ---
+
+let voucherHidBuffer = "";
+let voucherHidTimer = null;
+
+function handleVoucherHidInput(e) {
+  // Only active when voucher modal is open and input is not focused
+  if (els.voucherModal.classList.contains("hidden")) return;
+  if (document.activeElement === els.voucherNumberInput) return;
+  if (e.key === "Enter" && voucherHidBuffer.length >= 8) {
+    els.voucherNumberInput.value = voucherHidBuffer;
+    voucherHidBuffer = "";
+    checkVoucher();
+  } else if (e.key.length === 1) {
+    voucherHidBuffer += e.key;
+    clearTimeout(voucherHidTimer);
+    voucherHidTimer = setTimeout(() => { voucherHidBuffer = ""; }, 100);
+  }
+}
+document.addEventListener("keydown", handleVoucherHidInput);
+
+// --- Redeem Modal ---
+
+function openVoucherRedeemModal(prod) {
+  state.voucherProd = prod;
+  state.voucherMode = "redeem";
+  const price = Math.abs(Number(prod.price || 0));
+  state.voucherExpectedCents = Math.round(price * 100);
+
+  els.voucherModalTitle.textContent = "Gutschein einlösen";
+  els.voucherNumberInput.value = "";
+  els.voucherInputSection.classList.remove("hidden");
+  els.voucherResultSection.classList.add("hidden");
+  els.voucherResult.innerHTML = "";
+  els.voucherActions.innerHTML = `
+    <button class="ghost" id="voucher-cancel">Abbrechen</button>
+    <button class="primary" id="voucher-check">Prüfen</button>
+  `;
+  els.voucherModal.classList.remove("hidden");
+
+  setTimeout(() => els.voucherNumberInput.focus(), 100);
+
+  document.getElementById("voucher-cancel").onclick = closeVoucherModal;
+  const voucherCheckBtnMain = document.getElementById("voucher-check");
+  voucherCheckBtnMain.onclick = guardButton(voucherCheckBtnMain, checkVoucher);
+  // Camera only works on HTTPS — hide button on HTTP
+  if (window.location.protocol === "https:" || window.location.hostname === "localhost") {
+    els.voucherScanBtn.style.display = "";
+    els.voucherScanBtn.onclick = startVoucherScanner;
+    els.voucherScanStop.onclick = stopVoucherScanner;
+  } else {
+    els.voucherScanBtn.style.display = "none";
+  }
+
+  els.voucherNumberInput.onkeydown = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); checkVoucher(); }
+  };
+}
+
+function closeVoucherModal() {
+  stopVoucherScanner();
+  els.voucherModal.classList.add("hidden");
+  state.voucherProd = null;
+}
+
+async function checkVoucher() {
+  const input = els.voucherNumberInput.value.trim();
+  if (!input) { alert("Bitte Gutscheinnummer eingeben."); return; }
+
+  const body = { input };
+  // Only send expected_amount if product has a non-zero price
+  if (state.voucherExpectedCents > 0) {
+    body.expected_amount_cents = state.voucherExpectedCents;
+  }
+  body.device_id = state.deviceId || "pos";
+
+  const checkBtn = document.getElementById("voucher-check");
+  if (checkBtn) checkBtn.disabled = true;
+  const result = await voucherApiCall("/voucher/check", body);
+  if (checkBtn) checkBtn.disabled = false;
+
+  // Store the voucher's actual value from API response
+  state.voucherCheckedAmountCents = result.amount_cents || 0;
+
+  showVoucherCheckResult(result);
+}
+
+function showVoucherCheckResult(result) {
+  els.voucherInputSection.classList.add("hidden");
+  els.voucherResultSection.classList.remove("hidden");
+
+  let cssClass = "voucher-ok";
+  if (result.severity === "error" || result.severity === "alarm") cssClass = "voucher-error";
+  else if (result.severity === "warning") cssClass = "voucher-warning";
+
+  // Check for value mismatch (only when product has a fixed price)
+  let valueMismatch = false;
+  if (state.voucherExpectedCents > 0 && result.amount_cents && result.amount_cents !== state.voucherExpectedCents) {
+    valueMismatch = true;
+    cssClass = "voucher-error";
+  }
+
+  let html = `<div class="voucher-status ${cssClass}">
+    <div class="voucher-status-text">${escapeHtml(valueMismatch ? "Wert stimmt nicht überein!" : (result.message || "Unbekannter Fehler"))}</div>`;
+  if (result.voucher_number) html += `<div class="voucher-detail">Nr: ${result.voucher_number}</div>`;
+  if (result.amount_display) html += `<div class="voucher-detail">Wert: ${escapeHtml(result.amount_display)}</div>`;
+  if (result.issue_date) html += `<div class="voucher-detail">Datum: ${escapeHtml(result.issue_date)}</div>`;
+  if (valueMismatch) {
+    html += `<div class="voucher-detail">Hinweis: Bitte Gutschein mit passendem Wert verwenden oder wertfreien Gutschein-Artikel nutzen.</div>`;
+  }
+  html += `</div>`;
+  els.voucherResult.innerHTML = html;
+
+  // Allow redeem only if: can_redeem AND no value mismatch
+  if (result.can_redeem && !valueMismatch) {
+    els.voucherActions.innerHTML = `
+      <button class="ghost" id="voucher-cancel">Abbrechen</button>
+      <button class="ghost" id="voucher-back">Zurück</button>
+      <button class="primary" id="voucher-redeem">Einlösen</button>
+    `;
+    els.voucherActions.querySelector("#voucher-cancel").onclick = closeVoucherModal;
+    els.voucherActions.querySelector("#voucher-back").onclick = voucherBackToInput;
+    const voucherRedeemBtn = els.voucherActions.querySelector("#voucher-redeem");
+    voucherRedeemBtn.onclick = guardButton(voucherRedeemBtn, () => redeemVoucher());
+  } else {
+    els.voucherActions.innerHTML = `
+      <button class="ghost" id="voucher-cancel">Schließen</button>
+      <button class="ghost" id="voucher-back">Nochmal</button>
+    `;
+    els.voucherActions.querySelector("#voucher-cancel").onclick = closeVoucherModal;
+    els.voucherActions.querySelector("#voucher-back").onclick = voucherBackToInput;
+  }
+}
+
+function voucherBackToInput() {
+  els.voucherInputSection.classList.remove("hidden");
+  els.voucherResultSection.classList.add("hidden");
+  els.voucherNumberInput.value = "";
+  els.voucherActions.innerHTML = `
+    <button class="ghost" id="voucher-cancel">Abbrechen</button>
+    <button class="primary" id="voucher-check">Prüfen</button>
+  `;
+  els.voucherActions.querySelector("#voucher-cancel").onclick = closeVoucherModal;
+  const voucherCheckBtn = els.voucherActions.querySelector("#voucher-check");
+  voucherCheckBtn.onclick = guardButton(voucherCheckBtn, checkVoucher);
+  setTimeout(() => els.voucherNumberInput.focus(), 100);
+}
+
+async function redeemVoucher() {
+  const input = els.voucherNumberInput.value.trim();
+  const result = await voucherApiCall("/voucher/redeem", {
+    input,
+    confirmed_warnings: true,
+    device_id: state.deviceId || "pos"
+  });
+
+  if (result.success) {
+    // Add to cart immediately — voucher is redeemed
+    const prod = state.voucherProd;
+    const prodPrice = Math.abs(Number(prod.price || 0));
+    if (prodPrice === 0 && state.voucherCheckedAmountCents > 0) {
+      const voucherPrice = "-" + (state.voucherCheckedAmountCents / 100).toFixed(2);
+      const togo = state.selectedTable?.id === 0 ? 1 : 0;
+      addToCartCustom(prod, [], "", 1, togo, voucherPrice, true);
+    } else {
+      quickAddProduct(prod);
+    }
+
+    // Show confirmation then close
+    els.voucherResult.innerHTML = `<div class="voucher-status voucher-ok">
+      <div class="voucher-status-text">${escapeHtml(result.message)}</div>
+    </div>`;
+    els.voucherActions.innerHTML = `<button class="primary" id="voucher-done">OK</button>`;
+    els.voucherActions.querySelector("#voucher-done").onclick = () => {
+      closeVoucherModal();
+    };
+  } else {
+    els.voucherResult.innerHTML = `<div class="voucher-status voucher-error">
+      <div class="voucher-status-text">${escapeHtml(result.message)}</div>
+    </div>`;
+    els.voucherActions.innerHTML = `<button class="ghost" id="voucher-cancel">Schließen</button>`;
+    els.voucherActions.querySelector("#voucher-cancel").onclick = closeVoucherModal;
+  }
+}
+
+// --- Sell Modal ---
+
+function openVoucherSellModal(prod) {
+  state.voucherProd = prod;
+  state.voucherMode = "sell";
+  const price = Math.abs(Number(prod.price || 0));
+
+  if (price === 0) {
+    // Zero-price product — ask user to enter amount first
+    openVoucherSellAmountEntry(prod);
+    return;
+  }
+
+  state.voucherSellAmountCents = Math.round(price * 100);
+  openVoucherSellScan();
+}
+
+function openVoucherSellAmountEntry(prod) {
+  // Use the price modal to enter amount, then proceed to scan
+  state.priceEntry = { prod, raw: "", mode: "voucher-sell-amount" };
+  els.priceTitle.textContent = "Gutscheinwert eingeben";
+  els.priceValue.textContent = "0,00";
+  els.priceModal.classList.remove("hidden");
+
+  const originalConfirm = els.priceConfirm.onclick;
+  const originalCancel = els.priceCancel.onclick;
+
+  els.priceConfirm.onclick = () => {
+    const value = parsePriceEntry(state.priceEntry);
+    if (value <= 0) { alert("Bitte Wert eingeben"); return; }
+    state.voucherSellAmountCents = Math.round(Math.abs(value) * 100);
+    els.priceModal.classList.add("hidden");
+    state.priceEntry = null;
+    els.priceConfirm.onclick = originalConfirm;
+    els.priceCancel.onclick = originalCancel;
+    openVoucherSellScan();
+  };
+  els.priceCancel.onclick = () => {
+    els.priceModal.classList.add("hidden");
+    state.priceEntry = null;
+    els.priceConfirm.onclick = originalConfirm;
+    els.priceCancel.onclick = originalCancel;
+  };
+}
+
+function openVoucherSellScan() {
+  const amountDisplay = (state.voucherSellAmountCents / 100).toFixed(2).replace(".", ",");
+
+  // Show input for scanning/entering voucher code
+  els.voucherSellInfo.innerHTML = `
+    <div class="voucher-sell-details">
+      <p><strong>Wert:</strong> ${amountDisplay} €</p>
+      <p><strong>Gültig ab:</strong> ${new Date().toLocaleDateString("de-DE")}</p>
+    </div>
+    <div class="voucher-input-row">
+      <input type="text" id="voucher-sell-input" placeholder="Gutschein-Code scannen oder eingeben" autocomplete="off" inputmode="text" />
+      <button type="button" class="voucher-scan-btn" id="voucher-sell-scan-btn">📷</button>
+    </div>
+    <div id="voucher-sell-scanner-container" class="hidden">
+      <div id="voucher-sell-qr-reader"></div>
+      <button type="button" class="ghost" id="voucher-sell-scan-stop">Scanner schließen</button>
+    </div>
+  `;
+  els.voucherSellResult.classList.add("hidden");
+  els.voucherSellResult.innerHTML = "";
+  els.voucherSellActions.innerHTML = `
+    <button class="ghost" id="voucher-sell-cancel">Abbrechen</button>
+    <button class="primary" id="voucher-sell-confirm">Aktivieren</button>
+  `;
+  els.voucherSellModal.classList.remove("hidden");
+
+  const sellInput = document.getElementById("voucher-sell-input");
+  setTimeout(() => sellInput.focus(), 100);
+
+  document.getElementById("voucher-sell-cancel").onclick = closeVoucherSellModal;
+  document.getElementById("voucher-sell-confirm").onclick = () => activateVoucherSell();
+  document.getElementById("voucher-sell-scan-btn").onclick = startVoucherSellScanner;
+  document.getElementById("voucher-sell-scan-stop").onclick = stopVoucherSellScanner;
+
+  sellInput.onkeydown = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); activateVoucherSell(); }
+  };
+}
+
+let voucherSellScanner = null;
+let voucherSellScanning = false;
+
+function startVoucherSellScanner() {
+  if (voucherSellScanning) return;
+  if (typeof Html5Qrcode === "undefined") { alert("QR-Scanner nicht geladen."); return; }
+  const container = document.getElementById("voucher-sell-scanner-container");
+  container.classList.remove("hidden");
+  voucherSellScanner = new Html5Qrcode("voucher-sell-qr-reader");
+  voucherSellScanner.start(
+    { facingMode: "environment" },
+    { fps: 30, qrbox: { width: 200, height: 200 }, formatsToSupport: [0], videoConstraints: { facingMode: "environment",  advanced: [{ zoom: 2.0 }], width: { ideal: 1280 }, height: { ideal: 720 } } },
+    (text) => {
+      document.getElementById("voucher-sell-input").value = text;
+      stopVoucherSellScanner();
+      activateVoucherSell();
+    },
+    () => {}
+  ).catch(err => {
+    container.classList.add("hidden");
+    alert("Kamera nicht verfügbar: " + err);
+  });
+  voucherSellScanning = true;
+}
+
+function stopVoucherSellScanner() {
+  if (voucherSellScanner) { voucherSellScanner.stop().catch(() => {}); voucherSellScanner = null; }
+  const container = document.getElementById("voucher-sell-scanner-container");
+  if (container) container.classList.add("hidden");
+  voucherSellScanning = false;
+}
+
+function closeVoucherSellModal() {
+  stopVoucherSellScanner();
+  els.voucherSellModal.classList.add("hidden");
+  state.voucherProd = null;
+}
+
+async function activateVoucherSell() {
+  const input = document.getElementById("voucher-sell-input").value.trim();
+  if (!input) { alert("Bitte Gutschein-Code scannen oder eingeben."); return; }
+
+  const confirmBtn = document.getElementById("voucher-sell-confirm");
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  const result = await voucherApiCall("/voucher/activate", {
+    input,
+    amount_cents: state.voucherSellAmountCents,
+    valid_from: new Date().toISOString().slice(0, 10),
+    source: "paper_code",
+    device_id: state.deviceId || "pos"
+  });
+
+  if (confirmBtn) confirmBtn.disabled = false;
+
+  if (result.success) {
+    // Add to cart with the activation amount (not the product's zero price)
+    const sellPrice = (state.voucherSellAmountCents / 100).toFixed(2);
+    const togo = state.selectedTable?.id === 0 ? 1 : 0;
+    addToCartCustom(state.voucherProd, [], "", 1, togo, sellPrice, true);
+
+    // Show confirmation (user can note down the number, closing is safe)
+    els.voucherSellResult.classList.remove("hidden");
+    els.voucherSellResult.innerHTML = `<div class="voucher-status voucher-ok">
+      <div class="voucher-status-text">${escapeHtml(result.message || "Gutschein aktiviert!")}</div>
+      ${result.voucher_number ? `<div class="voucher-detail voucher-number-large">Nr: <strong>${result.voucher_number}</strong></div>` : ""}
+      ${result.code ? `<div class="voucher-detail">Code: ${escapeHtml(result.code)}</div>` : ""}
+    </div>`;
+    els.voucherSellActions.innerHTML = `<button class="primary" id="voucher-sell-done">OK</button>`;
+    document.getElementById("voucher-sell-done").onclick = () => {
+      closeVoucherSellModal();
+    };
+  } else {
+    els.voucherSellResult.classList.remove("hidden");
+    els.voucherSellResult.innerHTML = `<div class="voucher-status voucher-error">
+      <div class="voucher-status-text">${escapeHtml(result.message || "Aktivierung fehlgeschlagen")}</div>
+    </div>`;
+    // Allow retry
+    if (confirmBtn) confirmBtn.disabled = false;
+  }
+}
+
+// --- Variable price voucher (XXX Gutschein) ---
+
+function openPriceModalVoucher(prod) {
+  state.voucherVariableProd = prod;
+  openPriceModal(prod);
+  // Mark as voucher mode so default handler skips
+  if (state.priceEntry) state.priceEntry.mode = "voucher-variable";
+
+  // Override the confirm button to route to voucher flow
+  const confirmBtn = document.getElementById("price-confirm");
+  const originalHandler = confirmBtn.onclick;
+  confirmBtn.onclick = () => {
+    const price = parsePriceEntry(state.priceEntry);
+    if (price === 0) { alert("Bitte einen Wert eingeben."); return; }
+
+    els.priceModal.classList.add("hidden");
+
+    // Create a temporary product with the entered price
+    const tempProd = { ...prod, price: Math.abs(price) };
+
+    if (price < 0) {
+      // Negative = redeem
+      openVoucherRedeemModal(tempProd);
+    } else {
+      // Positive = sell
+      openVoucherSellModal(tempProd);
+    }
+    state.voucherVariableProd = null;
+
+    // Restore original handler for next non-voucher use
+    confirmBtn.onclick = originalHandler;
+  };
+}
+
+// ====================================================================
+
+// ====================================================================
+// ZVT PAYMENT TERMINAL INTEGRATION (Client-side)
+// ====================================================================
+
+/**
+ * Send a message to the broker WebSocket (helper).
+ */
+function sendBrokerMessage(msg) {
+  if (state.brokerWs && state.brokerWs.readyState === WebSocket.OPEN) {
+    state.brokerWs.send(JSON.stringify(msg));
+  }
+}
+
+/**
+ * Generate a UUID v4 (works on non-HTTPS origins where crypto.randomUUID is unavailable).
+ */
+function generateUUID() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for non-secure contexts
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
+/**
+ * Determine if a payment method is a card payment (triggers ZVT if terminal selected).
+ * Payment IDs 2+ are typically card-based (EC, Kreditkarte, etc).
+ * Payment ID 1 is usually "Bar" (cash).
+ */
+function isCardPayment(paymentId) {
+  return paymentId >= 2;
+}
+
+/**
+ * Trigger manual terminal discovery (full network scan) via broker,
+ * after a confirmation dialog. The broker replies with DISCOVERY_COMPLETE.
+ */
+function triggerTerminalScan() {
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    showWarnPopup("Broker nicht verbunden");
+    return;
+  }
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Terminals suchen";
+  els.confirmBody.innerHTML = `<p>Vollständigen Netzwerk-Scan nach Kartenterminals jetzt starten?</p>`;
+  els.confirmActions.innerHTML = `
+    <button class="ghost" id="scan-cancel">Abbrechen</button>
+    <button class="primary" id="scan-go">Jetzt suchen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  document.getElementById("scan-cancel").onclick = () => els.confirmModal.classList.add("hidden");
+  document.getElementById("scan-go").onclick = () => {
+    state.brokerWs.send(JSON.stringify({ type: "TRIGGER_DISCOVERY" }));
+    els.confirmTitle.textContent = "Terminals suchen";
+    els.confirmBody.innerHTML = `<p>Suche läuft…</p>`;
+    els.confirmActions.innerHTML = `<button class="ghost" id="scan-close">Schließen</button>`;
+    document.getElementById("scan-close").onclick = () => els.confirmModal.classList.add("hidden");
+  };
+}
+
+/**
+ * Show the result of a completed terminal scan (DISCOVERY_COMPLETE).
+ */
+function showTerminalScanResult(terminals) {
+  if (els.confirmModal.classList.contains("hidden")) return; // dialog already dismissed
+  els.confirmTitle.textContent = "Terminals gefunden";
+  const list = (terminals || []).map(t =>
+    `<div>${escapeHtml(t.name || t.id)} — ${escapeHtml(t.status || "")}</div>`
+  ).join("") || "<div>Keine Terminals gefunden.</div>";
+  els.confirmBody.innerHTML = `<div class="scan-result">${list}</div>`;
+  els.confirmActions.innerHTML = `<button class="primary" id="scan-done">OK</button>`;
+  document.getElementById("scan-done").onclick = () => els.confirmModal.classList.add("hidden");
+}
+
+// --- Card receipts (Kartenbelege) reprint menu ---
+
+const cardReceiptsState = { filter: "merchant", items: [] };
+
+/**
+ * Open the Kartenbelege popup and request the receipt list from the broker.
+ */
+function openCardReceiptsModal() {
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    showWarnPopup("Broker nicht verbunden");
+    return;
+  }
+  cardReceiptsState.filter = "merchant";
+  cardReceiptsState.items = [];
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Kartenbelege";
+  els.confirmBody.innerHTML = `<p>Belege werden geladen…</p>`;
+  els.confirmActions.innerHTML = `<button class="ghost" id="cr-close">Schließen</button>`;
+  els.confirmModal.classList.remove("hidden");
+  document.getElementById("cr-close").onclick = () => els.confirmModal.classList.add("hidden");
+  state.brokerWs.send(JSON.stringify({ type: "LIST_CARD_RECEIPTS" }));
+}
+
+/**
+ * Render the card-receipts list (called on CARD_RECEIPT_LIST).
+ */
+function renderCardReceipts(items) {
+  if (els.confirmModal.classList.contains("hidden")) return;
+  if (Array.isArray(items)) cardReceiptsState.items = items;
+  const filter = cardReceiptsState.filter;
+  const fmtAmt = (m) => (m == null ? "" : (m / 100).toFixed(2).replace(".", ",") + " €");
+  const fmtTime = (iso) => { try { const d = new Date(iso); return d.toLocaleString("de-DE"); } catch (_) { return iso || ""; } };
+  const rows = cardReceiptsState.items
+    .filter(e => filter === "merchant" ? e.hasMerchant : e.hasCustomer)
+    .map(e => `
+      <div class="cr-row">
+        <div class="cr-info">${fmtTime(e.timestamp)} · ${fmtAmt(e.amountMinor)} · ${escapeHtml(e.cardName || "")}</div>
+        <div class="cr-actions">
+          <button class="ghost cr-print" data-id="${escapeHtml(e.id)}">Drucken</button>
+          ${filter === "merchant" ? `<button class="ghost cr-del" data-id="${escapeHtml(e.id)}">Löschen</button>` : ""}
+        </div>
+      </div>`).join("") || "<div>Keine Belege.</div>";
+
+  const merchActive = filter === "merchant" ? "active" : "";
+  const custActive = filter === "customer" ? "active" : "";
+  els.confirmTitle.textContent = "Kartenbelege";
+  els.confirmBody.innerHTML = `
+    <div class="cr-filter">
+      <button class="cr-tab ${merchActive}" data-filter="merchant">Händler</button>
+      <button class="cr-tab ${custActive}" data-filter="customer">Kunde</button>
+    </div>
+    <div class="cr-list">${rows}</div>
+  `;
+  els.confirmActions.innerHTML = `
+    ${filter === "merchant" ? `<button class="primary" id="cr-printall">Alle drucken</button>` : ""}
+    <button class="ghost" id="cr-close">Schließen</button>
+  `;
+
+  els.confirmBody.querySelectorAll(".cr-tab").forEach(b => b.onclick = () => {
+    cardReceiptsState.filter = b.dataset.filter;
+    renderCardReceipts();
+  });
+  els.confirmBody.querySelectorAll(".cr-print").forEach(b => b.onclick = () => {
+    state.brokerWs.send(JSON.stringify({ type: "PRINT_CARD_RECEIPT", id: b.dataset.id, copyType: cardReceiptsState.filter }));
+    showStatusMessage("Beleg wird gedruckt…");
+  });
+  els.confirmBody.querySelectorAll(".cr-del").forEach(b => b.onclick = () => {
+    state.brokerWs.send(JSON.stringify({ type: "DELETE_MERCHANT_RECEIPT", id: b.dataset.id }));
+  });
+  const printAll = document.getElementById("cr-printall");
+  if (printAll) printAll.onclick = () => {
+    els.confirmBody.innerHTML = `<p>Alle Händlerbelege werden gedruckt…</p>`;
+    els.confirmActions.innerHTML = `<button class="ghost" id="cr-close">Schließen</button>`;
+    document.getElementById("cr-close").onclick = () => els.confirmModal.classList.add("hidden");
+    state.brokerWs.send(JSON.stringify({ type: "PRINT_ALL_MERCHANT" }));
+  };
+  const close = document.getElementById("cr-close");
+  if (close) close.onclick = () => els.confirmModal.classList.add("hidden");
+}
+
+/**
+ * Execute the normal OrderSprinter paydesk_pay after terminal confirmation.
+ */
+async function executePaydeskPay(paymentId, printBon) {
+  await paydeskPay(paymentId, printBon);
+}
+
+/**
+ * Render terminal selector buttons in the paydesk payment area.
+ * Shows toggle buttons for each terminal (max 1 selected, 0 = manual mode).
+ */
+function renderTerminalSelector() {
+  if (!state.zvtEnabled || !els.paydeskPayments) return;
+
+  // Find or create terminal selector container
+  let container = document.getElementById("zvt-terminal-selector");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "zvt-terminal-selector";
+    container.className = "zvt-terminal-selector";
+    // Insert before the payment buttons
+    els.paydeskPayments.parentNode.insertBefore(container, els.paydeskPayments);
+  }
+
+  // If selected terminal went offline, clear selection
+  if (state.selectedTerminal) {
+    const t = state.terminals.find(t => t.id === state.selectedTerminal.id);
+    if (!t || t.status === "OFFLINE") {
+      state.selectedTerminal = null;
+      clearTerminalSelection();
+    }
+  }
+
+  // Render buttons
+  if (state.terminals.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `<div class="zvt-terminal-label">Terminal:</div>` +
+    state.terminals.map(t => {
+      const isSelected = state.selectedTerminal && state.selectedTerminal.id === t.id;
+      const isAvailable = t.status === "AVAILABLE";
+      const isBusy = t.status === "BUSY";
+      const statusClass = isAvailable ? "zvt-available" : (isBusy ? "zvt-busy" : "zvt-offline");
+      const selectedClass = isSelected ? "zvt-selected" : "";
+      const disabled = !isAvailable && !isSelected ? "disabled" : "";
+      return `<button class="zvt-terminal-btn ${statusClass} ${selectedClass}" data-terminal-id="${t.id}" ${disabled}>${t.name}</button>`;
+    }).join("");
+
+  container.querySelectorAll(".zvt-terminal-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tid = btn.dataset.terminalId;
+      const terminal = state.terminals.find(t => t.id === tid);
+      if (!terminal) return;
+
+      if (state.selectedTerminal && state.selectedTerminal.id === tid) {
+        // Deselect (back to manual)
+        state.selectedTerminal = null;
+        clearTerminalSelection();
+      } else if (terminal.status === "AVAILABLE") {
+        // Select this terminal
+        state.selectedTerminal = { id: terminal.id, name: terminal.name };
+        saveTerminalSelection(terminal.id);
+      }
+      renderTerminalSelector();
+    });
+  });
+}
+
+function saveTerminalSelection(terminalId) {
+  try { localStorage.setItem("zvt_selected_terminal", terminalId); } catch (_) {}
+}
+
+function loadTerminalSelection() {
+  try {
+    return localStorage.getItem("zvt_selected_terminal") || null;
+  } catch (_) {}
+  return null;
+}
+
+function restoreTerminalSelection() {
+  if (state.selectedTerminal) return; // Already selected
+  const savedId = loadTerminalSelection();
+  if (!savedId) return;
+  const t = state.terminals.find(t => t.id === savedId);
+  if (t && t.status === "AVAILABLE") {
+    state.selectedTerminal = { id: t.id, name: t.name };
+  }
+}
+
+function clearTerminalSelection() {
+  try { localStorage.removeItem("zvt_selected_terminal"); } catch (_) {}
+}
+
+/**
+ * Initiate card payment via ZVT terminal.
+ * Shows payment dialog with amount entry BEFORE sending to terminal.
+ */
+function startTerminalPayment(amountMinor, paymentId, printBon) {
+  if (!state.selectedTerminal) {
+    return false;
+  }
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    alert("Broker nicht verbunden");
+    return false;
+  }
+
+  state.paymentInProgress = {
+    requestId: null, // assigned when "Zahlen" is tapped
+    amountMinor,
+    terminalId: state.selectedTerminal.id,
+    terminalName: state.selectedTerminal.name,
+    paymentId,
+    printBon,
+    // Carry the cashier-form receipt selections so the post-payment Belege
+    // popup can pre-select them: printBon = "Bondruck" (Kassenbon), host =
+    // "Bewirtungsbeleg". Captured once at start; survives cancel/retry.
+    host: !!state.paydeskHost,
+    state: "AMOUNT_ENTRY",
+    originalAmount: amountMinor,
+    sentToTerminal: false
+  };
+
+  showPaymentAmountDialog();
+
+  // Send customer display update
+  sendBrokerMessage({ type: "DISPLAY_UPDATE", mode: "payment", payload: {
+    state: "amount_entry",
+    amount: (amountMinor / 100).toFixed(2)
+  }});
+
+  return true;
+}
+
+/**
+ * Show payment dialog — Step 1: Amount entry with numpad.
+ */
+function showPaymentAmountDialog() {
+  const p = state.paymentInProgress;
+  if (!p) return;
+
+  const billAmount = (p.originalAmount / 100).toFixed(2).replace(".", ",");
+  els.confirmTitle.textContent = "Kartenzahlung";
+  els.confirmBody.innerHTML = `
+    <div class="zvt-payment-dialog">
+      <div class="zvt-payment-label">Rechnungsbetrag: ${billAmount} €</div>
+      <div class="zvt-payment-amount-input">
+        <div class="zvt-amount-display" id="zvt-amount-display"></div>
+      </div>
+      <div class="zvt-amount-keypad">
+        <div class="keyboard-row"><button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button></div>
+        <div class="keyboard-row"><button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button></div>
+        <div class="keyboard-row"><button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button></div>
+        <div class="keyboard-row"><button type="button" data-k="0">0</button><button type="button" data-k=",">,</button><button type="button" data-k="back">←</button></div>
+      </div>
+      <div class="zvt-payment-terminal">${escapeHtml(p.terminalName)}</div>
+    </div>
+  `;
+  els.confirmActions.innerHTML = `
+    <button class="ghost" id="zvt-pay-cancel">Abbrechen</button>
+    <button class="primary" id="zvt-pay-send">Zahlen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+
+  // Amount input state
+  let amountInput = "";
+  const display = document.getElementById("zvt-amount-display");
+  display.textContent = "Betrag eingeben oder leer = " + billAmount + " €";
+
+  // Keypad handlers
+  els.confirmBody.querySelectorAll("[data-k]").forEach(btn => {
+    btn.onclick = () => {
+      const k = btn.dataset.k;
+      if (k === "back") {
+        amountInput = amountInput.slice(0, -1);
+      } else {
+        amountInput += k;
+      }
+      display.textContent = amountInput ? amountInput + " €" : "Betrag eingeben oder leer = " + billAmount + " €";
+      // Update customer display live
+      const showAmount = amountInput ? amountInput : billAmount;
+      sendBrokerMessage({ type: "DISPLAY_UPDATE", mode: "payment", payload: {
+        state: "amount_entry",
+        amount: showAmount
+      }});
+    };
+  });
+
+  document.getElementById("zvt-pay-cancel").onclick = () => {
+    state.paymentInProgress = null;
+    els.confirmModal.classList.add("hidden");
+    sendBrokerMessage({ type: "DISPLAY_IDLE" });
+  };
+
+  document.getElementById("zvt-pay-send").onclick = (ev) => {
+    const sendBtn = ev.currentTarget;
+    // Ignore repeat taps once a payment has already been sent to the terminal
+    if (sendBtn && sendBtn.dataset && sendBtn.dataset.busy === "1") return;
+    // Determine final amount
+    let finalAmountMinor;
+    if (amountInput === "") {
+      finalAmountMinor = p.originalAmount;
+    } else {
+      const parsed = parseFloat(amountInput.replace(",", "."));
+      if (isNaN(parsed) || parsed <= 0) {
+        alert("Ungültiger Betrag");
+        return;
+      }
+      finalAmountMinor = Math.round(parsed * 100);
+      if (finalAmountMinor < p.originalAmount) {
+        alert("Betrag darf nicht kleiner als Rechnungsbetrag sein");
+        return;
+      }
+    }
+
+    // Validated — make the button untouchable so the payment can't be sent twice
+    setButtonBusy(sendBtn, true);
+
+    // Now send to terminal
+    p.amountMinor = finalAmountMinor;
+    p.requestId = generateUUID();
+    p.sentToTerminal = true;
+    p.state = "SENT";
+
+    state.brokerWs.send(JSON.stringify({
+      type: "PAYMENT_REQUEST",
+      requestId: p.requestId,
+      amountMinor: finalAmountMinor,
+      currency: "EUR",
+      terminalId: p.terminalId,
+      orderId: null
+    }));
+
+    showPaymentProcessingDialog();
+  };
+}
+
+/**
+ * Show payment processing dialog — Step 2: Waiting for terminal.
+ */
+function showPaymentProcessingDialog() {
+  const p = state.paymentInProgress;
+  if (!p) return;
+
+  const amountStr = (p.amountMinor / 100).toFixed(2).replace(".", ",");
+  els.confirmTitle.textContent = "Kartenzahlung";
+  els.confirmBody.innerHTML = `
+    <div class="zvt-payment-dialog">
+      <div class="zvt-payment-amount">${amountStr} €</div>
+      <div class="zvt-payment-terminal">${escapeHtml(p.terminalName)}</div>
+      <div class="zvt-payment-status" id="zvt-payment-status">Wird an Terminal gesendet...</div>
+    </div>
+  `;
+  els.confirmActions.innerHTML = `
+    <button class="ghost" id="zvt-pay-cancel">Abbrechen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+
+  document.getElementById("zvt-pay-cancel").onclick = cancelTerminalPayment;
+
+  // Customer display
+  sendBrokerMessage({ type: "DISPLAY_UPDATE", mode: "payment", payload: {
+    state: "waiting_card",
+    amount: amountStr
+  }});
+}
+
+/**
+ * Handle payment status updates from broker.
+ */
+function handlePaymentStatus(payload) {
+  if (!state.paymentInProgress) return;
+  if (payload.requestId !== state.paymentInProgress.requestId) return;
+
+  state.paymentInProgress.state = payload.state;
+
+  const statusEl = document.getElementById("zvt-payment-status");
+  if (!statusEl) return;
+
+  if (payload.state === "IN_PROGRESS" || payload.state === "VERIFYING_TERMINAL" || payload.state === "REGISTERING") {
+    statusEl.textContent = "Bitte Karte am Terminal vorhalten...";
+    // Disable cancel once terminal is actively processing
+    const cancelBtn = document.getElementById("zvt-pay-cancel");
+    if (cancelBtn) cancelBtn.textContent = "Abbrechen (Versuch)";
+  } else if (payload.error === "TERMINAL_BUSY") {
+    statusEl.textContent = "Terminal belegt — bitte warten";
+    els.confirmActions.innerHTML = `
+      <button class="ghost" id="zvt-pay-cancel">Abbrechen</button>
+      <button class="primary" id="zvt-pay-retry">Nochmal</button>
+      <button class="ghost" id="zvt-pay-change-terminal">Anderes Terminal</button>
+    `;
+    document.getElementById("zvt-pay-cancel").onclick = closePaymentDialog;
+    document.getElementById("zvt-pay-retry").onclick = retryPayment;
+    document.getElementById("zvt-pay-change-terminal").onclick = showTerminalPicker;
+  } else if (payload.error === "TERMINAL_UNAVAILABLE" || payload.error === "TERMINAL_OFFLINE") {
+    statusEl.textContent = "Terminal nicht erreichbar";
+    els.confirmActions.innerHTML = `
+      <button class="ghost" id="zvt-pay-cancel">Abbrechen</button>
+      <button class="ghost" id="zvt-pay-change-terminal">Anderes Terminal</button>
+    `;
+    document.getElementById("zvt-pay-cancel").onclick = closePaymentDialog;
+    document.getElementById("zvt-pay-change-terminal").onclick = showTerminalPicker;
+  } else if (payload.state === "FAILED") {
+    statusEl.textContent = `Fehler: ${payload.error || "Unbekannt"}`;
+    els.confirmActions.innerHTML = `<button class="primary" id="zvt-pay-close">OK</button>`;
+    document.getElementById("zvt-pay-close").onclick = closePaymentDialog;
+  }
+}
+
+/**
+ * Handle final payment result from broker.
+ * Takes priority over any open dialog (including "change amount" numpad).
+ */
+function handlePaymentResult(payload) {
+  if (!state.paymentInProgress) return;
+  if (payload.requestId !== state.paymentInProgress.requestId) return;
+
+  const p = state.paymentInProgress;
+
+  // Close price modal if "change amount" was open — payment result takes priority
+  if (els.priceModal && !els.priceModal.classList.contains("hidden")) {
+    els.priceModal.classList.add("hidden");
+    state.priceEntry = null;
+  }
+
+  if (payload.state === "SUCCESS") {
+    // Payment successful — show success + customer receipt prompt
+    const hasCustomerReceipt = payload.receipts?.customerReceiptAvailable;
+    els.confirmBody.innerHTML = `
+      <div class="zvt-payment-dialog">
+        <div class="zvt-payment-success">✓ Zahlung erfolgreich</div>
+        <div class="zvt-payment-amount">${(p.amountMinor / 100).toFixed(2).replace(".", ",")} €</div>
+      </div>
+    `;
+
+    // Automation: if Bewirtungsbeleg was already selected on the cashier form,
+    // there is nothing to ask — a Bewirtung sale always prints all papers.
+    // Skip the popup and finalize directly with all three selected (a
+    // successful card payment always has a card receipt to print).
+    if (p.host) {
+      finalizeWithReceipts(p, { karte: true, kassenbon: true, bewirtung: true });
+      return;
+    }
+
+    // Otherwise show the receipt-selection popup: choose which papers to print.
+    //  - Kartenbeleg  : the card customer receipt (pulled from the terminal)
+    //  - Kassenbon     : the OrderSprinter bill receipt
+    //  - Bewirtungsbeleg: hospitality receipt; forces Kassenbon on
+    showReceiptChoicePopup(p, !!hasCustomerReceipt);
+  } else if (payload.state === "DECLINED") {
+    els.confirmBody.innerHTML = `
+      <div class="zvt-payment-dialog">
+        <div class="zvt-payment-declined">✗ Zahlung abgelehnt</div>
+      </div>
+    `;
+    els.confirmActions.innerHTML = `<button class="primary" id="zvt-pay-close">OK</button>`;
+    document.getElementById("zvt-pay-close").onclick = closePaymentDialog;
+  } else if (payload.state === "CANCELLED") {
+    // Cancelled at the terminal — go back to the amount numpad so the amount
+    // can be changed (e.g. add tip) and re-sent, rather than dropping to the
+    // cashier form. The numpad's Abbrechen still closes fully.
+    returnToAmountEntry();
+  } else if (payload.state === "UNKNOWN") {
+    els.confirmBody.innerHTML = `
+      <div class="zvt-payment-dialog">
+        <div class="zvt-payment-unknown">⚠ Zahlungsstatus unklar</div>
+        <p>Bitte am Terminal prüfen ob die Zahlung durchgeführt wurde.</p>
+      </div>
+    `;
+    els.confirmActions.innerHTML = `
+      <button class="ghost" id="zvt-pay-cancel-unknown">Nicht bezahlt</button>
+      <button class="primary" id="zvt-pay-confirm-unknown">Zahlung bestätigen</button>
+    `;
+    document.getElementById("zvt-pay-cancel-unknown").onclick = closePaymentDialog;
+    const zvtConfirmUnknown = document.getElementById("zvt-pay-confirm-unknown");
+    zvtConfirmUnknown.onclick = guardButton(zvtConfirmUnknown, () => finalizePayment(state.paymentInProgress));
+  }
+}
+
+/**
+ * Post-payment receipt-selection popup.
+ * Switches: Kartenbeleg (card customer receipt), Kassenbon (OrderSprinter bill),
+ * Bewirtungsbeleg (hospitality; forces Kassenbon ON). OK prints the selected
+ * papers. Kassenbon/Bewirtungsbeleg print via the normal OrderSprinter flow;
+ * the Kartenbeleg is printed last (per requirement) via the broker.
+ * @param {object} p - paymentInProgress
+ * @param {boolean} hasCard - whether a card customer receipt is available
+ */
+function showReceiptChoicePopup(p, hasCard) {
+  els.confirmTitle.textContent = "Belege";
+  const amountStr = (p.amountMinor / 100).toFixed(2).replace(".", ",");
+  const cardDisabled = hasCard ? "" : "disabled";
+  // Pre-selection carried from the cashier form:
+  //  - Bewirtungsbeleg selected there (p.host) -> Bewirtung + Kassenbon on.
+  //  - "Bondruck" clicked there (p.printBon)   -> Kassenbon on.
+  const preBew = !!(p && p.host);
+  const preKasse = preBew || !!(p && p.printBon);
+  const bewChecked = preBew ? "checked" : "";
+  const kasseChecked = preKasse ? "checked" : "";
+  // When Bewirtung is pre-on, Kassenbon is forced on and locked.
+  const kasseDisabled = preBew ? "disabled" : "";
+  els.confirmBody.innerHTML = `
+    <div class="zvt-payment-dialog">
+      <div class="zvt-payment-success">&#10003; Zahlung erfolgreich</div>
+      <div class="zvt-payment-amount">${amountStr} &euro;</div>
+      <div class="receipt-choice">
+        <label class="receipt-switch"><input type="checkbox" id="rc-kartenbeleg" ${cardDisabled}> Kartenbeleg</label>
+        <label class="receipt-switch"><input type="checkbox" id="rc-kassenbon" ${kasseChecked} ${kasseDisabled}> Kassenbon</label>
+        <label class="receipt-switch"><input type="checkbox" id="rc-bewirtung" ${bewChecked}> Bewirtungsbeleg</label>
+      </div>
+    </div>
+  `;
+  els.confirmActions.innerHTML = `<button class="primary" id="rc-ok">OK</button>`;
+  els.confirmModal.classList.remove("hidden");
+
+  const cbKarte = document.getElementById("rc-kartenbeleg");
+  const cbKasse = document.getElementById("rc-kassenbon");
+  const cbBew = document.getElementById("rc-bewirtung");
+
+  // Bewirtungsbeleg forces Kassenbon ON (and locks it while active).
+  cbBew.addEventListener("change", () => {
+    if (cbBew.checked) { cbKasse.checked = true; cbKasse.disabled = true; }
+    else { cbKasse.disabled = false; }
+  });
+
+  const okBtn = document.getElementById("rc-ok");
+  okBtn.onclick = guardButton(okBtn, () => finalizeWithReceipts(p, {
+    karte: hasCard && cbKarte.checked,
+    kassenbon: cbKasse.checked,
+    bewirtung: cbBew.checked
+  }));
+}
+
+/**
+ * Finalize the payment applying the chosen receipts.
+ * Kassenbon => OrderSprinter print (printBon). Bewirtungsbeleg => host flag.
+ * Kartenbeleg => broker prints the card customer receipt, LAST.
+ */
+async function finalizeWithReceipts(p, choices) {
+  // Map Bewirtungsbeleg to the OrderSprinter "host" flag; Kassenbon to printBon.
+  state.paydeskHost = !!choices.bewirtung;
+  if (els.paydeskHost) els.paydeskHost.classList.toggle("active", !!choices.bewirtung);
+  if (p) p.printBon = !!choices.kassenbon;
+
+  // 1) Kassenbon / Bewirtungsbeleg via the normal OrderSprinter finalize.
+  await finalizePayment(p);
+
+  // 2) Kartenbeleg last (per requirement) — print the pulled card receipt.
+  if (choices.karte && state.brokerWs && state.brokerWs.readyState === WebSocket.OPEN) {
+    state.brokerWs.send(JSON.stringify({ type: "PRINT_CUSTOMER_RECEIPT", requestId: p.requestId }));
+  }
+}
+
+/**
+ * Print customer receipt and finalize. (Legacy direct path, still used elsewhere.)
+ */
+function printCustomerReceipt(requestId) {
+  if (state.brokerWs && state.brokerWs.readyState === WebSocket.OPEN) {
+    state.brokerWs.send(JSON.stringify({ type: "PRINT_CUSTOMER_RECEIPT", requestId }));
+  }
+  finalizePayment(state.paymentInProgress);
+}
+
+/**
+ * Handle receipt printed confirmation.
+ */
+function handleReceiptPrinted(payload) {
+  // Log for debugging; no UI action needed
+  if (!payload.success) {
+    console.warn("Receipt print failed:", payload.error);
+  }
+}
+
+/**
+ * Finalize payment — trigger the actual OrderSprinter paydesk_pay and refresh.
+ */
+async function finalizePayment(p) {
+  els.confirmModal.classList.add("hidden");
+  state.paymentInProgress = null;
+  // Execute the normal payment flow in OrderSprinter
+  if (p && p.paymentId) {
+    await executePaydeskPay(p.paymentId, p.printBon);
+  }
+  // Refresh tables and navigate to start screen
+  await refreshTables();
+  renderTables();
+}
+
+/**
+ * Cancel running terminal payment.
+ * After cancelling at the PT we return to the AMOUNT-ENTRY numpad (not all the
+ * way back to the cashier form) so the amount can be changed and re-sent — e.g.
+ * the customer decides to add a tip on the card. The numpad's own "Abbrechen"
+ * still closes fully back to the cashier form.
+ */
+function cancelTerminalPayment() {
+  const p = state.paymentInProgress;
+  if (p && state.brokerWs && state.brokerWs.readyState === WebSocket.OPEN) {
+    state.brokerWs.send(JSON.stringify({ type: "PAYMENT_CANCEL", requestId: p.requestId }));
+  }
+  returnToAmountEntry();
+}
+
+/**
+ * Reset the in-progress payment back to the amount-entry step and re-open the
+ * numpad, keeping the same table/paymentId/flags. Used after a cancel so the
+ * cashier can adjust the amount (tip) and send again.
+ */
+function returnToAmountEntry() {
+  const p = state.paymentInProgress;
+  if (!p) { closePaymentDialog(); return; }
+  p.requestId = null;
+  p.sentToTerminal = false;
+  p.state = "AMOUNT_ENTRY";
+  showPaymentAmountDialog();
+}
+
+/**
+ * Close payment dialog without action.
+ */
+function closePaymentDialog() {
+  els.confirmModal.classList.add("hidden");
+  state.paymentInProgress = null;
+}
+
+/**
+ * Retry payment (after TERMINAL_BUSY).
+ */
+function retryPayment() {
+  const p = state.paymentInProgress;
+  if (!p) return;
+  closePaymentDialog();
+  startTerminalPayment(p.amountMinor, p.paymentId, p.printBon);
+}
+
+/**
+ * Show terminal picker to change terminal.
+ */
+function showTerminalPicker() {
+  const available = state.terminals.filter(t => t.status === "AVAILABLE");
+  if (available.length === 0) {
+    alert("Keine Terminals verfügbar");
+    return;
+  }
+
+  const p = state.paymentInProgress;
+  els.confirmBody.innerHTML = `
+    <div class="zvt-payment-dialog">
+      <div class="zvt-payment-status">Terminal auswählen:</div>
+      <div class="zvt-terminal-picker">
+        ${available.map(t => `<button class="zvt-terminal-pick-btn" data-tid="${t.id}">${t.name}</button>`).join("")}
+      </div>
+    </div>
+  `;
+  els.confirmActions.innerHTML = `<button class="ghost" id="zvt-pick-cancel">Abbrechen</button>`;
+  document.getElementById("zvt-pick-cancel").onclick = closePaymentDialog;
+
+  els.confirmBody.querySelectorAll(".zvt-terminal-pick-btn").forEach(btn => {
+    btn.onclick = () => {
+      const tid = btn.dataset.tid;
+      const terminal = state.terminals.find(t => t.id === tid);
+      if (terminal) {
+        state.selectedTerminal = { id: terminal.id, name: terminal.name };
+        saveTerminalSelection(terminal.id);
+        renderTerminalSelector();
+        closePaymentDialog();
+        if (p) startTerminalPayment(p.amountMinor, p.paymentId, p.printBon);
+      }
+    };
+  });
+}
+
+// ====================================================================
 
 init();

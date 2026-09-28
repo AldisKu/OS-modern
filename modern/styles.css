@@ -64,7 +64,11 @@ body {
 
 .keyboard button {
   flex: 1;
-  padding: 10px 0;
+  /* Bigger digits, reduced padding keeps the button height about the same */
+  padding: 6px 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: #fafafa;
@@ -319,6 +323,19 @@ body {
 .edit-qty input {
   width: 80px;
   text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Quantity +1 / -1 buttons in the product/order edit + cancel dialogs */
+.edit-qty-row #qty-dec,
+.edit-qty-row #qty-inc,
+#qty-dec,
+#qty-inc {
+  font-size: 22px;
+  font-weight: 700;
+  padding: 6px 0;
+  line-height: 1.1;
 }
 
 .qty-small {
@@ -747,9 +764,11 @@ body {
 
 .price-keypad button {
   flex: 1;
-  padding: 12px 0;
-  font-size: 20px;
+  /* Bigger digits, reduced padding keeps the button height about the same */
+  padding: 8px 0;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 1.1;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: #fff;
@@ -760,8 +779,11 @@ body {
 }
 
 .storno-keypad button {
-  padding: 10px 0;
-  font-size: 18px;
+  /* Bigger digits, reduced padding keeps the button height about the same */
+  padding: 6px 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
 }
 
 .confirm-action:disabled {
@@ -797,4 +819,295 @@ body {
   border: none;
   padding: 2px 0;
   background: transparent;
+}
+
+
+/* ====================================================================
+   VOUCHER SYSTEM STYLES
+   ==================================================================== */
+
+.voucher-input-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.voucher-input-row input {
+  flex: 1;
+  font-size: 1.1rem;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+.voucher-scan-btn {
+  flex: 0 0 auto;
+  font-size: 1.4rem;
+  padding: 8px 14px;
+  background: #ff9800;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.voucher-scan-btn:hover {
+  background: #f57c00;
+}
+
+#voucher-scanner-container {
+  margin-bottom: 12px;
+}
+#voucher-qr-reader {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.voucher-status {
+  padding: 16px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+.voucher-ok {
+  background: #e8f5e9;
+  border: 1px solid #81c784;
+}
+.voucher-warning {
+  background: #fff8e1;
+  border: 1px solid #ffb74d;
+}
+.voucher-error {
+  background: #ffebee;
+  border: 1px solid #e57373;
+}
+.voucher-status-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.voucher-detail {
+  font-size: 0.95rem;
+  color: #555;
+  margin-top: 4px;
+}
+.voucher-number-large {
+  font-size: 1.2rem;
+  margin-top: 8px;
+}
+.voucher-sell-details p {
+  margin: 6px 0;
+  font-size: 1.05rem;
+}
+
+
+/* ====================================================================
+   ZVT PAYMENT TERMINAL STYLES
+   ==================================================================== */
+
+.zvt-terminal-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  flex-wrap: wrap;
+}
+.zvt-terminal-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-right: 4px;
+}
+.zvt-terminal-btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 2px solid #ccc;
+  background: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.zvt-terminal-btn.zvt-available {
+  border-color: #81c784;
+  color: #2e7d32;
+}
+.zvt-terminal-btn.zvt-busy {
+  border-color: #ffb74d;
+  color: #e65100;
+  opacity: 0.7;
+}
+.zvt-terminal-btn.zvt-offline {
+  border-color: #e57373;
+  color: #b71c1c;
+  opacity: 0.5;
+}
+.zvt-terminal-btn.zvt-selected {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.3);
+}
+.zvt-terminal-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* Payment dialog */
+.zvt-payment-dialog {
+  text-align: center;
+  padding: 16px 0;
+}
+.zvt-payment-amount {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 12px 0;
+}
+.zvt-payment-terminal {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 12px;
+}
+.zvt-payment-status {
+  font-size: 1.1rem;
+  color: #1976d2;
+  margin-top: 12px;
+}
+.zvt-payment-success {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+.zvt-payment-declined {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #c62828;
+}
+.zvt-payment-unknown {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #e65100;
+}
+
+/* Receipt prompt */
+.zvt-receipt-prompt {
+  width: 100%;
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+}
+
+/* Terminal picker */
+.zvt-terminal-picker {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.zvt-terminal-pick-btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 2px solid #81c784;
+  background: #e8f5e9;
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+.zvt-terminal-pick-btn:hover {
+  background: #c8e6c9;
+}
+
+
+/* ZVT Amount Entry in Payment Dialog */
+.zvt-payment-label {
+  font-size: 1rem;
+  color: #555;
+  margin-bottom: 8px;
+}
+.zvt-payment-amount-input {
+  margin: 12px 0;
+}
+.zvt-amount-display {
+  font-size: 1.6rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 12px;
+  min-height: 50px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+.zvt-amount-keypad {
+  margin: 12px 0;
+}
+.zvt-amount-keypad .keyboard-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+  justify-content: center;
+}
+.zvt-amount-keypad button {
+  width: 60px;
+  height: 48px;
+  font-size: 1.3rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+.zvt-amount-keypad button:active {
+  background: #e0e0e0;
+}
+
+/* --- Card-payment receipt choice popup (v62) --- */
+.receipt-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 18px;
+  align-items: flex-start;
+}
+.receipt-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 18px;
+  cursor: pointer;
+}
+.receipt-switch input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+.receipt-switch input[type="checkbox"]:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* --- Terminal scan result list (v63) --- */
+.scan-result { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 16px; }
+
+/* --- Kartenbelege (card receipts) reprint menu (v64) --- */
+.cr-filter { display: flex; gap: 8px; margin-bottom: 10px; }
+.cr-tab { padding: 6px 14px; border: 1px solid #ccc; background: #f4f4f4; border-radius: 6px; cursor: pointer; font-size: 16px; }
+.cr-tab.active { background: #2b6cb0; color: #fff; border-color: #2b6cb0; }
+.cr-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.cr-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px solid #eee; }
+.cr-info { font-size: 15px; }
+.cr-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.cr-actions button { padding: 5px 10px; font-size: 14px; }
+
+/* Payment method buttons locked while Bewirtungsbeleg is active (#3):
+   non-printing buttons (data-print="0") are disabled so a receipt is enforced.
+   Keep the label BLACK and readable; signal the locked state with a leading
+   lock icon and a muted background rather than fading the text out. */
+.paydesk-payment-block button.locked,
+.paydesk-payment-block button[data-print="0"]:disabled {
+  color: #000;
+  background: #e9e9e9;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.paydesk-payment-block button .lock-icon {
+  font-size: 0.95em;
+}
+/* Bewirtungsbeleg toggle: check mark when active. The active toggle has a blue
+   background, so the check is WHITE for clear contrast. */
+#paydesk-host .bew-check {
+  color: #fff;
+  font-weight: 700;
 }
