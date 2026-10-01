@@ -9,7 +9,7 @@
     "registrationTlvPermitPrint": true,
     "registrationIncludeCurrency": true,
     "receiptMode": "broker",
-    "receiptParam1F04": 161,
+    "receiptParam1F04": 3,
     "pollIntervalSeconds": 60,
     "discoveryIntervalHours": 24,
     "recoveryScanCooldownSeconds": 300,
@@ -19,6 +19,7 @@
     "scanPorts": [20007, 20011, 40007],
     "cidrs": ["192.168.0.0/24"],
     "maxConcurrency": 32,
-    "currency": "EUR"
+    "currency": "EUR",
+    "print": { "mode": "lan", "lanHost": "192.168.0.32", "lanPort": 9100 }
   }
 }
