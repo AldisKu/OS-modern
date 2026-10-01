@@ -8,11 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3077;
 const TOKEN = process.env.BROKER_TOKEN || "";
-const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/php/modernapi.php?cmd=state";
+// modernapi.php lives under <webroot>/modern/ (everything "modern" is under
+// modern/). All broker->API URLs must point there. Can be overridden per env.
+const POLL_URL = process.env.POLL_URL || "http://127.0.0.1/modern/modernapi.php?cmd=state";
 const CHANGES_URL = process.env.CHANGES_URL || "http://127.0.0.1/modern/modernapi.php?cmd=changes";
 const POLL_INTERVAL = process.env.POLL_INTERVAL_MS ? Number(process.env.POLL_INTERVAL_MS) : 4000;
-const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/php/modernapi.php?cmd=pricelevel_state";
-const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/php/modernapi.php?cmd=printer_status";
+const PRICELEVEL_URL = process.env.PRICELEVEL_URL || "http://127.0.0.1/modern/modernapi.php?cmd=pricelevel_state";
+const PRINTER_URL = process.env.PRINTER_URL || "http://127.0.0.1/modern/modernapi.php?cmd=printer_status";
 // Debug: log change-detection + push timing (journalctl -u ordersprinter-broker).
 const DEBUG_UPDATES = process.env.DEBUG_UPDATES ? process.env.DEBUG_UPDATES !== "0" : true;
 function dbgU(...a) { if (DEBUG_UPDATES) console.log("[UPD]", new Date().toISOString(), ...a); }
