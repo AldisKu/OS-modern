@@ -95,10 +95,27 @@ export class TerminalManager {
    * Get terminal list for POS clients (sanitized — no network details).
    */
   getTerminalList() {
+    // Map the internal 4-state health machine to the status the POS app knows
+    // (AVAILABLE / BUSY / OFFLINE). SUSPECT is reported as BUSY so the POS does
+    // not offer the terminal for a new payment while liveness is unconfirmed,
+    // but it is not shown as hard-OFFLINE (a health check is in progress).
+    const map = (s) => {
+      switch (s) {
+        case "READY": return "AVAILABLE";
+        case "BUSY": return "BUSY";
+        case "SUSPECT": return "BUSY";
+        case "OFFLINE": return "OFFLINE";
+        case "ATTENTION": return "ATTENTION";
+        // legacy values still used by discovery until first health cycle
+        case "AVAILABLE": return "AVAILABLE";
+        case "NOT_READY": return "BUSY";
+        default: return "UNKNOWN";
+      }
+    };
     return this.registry.terminals.map(t => ({
       id: t.id,
       name: t.name,
-      status: t.runtimeStatus || "UNKNOWN"
+      status: map(t.state || t.runtimeStatus)
     }));
   }
 
@@ -333,41 +350,103 @@ export class TerminalManager {
     }
   }
 
+  /**
+   * Need-based health check (runs on the poll timer). Per spec:
+   *  - Only check a terminal that is READY (idle) AND has had NO valid RX for
+   *    >= healthIdleMs (~60s). A recent payment/enquiry already proved liveness.
+   *  - The check itself sets BUSY while the Status-Enquiry runs (no queue: a
+   *    concurrent payment is rejected with TERMINAL_BUSY).
+   *  - Any valid RX (even 04 FF / 84 / 06 D1 ...) means the terminal is alive;
+   *    OFFLINE is NEVER derived from an "unexpected" answer, only from the
+   *    complete ABSENCE of valid communication.
+   *  - No RX at all within the enquiry timeout -> SUSPECT -> verify socket ->
+   *    OFFLINE + reconnect/rediscovery.
+   */
   async pollAll() {
+    const idleMs = (this.config.healthIdleSeconds || 60) * 1000;
+    const now = Date.now();
     for (const terminal of this.registry.terminals) {
-      if (this.isLocked(terminal.id)) continue; // Skip busy terminals
-      try {
-        // 8a "register-and-hold": every known terminal is backed by ONE
-        // persistent, registered session that stays open 24/7. Poll ENSURES
-        // that session exists (connect + register once if missing/dropped) and
-        // then sends a Status-Enquiry on it as the keepalive. There is NO
-        // throwaway session and NO connect/disconnect churn ("login/logout")
-        // per poll — poll rides the single live session and also acts as the
-        // reconnect driver when the socket has dropped.
-        const session = await this.getRegisteredSession(terminal.id);
-        if (!session) continue; // unknown terminal (shouldn't happen here)
-        const status = await session.statusEnquiry(); // 04 01 on the live socket
+      if (this.isLocked(terminal.id)) continue; // a broker action is running
+      const state = terminal.state || terminal.runtimeStatus;
 
-        // Verify identity
-        if (status.terminalIdentifier && status.terminalIdentifier !== terminal.identity.terminalIdentifier) {
-          terminal.runtimeStatus = "ATTENTION";
-          this.onLog(`POLL: ${terminal.id} identity mismatch! Expected ${terminal.identity.terminalIdentifier}, got ${status.terminalIdentifier}`);
-        } else {
-          terminal.lastSeenAt = new Date().toISOString();
-          // ATTENTION (e.g. after an UNKNOWN payment) is cleared by a clean poll.
-          terminal.runtimeStatus = status.deviceState === 0x00 ? "AVAILABLE" : "NOT_READY";
-        }
-      } catch (e) {
-        // The persistent session failed — evict it so the NEXT poll reconnects
-        // and re-registers from scratch. Mark OFFLINE + trigger recovery scan.
-        this.invalidateSession(terminal.id);
-        if (terminal.runtimeStatus !== "OFFLINE") {
-          terminal.runtimeStatus = "OFFLINE";
-          this.onLog(`POLL: ${terminal.id} (${terminal.name}) → OFFLINE: ${e.message}`);
-          this.triggerRecoveryScan();
-        }
+      // If OFFLINE/SUSPECT (or never established): try to (re)establish the
+      // persistent session. This is the reconnect driver.
+      if (state === "OFFLINE" || state === "SUSPECT" || !this.hasLiveSession(terminal.id)) {
+        await this.healthReconnect(terminal);
+        continue;
       }
-      if (this.onTerminalStatusChange) this.onTerminalStatusChange();
+
+      // READY (or legacy AVAILABLE): only poll if the terminal has been quiet
+      // for >= idleMs. Recent valid RX = recently proven alive, skip the poll.
+      const sess = this.sessions.get(terminal.id);
+      const lastRx = (sess && sess.lastValidRxAt) || 0;
+      if (now - lastRx < idleMs) continue; // proven alive recently -> no poll
+
+      await this.healthCheck(terminal);
+    }
+  }
+
+  /**
+   * Run a ZVT Status-Enquiry as a liveness probe on the persistent session.
+   * Sets BUSY for the duration, completes the full sequence (through 06 0F),
+   * then returns to READY. Classifies the outcome per the spec.
+   */
+  async healthCheck(terminal) {
+    const session = this.sessions.get(terminal.id);
+    if (!session) { await this.healthReconnect(terminal); return; }
+    this.setState(terminal.id, "BUSY"); // health check occupies the terminal
+    try {
+      const status = await session.statusEnquiry(); // 05 01 ... through 06 0F
+      // Got a valid completion. Identity check (mismatch = ATTENTION, not off).
+      if (status.terminalIdentifier && status.terminalIdentifier !== terminal.identity.terminalIdentifier) {
+        this.setState(terminal.id, "ATTENTION");
+        this.onLog(`HEALTH: ${terminal.id} identity mismatch! Expected ${terminal.identity.terminalIdentifier}, got ${status.terminalIdentifier}`);
+      } else {
+        terminal.lastSeenAt = new Date().toISOString();
+        this.setState(terminal.id, "READY");
+      }
+    } catch (e) {
+      // Did ANY valid RX arrive during the attempt? If yes, the terminal is
+      // alive (maybe just slow / doing a local action) -> stay reachable, do
+      // NOT go OFFLINE. Only a complete absence of valid RX is a real problem.
+      const sawRx = session.lastValidRxAt && (Date.now() - session.lastValidRxAt) < 15000;
+      if (sawRx) {
+        this.onLog(`HEALTH: ${terminal.id} enquiry did not fully complete (${e.message}) but terminal answered — keeping online`);
+        this.setState(terminal.id, "READY");
+        return;
+      }
+      // No valid communication -> SUSPECT, then confirm loss -> OFFLINE.
+      this.onLog(`HEALTH: ${terminal.id} no valid RX (${e.message}) → SUSPECT`);
+      this.setState(terminal.id, "SUSPECT");
+      await this.healthReconnect(terminal);
+    }
+  }
+
+  /**
+   * SUSPECT/OFFLINE handling: drop the (dead) session and attempt a clean
+   * reconnect + registration. On success -> READY; on failure -> OFFLINE +
+   * recovery scan. Never hammers (getRegisteredSession has backoff).
+   */
+  async healthReconnect(terminal) {
+    try {
+      this.invalidateSession(terminal.id);
+      const session = await this.getRegisteredSession(terminal.id);
+      if (!session) { this.onLog(`HEALTH: ${terminal.id} no session → OFFLINE`); this.setState(terminal.id, "OFFLINE"); return; }
+      // Confirm with one enquiry that the fresh session really answers.
+      const status = await session.statusEnquiry();
+      if (status.terminalIdentifier && status.terminalIdentifier !== terminal.identity.terminalIdentifier) {
+        this.onLog(`HEALTH: ${terminal.id} reconnected but TID mismatch (${status.terminalIdentifier}) → ATTENTION`);
+        this.setState(terminal.id, "ATTENTION");
+      } else {
+        terminal.lastSeenAt = new Date().toISOString();
+        this.setState(terminal.id, "READY");
+        this.onLog(`HEALTH: ${terminal.id} reconnected → READY`);
+      }
+    } catch (e) {
+      this.invalidateSession(terminal.id);
+      this.onLog(`HEALTH: ${terminal.id} (${terminal.name}) reconnect failed → OFFLINE: ${e.message}`);
+      this.setState(terminal.id, "OFFLINE");
+      this.triggerRecoveryScan();
     }
   }
 
@@ -389,18 +468,36 @@ export class TerminalManager {
   lock(terminalId, requestId, posId) {
     if (this.locks.has(terminalId)) return false;
     this.locks.set(terminalId, { requestId, posId, lockedAt: Date.now() });
-    const terminal = this.getTerminal(terminalId);
-    if (terminal) terminal.runtimeStatus = "BUSY";
-    if (this.onTerminalStatusChange) this.onTerminalStatusChange();
+    // A running broker ZVT action = BUSY. No queue: a second payment request
+    // sees state !== READY and is rejected with TERMINAL_BUSY.
+    this.setState(terminalId, "BUSY");
     return true;
   }
 
   unlock(terminalId) {
     this.locks.delete(terminalId);
     const terminal = this.getTerminal(terminalId);
-    if (terminal && terminal.runtimeStatus === "BUSY") {
-      terminal.runtimeStatus = "AVAILABLE";
+    // Only return to READY from BUSY. If the terminal became SUSPECT/OFFLINE
+    // meanwhile, leave that state for the health check / reconnect to resolve.
+    if (terminal && terminal.state === "BUSY") {
+      this.setState(terminalId, "READY");
     }
+  }
+
+  /**
+   * Central state setter for the 4-state health machine:
+   *   READY   - connected, ZVT session active, no broker action running
+   *   BUSY    - a broker ZVT action is in progress (payment, enquiry, ...)
+   *   SUSPECT - socket exists but a health check got no valid RX in time
+   *   OFFLINE - connection lost / socket closed / reconnect required
+   * Keeps runtimeStatus as a POS-facing alias and notifies on change.
+   */
+  setState(terminalId, state) {
+    const terminal = this.getTerminal(terminalId);
+    if (!terminal) return;
+    if (terminal.state === state) return;
+    terminal.state = state;
+    terminal.runtimeStatus = state; // alias (getTerminalList maps for POS)
     if (this.onTerminalStatusChange) this.onTerminalStatusChange();
   }
 

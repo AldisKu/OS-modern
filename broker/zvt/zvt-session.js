@@ -52,6 +52,11 @@ export class ZvtSession {
     // Defensive cap: if malformed data grows the buffer without producing a
     // valid frame, close the session rather than grow memory unbounded.
     this.maxRxBuffer = options.maxRxBuffer || (1024 * 1024);
+    // Liveness: timestamp of the last syntactically-valid ZVT APDU received.
+    // ANY valid frame (ACK, 84 error, 04 FF, 06 D1/D3, 06 0F, 06 1E, ...) is a
+    // sign of life — the TCP link is up and the ZVT process answers. The health
+    // check uses this to avoid polling a terminal that just communicated.
+    this.lastValidRxAt = 0;
   }
 
   /**
@@ -67,6 +72,11 @@ export class ZvtSession {
 
       this.socket = net.createConnection({ host: this.ip, port: this.port }, () => {
         clearTimeout(timeout);
+        // TCP-level liveness + latency: keepalive probes a dead peer even when
+        // no ZVT traffic flows; noDelay avoids Nagle buffering of small APDUs.
+        // This complements (does NOT replace) the ZVT 05 01 health check.
+        try { this.socket.setKeepAlive(true, 30000); } catch (_) {}
+        try { this.socket.setNoDelay(true); } catch (_) {}
         this.rxBuffer = Buffer.alloc(0);
         this.frameQueue = [];
         resolve();
@@ -103,6 +113,8 @@ export class ZvtSession {
       const frame = parseFrame(this.rxBuffer);
       if (!frame) break; // only an incomplete frame remains
       this.rxBuffer = this.rxBuffer.slice(frame.totalLength);
+      // A fully-parsed APDU of ANY type is proof the terminal is alive.
+      this.lastValidRxAt = Date.now();
       this.onLog("RX", Buffer.from([frame.cmdClass, frame.cmdInstr]), frame.payload);
       this.deliverFrame(frame);
     }

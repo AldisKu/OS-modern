@@ -78,6 +78,18 @@ export class PaymentService {
       return { requestId, state: STATE.FAILED, error: "TERMINAL_UNAVAILABLE", message: "Terminal not found" };
     }
 
+    // Health gate (no queue): only a READY terminal accepts a new payment.
+    // SUSPECT/OFFLINE -> not usable right now; BUSY is caught by lock() below.
+    const st = terminal.state || terminal.runtimeStatus;
+    if (st === "OFFLINE" || st === "SUSPECT") {
+      return {
+        requestId,
+        state: STATE.FAILED,
+        error: "TERMINAL_UNAVAILABLE",
+        message: `Terminal nicht bereit (${st})`
+      };
+    }
+
     // Try to lock terminal
     if (!this.tm.lock(terminalId, requestId, posId)) {
       const lock = this.tm.getLock(terminalId);
@@ -300,11 +312,14 @@ export class PaymentService {
         tx.completedAt = new Date().toISOString();
         this.onLog(`PAYMENT ${tx.requestId}: UNKNOWN STATE — ${e.message}. DO NOT RETRY.`);
         this.tm.invalidateSession(tx.terminalId);
-        const terminal = this.tm.getTerminal(tx.terminalId);
-        if (terminal) terminal.runtimeStatus = "ATTENTION";
+        tx._attention = true; // flag: set ATTENTION after unlock (see finally)
       }
     } finally {
+      // Release the lock first (BUSY -> READY), then, if the tx ended in an
+      // UNKNOWN state, raise ATTENTION so a human verifies the terminal before
+      // the next transaction. Doing it after unlock avoids unlock overwriting it.
       this.tm.unlock(tx.terminalId);
+      if (tx._attention) this.tm.setState(tx.terminalId, "ATTENTION");
     }
   }
 

@@ -13,7 +13,7 @@
     "pollIntervalSeconds": 60,
     "discoveryIntervalHours": 24,
     "recoveryScanCooldownSeconds": 300,
-    "connectTimeoutMs": 400,
+    "connectTimeoutMs": 5000,
     "responseTimeoutMs": 2000,
     "transactionTimeoutSeconds": 120,
     "scanPorts": [20007, 20011, 40007],
