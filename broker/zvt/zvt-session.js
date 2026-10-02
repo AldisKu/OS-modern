@@ -185,14 +185,29 @@ export class ZvtSession {
 
   /**
    * Send a command and wait for ACK.
+   * After an abort/cancel the terminal can still have an Intermediate-Status
+   * (04 FF) queued or emit one before ACKing the next command. Such a frame is
+   * NOT an error — ACK it and keep waiting for the real ACK. This prevents a
+   * harmless post-cancel 04 FF from being misread as "Expected ACK" and
+   * flipping the terminal to OFFLINE on the following Status-Enquiry.
    */
   async sendAndWaitAck(commandBuffer) {
     this.send(commandBuffer);
-    const frame = await this.waitFrame(this.responseTimeout);
-    if (!isAck(frame)) {
-      throw new Error(`Expected ACK, got ${frame.cmdClass.toString(16)} ${frame.cmdInstr.toString(16)}`);
+    const deadline = Date.now() + Math.max(this.responseTimeout * 2, 4000);
+    for (;;) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error("Expected ACK, timeout");
+      const frame = await this.waitFrame(Math.min(this.responseTimeout, remaining));
+      if (isAck(frame)) return frame;
+      // Intermediate Status (04 FF): ACK and keep waiting for the real ACK.
+      if (frame.cmdClass === 0x04 && frame.cmdInstr === 0xFF) {
+        this.send(ACK);
+        continue;
+      }
+      // Any other stray frame left over from a previous (aborted) operation:
+      // ACK it and keep waiting rather than treating it as a protocol error.
+      this.send(ACK);
     }
-    return frame;
   }
 
   /**
