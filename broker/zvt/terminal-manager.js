@@ -485,6 +485,45 @@ export class TerminalManager {
   }
 
   /**
+   * Fresh readiness probe right before sending a payment. The caller already
+   * holds the lock. Runs a 05 01 Status-Enquiry on the (ensured) persistent
+   * session and returns { ok, reason }:
+   *   ok=true  -> terminal answered and reports deviceState 0x00 (READY)
+   *   ok=false -> not ready now (busy with a local action, settling, mismatch,
+   *               or unreachable). Caller releases the lock and returns BUSY.
+   * This does NOT change the no-queue behaviour and does NOT start any
+   * background polling — readiness is checked exactly when a payment is tried.
+   */
+  async probeReadyForPayment(terminalId) {
+    const terminal = this.getTerminal(terminalId);
+    if (!terminal) return { ok: false, reason: "unknown" };
+    try {
+      const session = await this.getRegisteredSession(terminalId);
+      if (!session) return { ok: false, reason: "no-session" };
+      const status = await session.statusEnquiry(); // 05 01 -> ... -> 06 0F
+      // Identity must match (guards against a different device at the IP).
+      if (status.terminalIdentifier &&
+          status.terminalIdentifier !== terminal.identity.terminalIdentifier) {
+        this.setState(terminalId, "ATTENTION");
+        return { ok: false, reason: "identity-mismatch" };
+      }
+      // deviceState 0x00 = ready. Anything else = terminal busy/not ready
+      // (e.g. a local action at the PT). ackOnly (no completion) -> treat as
+      // ready=false to be safe, the user can retry.
+      if (status.ackOnly) return { ok: false, reason: "no-completion" };
+      if (status.deviceState === 0x00) {
+        terminal.lastSeenAt = new Date().toISOString();
+        return { ok: true, reason: "ready" };
+      }
+      return { ok: false, reason: `deviceState=${status.deviceState}` };
+    } catch (e) {
+      // No valid answer -> not ready. Do NOT force OFFLINE here (a slow/busy
+      // terminal is not necessarily gone); the health poll handles liveness.
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  /**
    * Central state setter for the 4-state health machine:
    *   READY   - connected, ZVT session active, no broker action running
    *   BUSY    - a broker ZVT action is in progress (payment, enquiry, ...)

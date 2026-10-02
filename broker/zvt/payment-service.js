@@ -78,19 +78,9 @@ export class PaymentService {
       return { requestId, state: STATE.FAILED, error: "TERMINAL_UNAVAILABLE", message: "Terminal not found" };
     }
 
-    // Health gate (no queue): only a READY terminal accepts a new payment.
-    // SUSPECT/OFFLINE -> not usable right now; BUSY is caught by lock() below.
-    const st = terminal.state || terminal.runtimeStatus;
-    if (st === "OFFLINE" || st === "SUSPECT") {
-      return {
-        requestId,
-        state: STATE.FAILED,
-        error: "TERMINAL_UNAVAILABLE",
-        message: `Terminal nicht bereit (${st})`
-      };
-    }
-
-    // Try to lock terminal
+    // Try to lock terminal FIRST (no queue): if another payment is running the
+    // lock fails -> immediate TERMINAL_BUSY. Locking before the readiness probe
+    // prevents a race with a concurrent payment during the probe.
     if (!this.tm.lock(terminalId, requestId, posId)) {
       const lock = this.tm.getLock(terminalId);
       return {
@@ -98,6 +88,24 @@ export class PaymentService {
         state: STATE.FAILED,
         error: "TERMINAL_BUSY",
         message: `Terminal belegt (${lock?.posId || "unknown"})`
+      };
+    }
+
+    // FRESH readiness probe (05 01) now that we hold the lock. We do NOT trust
+    // the cached state (it may be up to one health interval old). A terminal
+    // busy with a LOCAL action (storno/print/menu at the PT) or still settling
+    // after a prior abort would otherwise reject the 06 01 (e.g. 06 1E DF).
+    // If not ready, release the lock and return BUSY so the user can simply
+    // retry a few seconds later (each retry re-probes). No background poll, no
+    // queued payment — the 60s health poll is the fallback safety net.
+    const ready = await this.tm.probeReadyForPayment(terminalId);
+    if (!ready.ok) {
+      this.tm.unlock(terminalId);
+      return {
+        requestId,
+        state: STATE.FAILED,
+        error: "TERMINAL_BUSY",
+        message: `Terminal nicht bereit (${ready.reason})`
       };
     }
 
@@ -138,22 +146,13 @@ export class PaymentService {
    */
   async executePayment(tx) {
     try {
-      // Phase 1: Verify terminal identity
-      tx.state = STATE.VERIFYING;
-      const verified = await this.tm.verifyIdentity(tx.terminalId);
-      if (!verified) {
-        // Try recovery discovery
-        tx.state = STATE.DISCOVERING;
-        await this.tm.discover();
-        const retryVerify = await this.tm.verifyIdentity(tx.terminalId);
-        if (!retryVerify) {
-          tx.state = STATE.FAILED;
-          tx.error = "TERMINAL_UNAVAILABLE";
-          tx.completedAt = new Date().toISOString();
-          this.tm.unlock(tx.terminalId);
-          return;
-        }
-      }
+      // Phase 1 (identity + readiness) was already done by the fresh
+      // probeReadyForPayment() in processPayment() while holding the lock:
+      // it ran a 05 01 Status-Enquiry on the live persistent session, matched
+      // the terminal identity, and confirmed deviceState 0x00. Repeating a
+      // verifyIdentity() here would be a redundant second 05 01 right before
+      // the 06 01 (and could catch the PT mid-settle). So we go straight to
+      // obtaining the (cached) registered session.
 
       // Phase 2: Get a CONNECTED + REGISTERED session (8a). The terminal
       // manager caches one long-lived session per terminal and registers only
