@@ -209,7 +209,19 @@ export class ZvtSession {
     for (;;) {
       const remaining = deadline - Date.now();
       if (remaining <= 0) throw new Error("Expected ACK, timeout");
-      const frame = await this.waitFrame(Math.min(this.responseTimeout, remaining));
+      let frame;
+      try {
+        // waitFrame throws "Response timeout" when its slice elapses with no
+        // frame. That is NOT the overall deadline — a slow (cold WLAN) ACK can
+        // take longer than one responseTimeout slice. Swallow the per-slice
+        // timeout and keep waiting until the real `deadline`, so the full ACK
+        // budget (>=4s) is honoured instead of bailing after one slice. This
+        // prevents a slow-but-alive terminal from being flagged SUSPECT.
+        frame = await this.waitFrame(Math.min(this.responseTimeout, remaining));
+      } catch (e) {
+        if (e && e.message === "Response timeout" && Date.now() < deadline) continue;
+        throw e; // socket close/error, or real deadline reached
+      }
       if (isAck(frame)) return frame;
       // Intermediate Status (04 FF): ACK and keep waiting for the real ACK.
       if (frame.cmdClass === 0x04 && frame.cmdInstr === 0xFF) {
