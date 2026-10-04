@@ -1,5 +1,5 @@
 const API = "modernapi.php";
-const APP_VERSION = "70";
+const APP_VERSION = "71";
 // Debug: update/refresh timing. Toggle in browser console: window.DEBUG_UPDATES=false
 window.DEBUG_UPDATES = true;
 function dbgU(...a) { if (window.DEBUG_UPDATES) console.log("[UPD]", new Date().toISOString(), ...a); }
@@ -2493,6 +2493,13 @@ async function loadPayments() {
           console.error("ZVT startTerminalPayment error:", e);
         }
       }
+      // Card payment, ZVT active, NO terminal selected, but a terminal is
+      // reachable (AVAILABLE or BUSY — a BUSY terminal just has an open session
+      // and is still usable). Warn before paying without a terminal.
+      if (state.zvtEnabled && isCardPayment(paymentId) && !state.selectedTerminal && hasReachableTerminal()) {
+        showNoTerminalSelectedPopup(() => { paydeskPay(paymentId, print); });
+        return;
+      }
       await paydeskPay(paymentId, print);
     });
   });
@@ -2748,19 +2755,42 @@ async function changeTableFlow() {
 async function openMenuModal() {
   const data = await api("menu_items", {});
   if (data.menu) {
-    const items = (data.menu || []).filter(m => {
-      const name = (m.name || "").toLowerCase();
-      return !name.includes("logout") && !name.includes("abmelden");
-    });
-    const recordsBtn = `<button class="menu-link-btn" data-records="1">Tischprotokoll</button>`;
-    const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
-    const brokerBtn = `<button class="menu-link-btn" data-broker="1">Broker Debug</button>`;
-    const scanBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-terminalscan="1">Terminal scannen</button>` : "";
-    const cardReceiptsBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-cardreceipts="1">Kartenbelege</button>` : "";
-    els.menuItems.innerHTML = recordsBtn + localBtn + brokerBtn + scanBtn + cardReceiptsBtn + items.map(m => {
+    // Hidden vendor entries: logout/abmelden plus the in-app views that the
+    // modern UI already covers natively. "Kasse" is matched as a whole word so
+    // it does NOT also hide "Kassenbons".
+    const HIDE_EXACT = ["bestellung", "kasse", "reservierung", "kundenansicht", "feedback"];
+    const isHidden = (name) => {
+      const n = (name || "").trim().toLowerCase();
+      if (n.includes("logout") || n.includes("abmelden")) return true;
+      return HIDE_EXACT.includes(n);
+    };
+    const allItems = (data.menu || []).filter(m => !isHidden(m.name));
+    // "Kassenbons" comes from the vendor POS menu; pull it to the top group.
+    const isKassenbons = (m) => (m.name || "").trim().toLowerCase().startsWith("kassenbon");
+    const kassenbonsItems = allItems.filter(isKassenbons);
+    const restItems = allItems.filter(m => !isKassenbons(m));
+
+    const linkBtn = (m) => {
       const link = normalizeMenuLink(m.link || "");
       return `<button class="menu-link-btn" data-link="${link}">${m.name}</button>`;
-    }).join("");
+    };
+    const sep = `<div class="menu-separator"></div>`;
+
+    const recordsBtn = `<button class="menu-link-btn" data-records="1">Tischprotokoll</button>`;
+    const kassenbonsBtns = kassenbonsItems.map(linkBtn).join("");
+    const cardReceiptsBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-cardreceipts="1">Kartenbelege</button>` : "";
+    const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
+    const scanBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-terminalscan="1">Terminal scannen</button>` : "";
+    const brokerBtn = `<button class="menu-link-btn" data-broker="1">Broker Debug</button>`;
+
+    // Group 1: Tischprotokoll · Kassenbons · Kartenbelege
+    // Group 2: Lokale Konfiguration · Terminal scannen · Broker Debug
+    // Group 3: remaining vendor menu items
+    const group1 = recordsBtn + kassenbonsBtns + cardReceiptsBtn;
+    const group2 = localBtn + scanBtn + brokerBtn;
+    const group3 = restItems.map(linkBtn).join("");
+
+    els.menuItems.innerHTML = group1 + sep + group2 + sep + group3;
     els.menuItems.querySelectorAll("button").forEach(b => {
       if (b.dataset.records) {
         b.onclick = () => {
@@ -3652,6 +3682,40 @@ function generateUUID() {
  */
 function isCardPayment(paymentId) {
   return paymentId >= 2;
+}
+
+/**
+ * A terminal counts as reachable/usable if it is AVAILABLE or BUSY. BUSY only
+ * means an open session (locally occupied) — it is still a present, usable
+ * terminal. OFFLINE/SUSPECT do not count.
+ */
+function hasReachableTerminal() {
+  return (state.terminals || []).some(t => t.status === "AVAILABLE" || t.status === "BUSY");
+}
+
+/**
+ * Warn when the user triggers a card payment (or its Bondruck) while no card
+ * terminal is selected but at least one is reachable. "Weiter OHNE" proceeds
+ * without a terminal (runs onProceed); "Terminal wählen" just closes the popup
+ * and returns to the cashier so a terminal can be picked.
+ */
+function showNoTerminalSelectedPopup(onProceed) {
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Kein Kartenterminal ausgewählt";
+  els.confirmBody.innerHTML = `<p>Kein Kartenterminal ausgewählt, Terminals sind verfügbar.</p>`;
+  els.confirmActions.innerHTML = `
+    <button class="ghost" id="nts-without">Weiter OHNE</button>
+    <button class="primary" id="nts-select">Terminal wählen</button>
+  `;
+  els.confirmModal.classList.remove("hidden");
+  document.getElementById("nts-without").onclick = () => {
+    els.confirmModal.classList.add("hidden");
+    if (typeof onProceed === "function") onProceed();
+  };
+  document.getElementById("nts-select").onclick = () => {
+    // Just close and go back to the cashier form so a terminal can be picked.
+    els.confirmModal.classList.add("hidden");
+  };
 }
 
 /**

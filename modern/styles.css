@@ -17,11 +17,19 @@
 body {
   margin: 0;
   font-family: var(--font);
+  font-size: 17px;
   background: var(--bg);
   color: var(--ink);
 }
 
 .hidden { display: none !important; }
+
+/* Divider between menu groups in the menu modal. */
+.menu-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
 
 .login-screen {
   display: grid;
