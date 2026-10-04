@@ -139,7 +139,13 @@ export function initZvt(config, clients, brokerDir) {
         : ` cups=${PRINT_CONFIG.cupsPrinter}${PRINT_CONFIG.cupsHost ? "@" + PRINT_CONFIG.cupsHost : " (local)"}`));
 
   // Persistent card-receipt store (files + index under <brokerDir>/receipts).
-  const receiptStore = new ReceiptStore(brokerDir, { onLog: log });
+  // compactMerchant (font + line width for the "print all" job) comes from
+  // config.json zvt.print.compactMerchant; ReceiptStore falls back to its
+  // Font B / 57-char default when absent.
+  const receiptStore = new ReceiptStore(brokerDir, {
+    onLog: log,
+    compactMerchant: (config && config.print && config.print.compactMerchant) || null
+  });
 
   const ps = new PaymentService(tm, {
     onLog: log,

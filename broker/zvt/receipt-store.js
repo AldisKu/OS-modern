@@ -14,6 +14,105 @@
 import fs from "fs";
 import path from "path";
 
+// Default compact-print config (overridable via config.json zvt.print.compactMerchant).
+//   fontEsc: ESC/POS bytes (hex) to select the font, e.g. "1b4d01" = Font B.
+//   width:   characters per line that font fits on the roll (Font B ~57 on 80mm).
+const COMPACT_DEFAULT = { fontEsc: "1b4d01", width: 57 };
+
+/**
+ * Turn one raw A960 merchant receipt (array of text lines) into a flat list
+ * of TOKENS (each a self-contained "field value" unit, never split mid-token
+ * except when a single token is longer than the line). Shop header is dropped.
+ * The card number is NOT masked (kept exactly as the terminal printed it).
+ */
+function tokenizeMerchant(rawLines) {
+  const toks = [];
+  const txt = rawLines.join("\n");
+  const one = (re) => { const m = txt.match(re); return m ? m[1].trim() : null; };
+
+  const datum  = one(/(\d{2}\.\d{2}\.\d{4})\s+\d{2}:\d{2}/);
+  const zeit   = one(/\d{2}\.\d{2}\.\d{4}\s+(\d{2}:\d{2})/);
+  const ta     = one(/TA-Nr\.\s*(\d+)/);
+  const beleg  = one(/Beleg-Nr\.\s*(\d+)/);
+  const betrag = one(/Betrag\s+([\d.]+,\d{2})\s*EUR/);
+  const kart   = (txt.match(/(?:Kartenzahlung|Bezahlung)\s+(.+)/) || [])[1];
+  const tid    = one(/T-ID\s+(\d+)/);
+  const knr    = one(/(?:Kartennr\.|KNr\.)\s*([#\d* ]+?)\s*$/m);
+  const gueltig= one(/g.ltig bis \(MM\/JJ\)\s*([\d/]+)/);
+  const online = txt.includes("Kontaktlos Chip") && txt.includes("Online");
+  const vu     = one(/VU-Nummer\s*(\w+)/);
+  const aut    = one(/Autorisierungsnummer\s*(\w+)/);
+  const rc     = one(/Autorisierungsantwortcode\s*(\d+)/);
+  const asproc = one(/AS-Proc(?:-Code)?\s*=?\s*(.+)/);
+  const capt   = one(/Capt\.?-?Ref\.?\s*=?\s*(.+)/);
+  const aid    = one(/AID59:?\s*(\w+)/);
+
+  // EMV: concatenate the fragment lines into one token (may overflow -> wrapped).
+  const emv = [];
+  let coll = false;
+  for (const l of rawLines) {
+    if (l.includes("EMV-Daten")) { coll = true; continue; }
+    if (coll) {
+      const s = l.trim();
+      if (s.startsWith("**") || /^(AS-Proc|Capt\.?-?Ref|AID59)/.test(s)) break;
+      if (s) emv.push(s);
+    }
+  }
+  const emvJoin = emv.join("");
+  // Status: shorten "Autorisierung erfolgt" -> "auth OK" (only this one).
+  const mSt = txt.match(/\*\*\s*(.+?)\s*\*\*/);
+  let status = mSt ? mSt[1].trim() : null;
+  if (status && /Autorisierung\s+erfolgt/i.test(status)) status = "auth OK";
+
+  // Build tokens in receipt order. Each entry is ONE token (kept intact).
+  const push = (v) => { if (v) toks.push(v); };
+  if (datum && zeit) push(`${datum} ${zeit}`); else { push(datum); push(zeit); }
+  push(beleg && `Beleg ${beleg}`);
+  push(ta && `TA ${ta}`);
+  push(kart && kart.trim());
+  push(betrag && `${betrag} EUR`);
+  push(tid && `TID ${tid}`);
+  push(knr && `Karte ${knr}`);
+  push(gueltig && `gültig ${gueltig}`);
+  push(online && "Kontaktlos Chip Online");
+  push(vu && `VU ${vu}`);
+  push(aut && `Autor ${aut}`);
+  push(rc && `RC ${rc}`);
+  push(emvJoin && `EMV ${emvJoin}`);
+  push(asproc && `AS-Proc ${asproc}`);
+  push(capt && `Capt.Ref ${capt}`);
+  push(aid && `AID59 ${aid}`);
+  push(status);
+  return toks;
+}
+
+/**
+ * Greedy line fill: place tokens in order, space-separated, as many as fit in
+ * `width`. A token longer than the line is hard-wrapped. Shop header dropped.
+ * Returns an array of printable lines for ONE receipt (no leading/trailing
+ * separators — the caller adds the divider between receipts).
+ */
+function layoutTokens(tokens, width) {
+  const lines = [];
+  let cur = "";
+  const flush = () => { if (cur) { lines.push(cur); cur = ""; } };
+  for (let tok of tokens) {
+    // Token longer than a full line -> hard-wrap it on its own line(s).
+    if (tok.length > width) {
+      flush();
+      let rest = tok;
+      while (rest.length > width) { lines.push(rest.slice(0, width)); rest = rest.slice(width); }
+      if (rest) cur = rest; // continue filling the remainder
+      continue;
+    }
+    if (!cur) { cur = tok; }
+    else if (cur.length + 1 + tok.length <= width) { cur += " " + tok; }
+    else { flush(); cur = tok; }
+  }
+  flush();
+  return lines;
+}
+
 export class ReceiptStore {
   constructor(brokerDir, options = {}) {
     this.baseDir = path.join(brokerDir, "receipts");
@@ -24,6 +123,9 @@ export class ReceiptStore {
     // so archived single receipt text files sit at modern/receipts-archive/.
     this.archiveDir = options.archiveDir || path.join(brokerDir, "..", "receipts-archive");
     this.onLog = options.onLog || (() => {});
+    // Compact "print all" layout config (font + line width), from config.json
+    // zvt.print.compactMerchant; falls back to Font B / 57 chars.
+    this.compact = { ...COMPACT_DEFAULT, ...(options.compactMerchant || {}) };
     this._ensureDirs();
   }
 
@@ -151,16 +253,31 @@ export class ReceiptStore {
   getAllMerchantReceiptsCombined() {
     const idx = this._loadIndex();
     const entries = idx.receipts.filter(e => e.merchantFile); // oldest first (index order)
+    if (entries.length === 0) return { lines: [], count: 0 };
+
+    const width = this.compact.width || COMPACT_DEFAULT.width;
+    const divider = "-".repeat(width);
+    // Font select ESC/POS bytes (hex -> raw string) emitted once at the top.
     const lines = [];
+    if (this.compact.fontEsc) {
+      try { lines.push(Buffer.from(this.compact.fontEsc, "hex").toString("latin1")); } catch (_) {}
+    }
+
+    // Shop header is dropped; receipts are tokenized and greedily filled into
+    // `width`-char lines; a divider line separates each receipt. Single-receipt
+    // printing (getReceiptLines) is untouched and stays 1:1.
     let count = 0;
     for (const e of entries) {
       try {
-        const txt = fs.readFileSync(path.join(this.merchantDir, e.merchantFile), "utf8");
-        if (count > 0) lines.push("", "");
-        lines.push(...txt.split("\n"));
+        const raw = fs.readFileSync(path.join(this.merchantDir, e.merchantFile), "utf8").split("\n");
+        const body = layoutTokens(tokenizeMerchant(raw), width);
+        if (body.length === 0) continue;
+        if (count > 0) lines.push(divider);
+        lines.push(...body);
         count++;
       } catch (_) {}
     }
+    if (count === 0) return { lines: [], count: 0 };
     return { lines, count };
   }
 
@@ -229,3 +346,7 @@ export class ReceiptStore {
     return true;
   }
 }
+
+// Exported for unit testing of the compact "print all" layout (not used by the
+// broker runtime, which calls getAllMerchantReceiptsCombined()).
+export { tokenizeMerchant, layoutTokens };
