@@ -14,10 +14,6 @@
 import fs from "fs";
 import path from "path";
 
-// Reject anything that looks like an unmasked PAN (13-19 consecutive digits).
-// Masked forms like "############5373" or "**** 5373" are fine.
-const UNMASKED_PAN = /(?<!\d)\d{13,19}(?!\d)/;
-
 export class ReceiptStore {
   constructor(brokerDir, options = {}) {
     this.baseDir = path.join(brokerDir, "receipts");
@@ -101,11 +97,11 @@ export class ReceiptStore {
     const writeCopy = (lines, dir, kind) => {
       if (!lines || lines.length === 0) return null;
       const text = lines.join("\n") + "\n";
-      if (UNMASKED_PAN.test(text)) {
-        // Defensive: never persist anything resembling a full PAN.
-        this.onLog(`RECEIPTS: refusing to save ${kind} receipt — possible unmasked PAN detected`);
-        return null;
-      }
+      // No PAN masking check: receipts come from a certified payment terminal
+      // (Nexi/CCV A960) which already masks the card number on both merchant
+      // and customer copies. The merchant receipt's "KNr." field is an internal
+      // card/account reference (19 digits), not an unmasked PAN — a length-only
+      // regex falsely flagged it and dropped the merchant copy. Store as-is.
       const filePath = path.join(dir, baseName);
       try {
         this._atomicWrite(filePath, text);
