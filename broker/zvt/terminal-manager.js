@@ -562,6 +562,23 @@ export class TerminalManager {
       }
       if (!session) return { status: "OFFLINE", error: "no session" };
 
+      // Re-register with the administration-receipt bit (0x04) set so the PT
+      // SENDS the Tagesabschluss receipt as 06 D1/06 D3. The normal config byte
+      // (e.g. 0x9A) does not request admin receipts, so the A960 completes the
+      // EOD without pushing any printable block. We flip to <active | 0x04>
+      // (0x9A -> 0x9E) for THIS operation only and revert in finally. Done
+      // inside the lock, so no other command runs during the switch.
+      const normalByte = this.config.configByte;
+      const eodByte = (normalByte | 0x04) & 0xFF;
+      try {
+        await session.registration(eodByte);
+        this.onLog(`EOD: ${terminal.id} re-registered with configByte 0x${eodByte.toString(16)} (admin receipts on)`);
+      } catch (e) {
+        // Could not switch — the EOD can still run, but likely without a
+        // printed receipt. Proceed; do not fail here.
+        this.onLog(`EOD: ${terminal.id} re-register to 0x${eodByte.toString(16)} failed (${e.message}); continuing`);
+      }
+
       let eod;
       try {
         eod = await session.endOfDay({
@@ -597,6 +614,24 @@ export class TerminalManager {
       }
       return { status: "FAILED", resultCode: eod.resultCode, lines: eod.lines || [] };
     } finally {
+      // Revert the registration back to the normal config byte so ordinary
+      // payment behaviour is unchanged. Only attempt this if the session is
+      // still alive — on UNCERTAIN we invalidated it, and the next access will
+      // re-register with the config default (normalByte) anyway.
+      try {
+        if (this.hasLiveSession(terminalId)) {
+          const sess = this.sessions.get(terminalId);
+          if (sess && sess.registered) {
+            await sess.registration(this.config.configByte);
+            this.onLog(`EOD: ${terminalId} re-registered back to configByte 0x${this.config.configByte.toString(16)}`);
+          }
+        }
+      } catch (e) {
+        // If reverting fails, drop the session so the next op re-registers
+        // cleanly with the config default.
+        this.onLog(`EOD: ${terminalId} revert registration failed (${e.message}); invalidating session`);
+        this.invalidateSession(terminalId);
+      }
       // Release the lock -> back to READY (unless health moved it to SUSPECT/OFFLINE).
       this.unlock(terminalId);
     }

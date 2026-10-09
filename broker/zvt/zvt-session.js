@@ -297,10 +297,16 @@ export class ZvtSession {
   /**
    * Perform Registration.
    * Some simulators only respond with ACK (no Completion).
+   * @param {number} [configByteOverride] - use this config byte for THIS
+   *   registration only (does not change the session default). Used to switch
+   *   the terminal to "send administration receipts" (0x9E) for an End-of-Day
+   *   and back to the normal byte (0x9A) afterwards.
    */
-  async registration() {
+  async registration(configByteOverride) {
     await this.connect();
-    const cmd = buildRegistration(this.password, this.configByte, this.currencyCode, this.registrationOpts);
+    const cfgByte = (configByteOverride === undefined || configByteOverride === null)
+      ? this.configByte : configByteOverride;
+    const cmd = buildRegistration(this.password, cfgByte, this.currencyCode, this.registrationOpts);
     await this.sendAndWaitAck(cmd);
 
     // Wait for Completion, skipping any Intermediate Status (04 FF) frames.
