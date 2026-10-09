@@ -172,6 +172,52 @@ export function initZvt(config, clients, brokerDir) {
 
   log(`Initialized. Scanning ports: ${config.scanPorts || [20007, 20011, 40007]}`);
 
+  /**
+   * Run the End-of-Day for ONE terminal: perform 06 50, and on success store
+   * the EOD receipt (type TERMINAL_EOD, under the merchant receipt store) and
+   * print it immediately 1:1. A print failure does NOT turn a successful EOD
+   * into a failure (spec §16) — the stored receipt can be reprinted later.
+   * Returns a sanitized result object for the POS.
+   */
+  async function runTerminalEod(terminalId) {
+    const terminal = tm.getTerminal(terminalId);
+    const name = terminal ? terminal.name : terminalId;
+    const res = await tm.performEndOfDay(terminalId);
+    const out = { terminalId, terminalName: name, status: res.status };
+
+    if (res.status === "SUCCESS") {
+      // Store the EOD receipt (even if there are no printed lines — keeps a
+      // record). Then print 1:1 immediately. Print errors are non-fatal.
+      let entry = null;
+      try {
+        entry = receiptStore.saveEod({
+          terminalId,
+          zvtTid: res.zvtTid,
+          resultCode: res.resultCode,
+          lines: res.lines || []
+        });
+        out.receiptId = entry ? entry.id : null;
+      } catch (e) {
+        log(`EOD: saveEod failed for ${terminalId}: ${e.message}`);
+      }
+      out.printed = false;
+      if (res.lines && res.lines.length > 0) {
+        try {
+          await printReceipt(res.lines, "merchant");
+          out.printed = true;
+        } catch (e) {
+          out.printError = e.message;
+          log(`EOD: ${terminalId} print failed (EOD still SUCCESS): ${e.message}`);
+        }
+      }
+    } else if (res.status === "REJECTED" || res.status === "FAILED") {
+      out.resultCode = res.resultCode;
+    } else if (res.status === "UNCERTAIN" || res.status === "OFFLINE" || res.status === "BUSY") {
+      out.error = res.error || null;
+    }
+    return out;
+  }
+
   return {
     /**
      * Handle incoming WebSocket message related to ZVT/payment.
@@ -290,6 +336,7 @@ export function initZvt(config, clients, brokerDir) {
           // Return the stored card-receipt index (newest first), sanitized.
           const items = receiptStore.list().map(e => ({
             id: e.id,
+            type: e.type || "MERCHANT_PAYMENT",
             timestamp: e.timestamp,
             terminalId: e.terminalId,
             amountMinor: e.amountMinor,
@@ -350,6 +397,37 @@ export function initZvt(config, clients, brokerDir) {
           // Permanent manual delete of a single merchant receipt.
           const okDel = receiptStore.deleteMerchant(msg.id);
           ws.send(JSON.stringify({ type: "MERCHANT_RECEIPT_DELETED", id: msg.id, success: okDel, ts: Date.now() }));
+          break;
+        }
+
+        case "TERMINAL_EOD": {
+          // End-of-Day for a SINGLE terminal (msg.terminalId).
+          const r = await runTerminalEod(msg.terminalId);
+          ws.send(JSON.stringify({ type: "EOD_RESULT", ...r, ts: Date.now() }));
+          broadcastTerminalList(clients, tm);
+          break;
+        }
+
+        case "TERMINAL_EOD_ALL": {
+          // End-of-Day for ALL configured terminals, strictly SEQUENTIAL (no
+          // Promise.all). A failing terminal does not stop the others. Each
+          // terminal's EOD receipt is stored + printed immediately before the
+          // next terminal starts (spec §3, §15). Progress events per terminal.
+          const terminals = tm.getTerminalList(); // {id,name,status}
+          const results = [];
+          for (const t of terminals) {
+            ws.send(JSON.stringify({ type: "EOD_PROGRESS", terminalId: t.id, terminalName: t.name, phase: "running", ts: Date.now() }));
+            let r;
+            try {
+              r = await runTerminalEod(t.id);
+            } catch (e) {
+              r = { terminalId: t.id, terminalName: t.name, status: "UNCERTAIN", error: e.message };
+            }
+            results.push(r);
+            ws.send(JSON.stringify({ type: "EOD_PROGRESS", phase: "done", ...r, ts: Date.now() }));
+            broadcastTerminalList(clients, tm);
+          }
+          ws.send(JSON.stringify({ type: "EOD_ALL_DONE", results, ts: Date.now() }));
           break;
         }
       }

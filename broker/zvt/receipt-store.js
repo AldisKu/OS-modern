@@ -183,6 +183,7 @@ export class ReceiptStore {
 
     const entry = {
       id: `${stamp}-${ta}-${term}`,
+      type: "MERCHANT_PAYMENT", // vs. "TERMINAL_EOD" (see saveEod)
       requestId: tx.requestId || null,
       timestamp: date.toISOString(),
       terminalId: tx.terminalId || null,
@@ -226,6 +227,62 @@ export class ReceiptStore {
     return entry;
   }
 
+  /**
+   * Save a terminal End-of-Day (Tagesabschluss) receipt. Stored in the SAME
+   * merchant receipt infrastructure (merchantDir + index) so list/single-print/
+   * archive all work unchanged — distinguished only by `type: "TERMINAL_EOD"`.
+   *
+   * Filename keeps the standard timestamp-first scheme but marks the type:
+   *   <YYYYMMDDHHMMSS>-eod-<terminalId>.txt
+   *
+   * @param {object} tx - { terminalId, zvtTid, resultCode, lines: string[] }
+   *                       lines = the raw printed EOD receipt text (stored 1:1).
+   * @returns {object} the stored index entry
+   */
+  saveEod(tx) {
+    const date = new Date();
+    const stamp = ReceiptStore.stamp(date);
+    const term = (tx.terminalId || "terminal").replace(/[^a-zA-Z0-9_-]/g, "");
+    const baseName = `${stamp}-eod-${term}.txt`;
+
+    const entry = {
+      id: `${stamp}-eod-${term}`,
+      type: "TERMINAL_EOD",
+      requestId: null,
+      timestamp: date.toISOString(),
+      terminalId: tx.terminalId || null,
+      amountMinor: null,
+      currency: tx.currency || "EUR",
+      // Shown in the Kartenbelege list so the EOD receipt is clearly labelled
+      // without any UI change (the list renders cardName).
+      cardName: "Kartenterminal-Tagesabschluss",
+      traceNumber: null,
+      receiptNumber: null,
+      resultCode: tx.resultCode != null ? tx.resultCode : null,
+      zvtTid: tx.zvtTid || null,
+      merchantFile: null,
+      customerFile: null
+    };
+
+    const lines = Array.isArray(tx.lines) ? tx.lines : [];
+    if (lines.length > 0) {
+      const text = lines.join("\n") + "\n";
+      try {
+        this._atomicWrite(path.join(this.merchantDir, baseName), text);
+        entry.merchantFile = baseName;
+      } catch (e) {
+        this.onLog(`RECEIPTS: failed to save EOD receipt: ${e.message}`);
+      }
+    }
+
+    const idx = this._loadIndex();
+    idx.receipts.push(entry);
+    try { this._saveIndex(idx); } catch (e) { this.onLog(`RECEIPTS: index save failed: ${e.message}`); }
+
+    this.onLog(`RECEIPTS: saved EOD ${entry.id} merchant=${!!entry.merchantFile}`);
+    return entry;
+  }
+
   /** List index entries (most recent first). */
   list() {
     const idx = this._loadIndex();
@@ -252,7 +309,11 @@ export class ReceiptStore {
    */
   getAllMerchantReceiptsCombined() {
     const idx = this._loadIndex();
-    const entries = idx.receipts.filter(e => e.merchantFile); // oldest first (index order)
+    // "Alle drucken" prints only normal payment merchant receipts. EOD
+    // (TERMINAL_EOD) receipts are excluded — they were already printed right
+    // after each terminal's Tagesabschluss (spec §18). Archiving still includes
+    // them (archivePrintedMerchants moves ALL merchantFile entries).
+    const entries = idx.receipts.filter(e => e.merchantFile && e.type !== "TERMINAL_EOD"); // oldest first
     if (entries.length === 0) return { lines: [], count: 0 };
 
     const width = this.compact.width || COMPACT_DEFAULT.width;

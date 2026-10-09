@@ -372,6 +372,17 @@ export function buildAbort() {
 }
 
 /**
+ * Build End-of-Day / Tagesabschluss command (06 50).
+ * Payload is just the 3-byte BCD ZVT password:
+ *   06 50 03 <pw0> <pw1> <pw2>   e.g. password "000000" -> 06 50 03 00 00 00
+ * No Log-Off (06 02) is performed before this; the command is sent on the
+ * existing registered session.
+ */
+export function buildEndOfDay(password) {
+  return buildFrame(0x06, 0x50, encodePassword(password));
+}
+
+/**
  * Build Repeat-Receipt command (06 20).
  *
  * Retrieves stored receipts. With ECR-Receipt active the terminal returns them

@@ -5,7 +5,7 @@
  */
 
 import net from "net";
-import { parseFrame, ACK, isAck, buildStatusEnquiry, buildRegistration, buildAuthorisation, buildAbort, parseCompletion, parsePrintCommand, parseStatusInformation, buildRepeatReceipt, parsePrintLine } from "./zvt-codec.js";
+import { parseFrame, ACK, isAck, buildStatusEnquiry, buildRegistration, buildAuthorisation, buildAbort, buildEndOfDay, parseCompletion, parsePrintCommand, parseStatusInformation, buildRepeatReceipt, parsePrintLine } from "./zvt-codec.js";
 
 const DEFAULT_CONNECT_TIMEOUT = 400;
 const DEFAULT_RESPONSE_TIMEOUT = 2000;
@@ -565,6 +565,133 @@ export class ZvtSession {
     }
 
     throw new Error("Transaction timeout");
+  }
+
+  /**
+   * Perform an End-of-Day / Tagesabschluss (06 50) on the EXISTING registered
+   * session. No Log-Off (06 02) beforehand.
+   *
+   * The whole ZVT sequence is processed to completion:
+   *   TX 06 50 -> RX 80 00 (ACK) -> (04 FF intermediate)* -> 04 0F status
+   *            -> (06 D1 / 06 D3 receipt push)* -> 06 0F completion -> ACK
+   * Only after 06 0F (and its ACK) is the EOD finished.
+   *
+   * Generous timeouts (spec §8): the EOD can take much longer than a normal
+   * command. We use an initial-ACK timeout and an inactivity timeout since the
+   * last valid RX — ANY valid frame resets the inactivity timer — plus an
+   * absolute cap. We NEVER auto-resend 06 50 (spec §9); on loss after sending
+   * we throw an error flagged `zvtUncertain` so the caller can mark UNCERTAIN
+   * and resynchronise (drop/reconnect) WITHOUT a second 06 50.
+   *
+   * @param {object} opts { initialAckMs=15000, inactivityMs=60000, maxMs=300000, onIntermediate }
+   * @returns {object} { resultCode, success, lines, receiptType, terminalIdentifier }
+   */
+  async endOfDay(opts = {}) {
+    await this.connect();
+    const initialAckMs = opts.initialAckMs || 15000;
+    const inactivityMs = opts.inactivityMs || 60000;
+    const maxMs = opts.maxMs || 300000;
+
+    const cmd = buildEndOfDay(this.password);
+    this.send(cmd);
+
+    const result = {
+      resultCode: null,
+      success: false,
+      lines: [],
+      receiptType: null,
+      terminalIdentifier: null,
+      statusReceived: false
+    };
+
+    const absoluteDeadline = Date.now() + maxMs;
+    let ackSeen = false;
+
+    for (;;) {
+      if (Date.now() > absoluteDeadline) {
+        const err = new Error("EOD max duration exceeded");
+        err.zvtUncertain = true;
+        throw err;
+      }
+      // Before the first ACK, allow initialAckMs; afterwards, each frame may
+      // take up to inactivityMs. Clamp to the absolute deadline.
+      const budget = ackSeen ? inactivityMs : initialAckMs;
+      const waitMs = Math.min(budget, absoluteDeadline - Date.now());
+      let frame;
+      try {
+        frame = await this.waitFrame(waitMs);
+      } catch (e) {
+        // No valid RX within the window. 06 50 may already have been executed
+        // at the acquirer -> state is UNCERTAIN. Do NOT retry; signal it.
+        const err = new Error(ackSeen ? "EOD inactivity timeout" : "EOD ACK timeout");
+        err.zvtUncertain = true;
+        throw err;
+      }
+
+      // Positive ACK (80 00): terminal accepted 06 50; keep reading.
+      if (frame.cmdClass === 0x80 && frame.cmdInstr === 0x00) {
+        ackSeen = true;
+        continue;
+      }
+      // Intermediate Status (04 FF): ACK, continue (resets inactivity window).
+      if (frame.cmdClass === 0x04 && frame.cmdInstr === 0xFF) {
+        this.send(ACK);
+        if (opts.onIntermediate) { try { opts.onIntermediate(frame.payload); } catch (_) {} }
+        continue;
+      }
+      // Print Line (06 D1): collect, ACK.
+      if (frame.cmdClass === 0x06 && frame.cmdInstr === 0xD1) {
+        this.send(ACK);
+        const { text } = parsePrintLine(frame.payload);
+        result.lines.push(text);
+        continue;
+      }
+      // Print Text-Block (06 D3): collect lines + type, ACK.
+      if (frame.cmdClass === 0x06 && frame.cmdInstr === 0xD3) {
+        this.send(ACK);
+        const pd = parsePrintCommand(0xD3, frame.payload);
+        if (pd.receiptType !== null && result.receiptType === null) result.receiptType = pd.receiptType;
+        result.lines.push(...pd.lines);
+        continue;
+      }
+      // Status-Information (04 0F): the EOD RESULT. ACK, remember it, but DO
+      // NOT finish here — keep consuming receipt push + 06 0F (spec §10).
+      if (frame.cmdClass === 0x04 && frame.cmdInstr === 0x0F) {
+        this.send(ACK);
+        const parsed = parseCompletion(frame.payload);
+        result.resultCode = parsed.resultCode;
+        result.terminalIdentifier = parsed.terminalIdentifier || result.terminalIdentifier;
+        result.statusReceived = true;
+        continue;
+      }
+      // Completion (06 0F): EOD operation finished. ACK and return.
+      if (frame.cmdClass === 0x06 && frame.cmdInstr === 0x0F) {
+        this.send(ACK);
+        const parsed = parseCompletion(frame.payload);
+        if (result.resultCode === null && parsed.resultCode != null) result.resultCode = parsed.resultCode;
+        result.terminalIdentifier = parsed.terminalIdentifier || result.terminalIdentifier;
+        // Success if we saw a 00 result (04 0F or 06 0F). If no explicit result
+        // code was ever sent, treat a clean completion as success.
+        result.success = (result.resultCode === 0x00 || result.resultCode === null);
+        return result;
+      }
+      // Abort (06 1E): terminal ended the EOD negatively.
+      if (frame.cmdClass === 0x06 && frame.cmdInstr === 0x1E) {
+        this.send(ACK);
+        result.success = false;
+        result.resultCode = frame.payload.length > 0 ? frame.payload[0] : 0xFF;
+        return result;
+      }
+      // Negative response (84 xx): rejected.
+      if (frame.cmdClass === 0x84) {
+        result.success = false;
+        result.resultCode = frame.payload.length > 0 ? frame.payload[0] : 0xFF;
+        result.rejected = true;
+        return result;
+      }
+      // Anything else: ACK and keep waiting.
+      this.send(ACK);
+    }
   }
 
   /**

@@ -524,6 +524,85 @@ export class TerminalManager {
   }
 
   /**
+   * Perform a terminal End-of-Day / Tagesabschluss (ZVT 06 50) on a single
+   * terminal. Gated on READY (no other broker action running). While it runs,
+   * the terminal is LOCKED (-> state BUSY), which makes the health poll skip it
+   * (isLocked() -> continue) — so there are no 05 01 pings or other commands
+   * mid-EOD. No Log-Off beforehand; no auto-retry of 06 50 (UNCERTAIN on loss).
+   *
+   * Returns one of:
+   *   { status: "BUSY" }                              terminal busy -> not started
+   *   { status: "OFFLINE", error }                    could not reach before start
+   *   { status: "SUCCESS", lines, resultCode, zvtTid }
+   *   { status: "REJECTED", resultCode }              PT rejected 06 50 (84 xx)
+   *   { status: "FAILED", resultCode }                PT gave a negative result
+   *   { status: "UNCERTAIN", error }                  06 50 sent, comms lost
+   */
+  async performEndOfDay(terminalId) {
+    const terminal = this.getTerminal(terminalId);
+    if (!terminal) return { status: "OFFLINE", error: "unknown terminal" };
+
+    // Gate: do not start if another broker action is running on this terminal
+    // (payment/enquiry/receipt/reconnect) — i.e. it must be free to lock.
+    if (this.isLocked(terminalId)) {
+      return { status: "BUSY", error: `Terminal ${terminal.name} ist momentan beschäftigt.` };
+    }
+    // Acquire the lock FIRST (sets BUSY, suppresses health poll). requestId is
+    // a synthetic EOD marker; posId identifies the operation.
+    if (!this.lock(terminalId, `eod-${Date.now()}`, "EOD")) {
+      return { status: "BUSY", error: `Terminal ${terminal.name} ist momentan beschäftigt.` };
+    }
+
+    try {
+      let session;
+      try {
+        session = await this.getRegisteredSession(terminalId);
+      } catch (e) {
+        return { status: "OFFLINE", error: e.message };
+      }
+      if (!session) return { status: "OFFLINE", error: "no session" };
+
+      let eod;
+      try {
+        eod = await session.endOfDay({
+          onIntermediate: () => { /* keeps the operation alive; logged by session */ }
+        });
+      } catch (e) {
+        // Loss after sending 06 50. Never auto-retry (spec §9). Mark UNCERTAIN
+        // and drop the session so the next action reconnects+registers cleanly.
+        if (e && e.zvtUncertain) {
+          this.invalidateSession(terminalId);
+          this.onLog(`EOD: ${terminal.id} UNCERTAIN (${e.message}) — not retrying 06 50`);
+          return { status: "UNCERTAIN", error: e.message };
+        }
+        // Other errors (e.g. socket died before ACK): also uncertain-ish, but
+        // treat as OFFLINE if nothing was sent is not distinguishable here —
+        // be safe and report UNCERTAIN without retry.
+        this.invalidateSession(terminalId);
+        this.onLog(`EOD: ${terminal.id} error (${e.message})`);
+        return { status: "UNCERTAIN", error: e.message };
+      }
+
+      if (eod.rejected) {
+        return { status: "REJECTED", resultCode: eod.resultCode };
+      }
+      if (eod.success) {
+        terminal.lastSeenAt = new Date().toISOString();
+        return {
+          status: "SUCCESS",
+          lines: eod.lines || [],
+          resultCode: eod.resultCode,
+          zvtTid: eod.terminalIdentifier || terminal.identity.terminalIdentifier
+        };
+      }
+      return { status: "FAILED", resultCode: eod.resultCode, lines: eod.lines || [] };
+    } finally {
+      // Release the lock -> back to READY (unless health moved it to SUSPECT/OFFLINE).
+      this.unlock(terminalId);
+    }
+  }
+
+  /**
    * Central state setter for the 4-state health machine:
    *   READY   - connected, ZVT session active, no broker action running
    *   BUSY    - a broker ZVT action is in progress (payment, enquiry, ...)

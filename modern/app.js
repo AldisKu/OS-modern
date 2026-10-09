@@ -1,5 +1,5 @@
 const API = "modernapi.php";
-const APP_VERSION = "71";
+const APP_VERSION = "72";
 // Debug: update/refresh timing. Toggle in browser console: window.DEBUG_UPDATES=false
 window.DEBUG_UPDATES = true;
 function dbgU(...a) { if (window.DEBUG_UPDATES) console.log("[UPD]", new Date().toISOString(), ...a); }
@@ -472,6 +472,16 @@ function initBroker() {
       // --- Kartenbelege (card receipts) ---
       if (payload && payload.type === "CARD_RECEIPT_LIST") {
         renderCardReceipts(payload.receipts);
+      }
+      // --- Kartenterminals Tagesabschluss (EOD) ---
+      if (payload && payload.type === "EOD_PROGRESS") {
+        handleEodProgress(payload);
+      }
+      if (payload && payload.type === "EOD_RESULT") {
+        handleEodResult(payload);
+      }
+      if (payload && payload.type === "EOD_ALL_DONE") {
+        handleEodAllDone(payload);
       }
       if (payload && payload.type === "CARD_RECEIPT_PRINTED") {
         if (!payload.success) showStatusMessage("Druck fehlgeschlagen: " + (payload.error || ""));
@@ -2780,14 +2790,15 @@ async function openMenuModal() {
     const kassenbonsBtns = kassenbonsItems.map(linkBtn).join("");
     const cardReceiptsBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-cardreceipts="1">Kartenbelege</button>` : "";
     const localBtn = `<button class="menu-link-btn" data-local="1">Lokale Konfiguration</button>`;
+    const eodBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-eod="1">Kartenterminals Tagesabschluss</button>` : "";
     const scanBtn = state.zvtEnabled ? `<button class="menu-link-btn" data-terminalscan="1">Terminal scannen</button>` : "";
     const brokerBtn = `<button class="menu-link-btn" data-broker="1">Broker Debug</button>`;
 
     // Group 1: Tischprotokoll · Kassenbons · Kartenbelege
-    // Group 2: Lokale Konfiguration · Terminal scannen · Broker Debug
+    // Group 2: Lokale Konfiguration · Kartenterminals Tagesabschluss · Terminal scannen · Broker Debug
     // Group 3: remaining vendor menu items
     const group1 = recordsBtn + kassenbonsBtns + cardReceiptsBtn;
-    const group2 = localBtn + scanBtn + brokerBtn;
+    const group2 = localBtn + eodBtn + scanBtn + brokerBtn;
     const group3 = restItems.map(linkBtn).join("");
 
     els.menuItems.innerHTML = group1 + sep + group2 + sep + group3;
@@ -2816,6 +2827,11 @@ async function openMenuModal() {
         b.onclick = () => {
           closeMenuModal();
           openCardReceiptsModal();
+        };
+      } else if (b.dataset.eod) {
+        b.onclick = () => {
+          closeMenuModal();
+          openEodModal();
         };
       } else {
         b.onclick = () => {
@@ -3757,6 +3773,122 @@ function showTerminalScanResult(terminals) {
   els.confirmBody.innerHTML = `<div class="scan-result">${list}</div>`;
   els.confirmActions.innerHTML = `<button class="primary" id="scan-done">OK</button>`;
   document.getElementById("scan-done").onclick = () => els.confirmModal.classList.add("hidden");
+}
+
+// --- Kartenterminals Tagesabschluss (End-of-Day / ZVT 06 50) ---
+
+// Tracks the EOD progress dialog so broker events (EOD_PROGRESS / EOD_RESULT /
+// EOD_ALL_DONE) can update it. mode: "single" | "all".
+const eodState = { active: false, mode: null, progress: {} };
+
+const EOD_STATUS_TEXT = {
+  SUCCESS: "Erfolgreich",
+  REJECTED: "Abgelehnt",
+  FAILED: "Fehlgeschlagen",
+  UNCERTAIN: "Unbestätigt — bitte Terminalstatus prüfen",
+  OFFLINE: "Nicht erreichbar",
+  BUSY: "Beschäftigt"
+};
+
+/**
+ * Open the EOD selection popup: [Alle] + one button per terminal + [Abbruch].
+ * Abbruch only closes; no ZVT command is sent yet (spec §1, §22).
+ */
+function openEodModal() {
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    showWarnPopup("Broker nicht verbunden");
+    return;
+  }
+  const terminals = state.terminals || [];
+  resetConfirmActionsLayout();
+  els.confirmTitle.textContent = "Kartenterminals Tagesabschluss";
+  const termBtns = terminals.map(t =>
+    `<button class="menu-btn eod-term-btn" data-eod-tid="${escapeHtml(t.id)}" style="display:block;width:100%;margin:4px 0;">${escapeHtml(t.name || t.id)}</button>`
+  ).join("");
+  els.confirmBody.innerHTML = `
+    <p>Für welche Kartenterminals soll der Tagesabschluss durchgeführt werden?</p>
+    <div class="eod-choice">
+      <button class="primary eod-all-btn" data-eod-all="1" style="display:block;width:100%;margin:4px 0;">Alle</button>
+      ${termBtns || "<p>Keine Terminals konfiguriert.</p>"}
+    </div>
+  `;
+  els.confirmActions.innerHTML = `<button class="ghost" id="eod-cancel">Abbruch</button>`;
+  els.confirmModal.classList.remove("hidden");
+  document.getElementById("eod-cancel").onclick = () => els.confirmModal.classList.add("hidden");
+  els.confirmBody.querySelectorAll("[data-eod-tid]").forEach(b => {
+    b.onclick = () => startEod("single", b.dataset.eodTid, b.textContent);
+  });
+  const allBtn = els.confirmBody.querySelector("[data-eod-all]");
+  if (allBtn) allBtn.onclick = () => startEod("all", null, null);
+}
+
+/**
+ * Send the EOD command and switch to the progress dialog. Once sent, the UI
+ * offers NO cancel (spec §22) — closing the page does not stop the backend.
+ */
+function startEod(mode, terminalId, terminalName) {
+  if (!state.brokerWs || state.brokerWs.readyState !== WebSocket.OPEN) {
+    showWarnPopup("Broker nicht verbunden");
+    return;
+  }
+  eodState.active = true;
+  eodState.mode = mode;
+  eodState.progress = {};
+
+  if (mode === "all") {
+    (state.terminals || []).forEach(t => { eodState.progress[t.id] = { name: t.name, status: "wartet" }; });
+    state.brokerWs.send(JSON.stringify({ type: "TERMINAL_EOD_ALL" }));
+  } else {
+    eodState.progress[terminalId] = { name: terminalName || terminalId, status: "läuft" };
+    state.brokerWs.send(JSON.stringify({ type: "TERMINAL_EOD", terminalId }));
+  }
+  renderEodProgress(false);
+}
+
+/**
+ * Render the EOD progress / result dialog from eodState.progress.
+ */
+function renderEodProgress(done) {
+  els.confirmTitle.textContent = done ? "Kartenterminals Tagesabschluss beendet" : "Kartenterminals Tagesabschluss";
+  const rows = Object.keys(eodState.progress).map(id => {
+    const p = eodState.progress[id];
+    const label = EOD_STATUS_TEXT[p.status] || p.status;
+    return `<div class="eod-row"><b>${escapeHtml(p.name || id)}</b>: ${escapeHtml(label)}</div>`;
+  }).join("") || "<div>—</div>";
+  const note = done ? "" : `<p style="color:var(--muted);font-size:14px;">Der Tagesabschluss kann mehrere Minuten dauern. Terminal und Anwendung währenddessen nicht ausschalten.</p>`;
+  els.confirmBody.innerHTML = `<div class="eod-progress">${rows}</div>${note}`;
+  els.confirmActions.innerHTML = done ? `<button class="primary" id="eod-close">Schließen</button>` : "";
+  els.confirmModal.classList.remove("hidden");
+  if (done) {
+    const btn = document.getElementById("eod-close");
+    if (btn) btn.onclick = () => { eodState.active = false; els.confirmModal.classList.add("hidden"); };
+  }
+}
+
+function handleEodProgress(payload) {
+  if (!eodState.active) return;
+  const id = payload.terminalId;
+  if (!id) return;
+  if (!eodState.progress[id]) eodState.progress[id] = { name: payload.terminalName || id };
+  eodState.progress[id].name = payload.terminalName || eodState.progress[id].name;
+  eodState.progress[id].status = payload.phase === "running" ? "läuft" : (payload.status || "fertig");
+  renderEodProgress(false);
+}
+
+function handleEodResult(payload) {
+  // Single-terminal result.
+  if (!eodState.active) return;
+  const id = payload.terminalId;
+  if (id) eodState.progress[id] = { name: payload.terminalName || id, status: payload.status };
+  renderEodProgress(true);
+}
+
+function handleEodAllDone(payload) {
+  if (!eodState.active) return;
+  (payload.results || []).forEach(r => {
+    eodState.progress[r.terminalId] = { name: r.terminalName || r.terminalId, status: r.status };
+  });
+  renderEodProgress(true);
 }
 
 // --- Card receipts (Kartenbelege) reprint menu ---

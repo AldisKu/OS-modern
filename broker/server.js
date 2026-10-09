@@ -273,7 +273,9 @@ wss.on("connection", (ws, req) => {
       msg.type === "PRINT_CARD_RECEIPT" ||
       msg.type === "PRINT_ALL_MERCHANT" ||
       msg.type === "ARCHIVE_MERCHANT_RECEIPTS" ||
-      msg.type === "DELETE_MERCHANT_RECEIPT"
+      msg.type === "DELETE_MERCHANT_RECEIPT" ||
+      msg.type === "TERMINAL_EOD" ||
+      msg.type === "TERMINAL_EOD_ALL"
     )) {
       zvtHandler.handleMessage(ws, msg).catch(e => console.log("[ZVT] handleMessage error:", e.message));
     }
